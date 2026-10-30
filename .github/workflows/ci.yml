@@ -78,10 +78,18 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
+      # Bubblewrap checks that the SDK folder contains bin/ or tools/ and then
+      # runs bin/sdkmanager itself, while modern SDKs keep the tools under
+      # cmdline-tools/latest/bin. bin is linked to whichever one is installed.
       - name: Install the Android packages the build needs
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36"
+          sdkmanager "build-tools;36.1.0" || echo "build-tools 36.1.0 unavailable, Bubblewrap will install it"
+          if [ ! -d "$ANDROID_HOME/bin" ]; then
+            sudo ln -s "$(dirname "$(command -v sdkmanager)")" "$ANDROID_HOME/bin"
+          fi
+          ls -la "$ANDROID_HOME"
 
       # Bubblewrap's own setup wizard asks questions on stdin, which does not
       # exist on a runner, so the config file is written by hand instead.
