@@ -7,6 +7,7 @@ import { Button, Field, SectionHeader, TextArea } from "../components/ui";
 import { useAuth } from "../state/AuthContext";
 import { useToasts } from "../state/ToastContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import { BrowserCapabilitySetupPrompt } from "../components/BrowserCapabilitySetupPrompt";
 
 function roleLabel(role: string): string {
   if (role === "admin") return "Moderator";
@@ -23,6 +24,7 @@ export function SettingsPage() {
   const [bio, setBio] = useState(user?.bio ?? "");
   const [saving, setSaving] = useState(false);
   const [hasStudio, setHasStudio] = useState<boolean | null>(null);
+  const [showDeviceSetup, setShowDeviceSetup] = useState(false);
   const { canInstall, installed, install } = useInstallPrompt();
 
   useEffect(() => {
@@ -144,6 +146,20 @@ export function SettingsPage() {
             <span className="shrink-0 text-[14px] font-bold text-[#1ed760]">Open</span>
           </Link>
         ) : null}
+      </section>
+
+      <section className="mb-8">
+        <SectionHeader title="Permissions & storage" />
+        {showDeviceSetup ? (
+          <BrowserCapabilitySetupPrompt onDismiss={() => setShowDeviceSetup(false)} />
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-[#181818] p-5">
+            <p className="max-w-xl text-[14.5px] leading-relaxed text-ink-soft">
+              Review notification permission and whether your browser protects ORU’s stored app data from cleanup.
+            </p>
+            <Button variant="outline" onClick={() => setShowDeviceSetup(true)}>Review device setup</Button>
+          </div>
+        )}
       </section>
 
       <section>

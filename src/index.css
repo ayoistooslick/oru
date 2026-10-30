@@ -195,3 +195,31 @@
 .eq-bar:nth-child(3) {
   animation-delay: 0.44s;
 }
+
+/* Mobile readability: keep user zoom available, but enlarge the smallest
+   captions and make touch interaction less dependent on hover. */
+@media (max-width: 639px) {
+  [class~="text-[10px]"],
+  [class~="text-[10.5px]"],
+  [class~="text-[11px]"],
+  [class~="text-[11.5px]"],
+  [class~="text-[12px]"],
+  [class~="text-[12.5px]"] {
+    font-size: 13px !important;
+    line-height: 1.35;
+  }
+
+  button {
+    touch-action: manipulation;
+    min-height: 40px;
+  }
+}
+
+@media (hover: none) {
+  .scrub::-webkit-slider-thumb,
+  .scrub::-moz-range-thumb {
+    opacity: 1;
+    width: 14px;
+    height: 14px;
+  }
+}

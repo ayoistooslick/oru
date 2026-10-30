@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { auth, setToken } from "../lib/api";
+import { ApiError, auth, setToken } from "../lib/api";
 import type { AuthResponse, User } from "../lib/types";
 
 interface SignUpInput {
@@ -53,10 +53,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((response) => {
         if (!cancelled) persist(response.user);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!cancelled) {
-          setToken(null);
-          persist(null);
+          // A transient network/server failure must not sign a listener out.
+          // Keep the cached account available offline; clear credentials only
+          // when the API confirms the token is no longer valid.
+          if (error instanceof ApiError && error.status === 401) {
+            setToken(null);
+            persist(null);
+          }
         }
       })
       .finally(() => {

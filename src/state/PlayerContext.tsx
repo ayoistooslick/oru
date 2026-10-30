@@ -16,6 +16,8 @@ interface PlayerValue {
   queue: Song[];
   current: Song | null;
   index: number;
+  shuffle: boolean;
+  repeatMode: "off" | "all" | "one";
   isPlaying: boolean;
   isLoading: boolean;
   position: number;
@@ -27,6 +29,8 @@ interface PlayerValue {
   toggle: () => void;
   next: () => void;
   previous: () => void;
+  toggleShuffle: () => void;
+  cycleRepeat: () => void;
   seek: (seconds: number) => void;
   setVolume: (value: number) => void;
   setExpanded: (value: boolean) => void;
@@ -38,6 +42,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toasts = useToasts();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const reportedRef = useRef(false);
+  const historyRef = useRef<number[]>([]);
+  const repeatModeRef = useRef<"off" | "all" | "one">("off");
+  const shuffleRef = useRef(false);
   const [queue, setQueue] = useState<Song[]>([]);
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -45,7 +52,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(1);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
   const [expanded, setExpanded] = useState(false);
+  repeatModeRef.current = repeatMode;
+  shuffleRef.current = shuffle;
 
   const current = queue[index] ?? null;
 
@@ -68,8 +79,45 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const next = useCallback(() => {
+    if (queue.length > 1 && shuffleRef.current) {
+      const unplayed = queue
+        .map((_, at) => at)
+        .filter((at) => at !== index && !historyRef.current.includes(at));
+      if (unplayed.length > 0) {
+        historyRef.current.push(index);
+        setIndex(unplayed[Math.floor(Math.random() * unplayed.length)]);
+        return;
+      }
+      if (repeatModeRef.current === "all") {
+        const candidates = queue.map((_, at) => at).filter((at) => at !== index);
+        historyRef.current = [index];
+        setIndex(candidates[Math.floor(Math.random() * candidates.length)]);
+        return;
+      }
+      const element = audioRef.current;
+      if (element) {
+        element.pause();
+        element.currentTime = 0;
+      }
+      setIsPlaying(false);
+      return;
+    }
     if (index + 1 < queue.length) {
+      historyRef.current.push(index);
       setIndex(index + 1);
+      return;
+    }
+    if (repeatModeRef.current === "all" && queue.length > 0) {
+      if (queue.length === 1) {
+        const element = audioRef.current;
+        if (element) {
+          element.currentTime = 0;
+          element.play().catch(() => setIsPlaying(false));
+        }
+        return;
+      }
+      historyRef.current.push(index);
+      setIndex(0);
       return;
     }
     const element = audioRef.current;
@@ -78,7 +126,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       element.currentTime = 0;
     }
     setIsPlaying(false);
-  }, [index, queue.length]);
+  }, [index, queue]);
 
   const previous = useCallback(() => {
     const element = audioRef.current;
@@ -87,8 +135,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setPosition(0);
       return;
     }
-    setIndex((current_index) => Math.max(0, current_index - 1));
-  }, []);
+    const previousIndex = historyRef.current.pop();
+    if (previousIndex !== undefined) setIndex(previousIndex);
+    else if (index > 0) setIndex(index - 1);
+    else if (element) {
+      element.currentTime = 0;
+      setPosition(0);
+    }
+  }, [index]);
 
   // Load the selected track whenever the selection changes.
   useEffect(() => {
@@ -126,7 +180,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         reportedRef.current = true;
         reportListen(current, (element.duration || 0) * 1000);
       }
-      next();
+      if (repeatModeRef.current === "one") {
+        element.currentTime = 0;
+        element.play().catch(() => setIsPlaying(false));
+      } else {
+        next();
+      }
     };
 
     element.addEventListener("loadedmetadata", onLoaded);
@@ -215,6 +274,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playQueue = useCallback(
     (songs: Song[], startIndex = 0) => {
       if (!songs.length) return;
+      historyRef.current = [];
       const sameTrack = current && songs[startIndex]?.id === current.id;
       setQueue(songs);
       setIndex(startIndex);
@@ -244,6 +304,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     element.currentTime = seconds;
     setPosition(seconds);
   }, []);
+
+  const toggleShuffle = useCallback(() => setShuffle((value) => !value), []);
+  const cycleRepeat = useCallback(
+    () => setRepeatMode((value) => (value === "off" ? "all" : value === "all" ? "one" : "off")),
+    [],
+  );
 
   const setVolume = useCallback((value: number) => {
     setVolumeState(value);
@@ -309,44 +375,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [current?.id, position, duration, isPlaying]);
 
-  // Keep the screen on while music plays so the controls stay reachable.
-  useEffect(() => {
-    if (!isPlaying || !current || !("wakeLock" in navigator)) return;
-    let sentinel: WakeLockSentinel | null = null;
-    let cancelled = false;
-
-    const request = () => {
-      if (cancelled) return;
-      navigator.wakeLock
-        .request("screen")
-        .then((lock) => {
-          if (cancelled) {
-            lock.release().catch(() => undefined);
-            return;
-          }
-          sentinel = lock;
-        })
-        .catch(() => undefined);
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") request();
-    };
-
-    request();
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisibility);
-      sentinel?.release().catch(() => undefined);
-    };
-  }, [isPlaying, current?.id]);
-
   const value = useMemo<PlayerValue>(
     () => ({
       queue,
       current,
       index,
+      shuffle,
+      repeatMode,
       isPlaying,
       isLoading,
       position,
@@ -358,6 +393,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       toggle,
       next,
       previous,
+      toggleShuffle,
+      cycleRepeat,
       seek,
       setVolume,
       setExpanded,
@@ -366,6 +403,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       queue,
       current,
       index,
+      shuffle,
+      repeatMode,
       isPlaying,
       isLoading,
       position,
@@ -377,6 +416,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       toggle,
       next,
       previous,
+      toggleShuffle,
+      cycleRepeat,
       seek,
       setVolume,
     ],

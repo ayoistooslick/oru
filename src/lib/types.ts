@@ -16,7 +16,12 @@ export interface AuthResponse {
   token_type: "bearer";
 }
 
-export type SongStatus = "draft" | "published" | "hidden";
+export type SongStatus = "draft" | "pending" | "published" | "hidden";
+
+export interface SongSharer {
+  handle: string;
+  display_name: string;
+}
 
 export interface Song {
   id: number;
@@ -31,6 +36,8 @@ export interface Song {
   published_at: string | null;
   audio_url: string | null;
   cover_url: string | null;
+  source_url: string | null;
+  shared_by: SongSharer | null;
 }
 
 export interface Artist {

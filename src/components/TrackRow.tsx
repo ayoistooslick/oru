@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Heart, Pause, Play, X } from "lucide-react";
 import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";
@@ -96,7 +97,12 @@ export function TrackRow({
           {song.title}
         </p>
         <p className="mt-0.5 flex items-center gap-2 truncate text-[13.5px] text-ink-soft">
-          {showArtist ? song.artist_name : song.genres.slice(0, 2).join(", ") || "No genre"}
+          {showArtist ? (
+            <Link to={`/artist/${song.artist_id}`} onClick={(event) => event.stopPropagation()} className="truncate hover:text-white hover:underline">
+              {song.artist_name}
+            </Link>
+          ) : song.genres.slice(0, 2).join(", ") || "No genre"}
+          {published && song.shared_by ? <span className="truncate">· Shared by {song.shared_by.display_name}</span> : null}
           {showStatus && !published ? (
             <span className="rounded bg-white/15 px-1.5 py-px text-[10.5px] font-bold uppercase">{song.status}</span>
           ) : null}
