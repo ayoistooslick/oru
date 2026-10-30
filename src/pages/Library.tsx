@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Globe2, Heart, Lock, Plus, X } from "lucide-react";
+import { Globe2, Heart, Lock, Play, Plus, Shuffle, X } from "lucide-react";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Paginated, Playlist } from "../lib/types";
 import { TrackCard } from "../components/TrackCard";
+import { TrackRow } from "../components/TrackRow";
 import { Cover } from "../components/Cover";
 import { Button, Chip, EmptyState, Field, Spinner } from "../components/ui";
 import { useToasts } from "../state/ToastContext";
+import { usePlayer } from "../state/PlayerContext";
 import type { Song } from "../lib/types";
 
 type Filter = "all" | "playlists" | "liked" | "artists";
@@ -23,6 +25,7 @@ function Loader({ label }: { label: string }) {
 
 export function Library() {
   const toasts = useToasts();
+  const { playQueue } = usePlayer();
   const [filter, setFilter] = useState<Filter>("all");
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
@@ -61,6 +64,14 @@ export function Library() {
   const showPlaylists = filter === "all" || filter === "playlists";
   const showLiked = filter === "all" || filter === "liked";
   const showArtists = filter === "all" || filter === "artists";
+  const playShuffled = () => {
+    const order = [...liked];
+    for (let at = order.length - 1; at > 0; at -= 1) {
+      const swapAt = Math.floor(Math.random() * (at + 1));
+      [order[at], order[swapAt]] = [order[swapAt], order[at]];
+    }
+    if (order.length) playQueue(order, 0);
+  };
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
@@ -146,7 +157,14 @@ export function Library() {
 
       {showLiked ? (
         <section className="mb-8">
-          <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Liked songs</h2>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 className="text-[22px] font-bold tracking-[-0.02em]">Liked songs</h2>
+            {filter !== "liked" ? (
+              <button type="button" onClick={() => setFilter("liked")} className="text-[13px] font-bold text-ink-soft hover:text-white">
+                Open playlist
+              </button>
+            ) : null}
+          </div>
           {loading && !likes.data ? (
             <Loader label="Loading your likes" />
           ) : liked.length === 0 ? (
@@ -158,6 +176,33 @@ export function Library() {
                 Songs you like will show up here. Tap the heart on any song.
               </p>
             </div>
+          ) : filter === "liked" ? (
+            <>
+              <div className="mb-5 flex flex-col gap-5 rounded-lg bg-gradient-to-br from-[#5536a7] via-[#362477] to-[#181818] p-5 sm:flex-row sm:items-end sm:p-7">
+                <div className="grid aspect-square w-40 shrink-0 grid-cols-2 grid-rows-2 overflow-hidden rounded-md bg-white/10 shadow-xl sm:w-52">
+                  {liked.slice(0, 4).map((song) => (
+                    <Cover key={song.id} src={song.cover_url} alt={song.title} seed={song.id} className="h-full w-full" rounded="rounded-none" />
+                  ))}
+                  {liked.length < 2 ? <Heart className="m-auto h-12 w-12 text-white/70" fill="currentColor" /> : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-white/80">Playlist</p>
+                  <h2 className="mt-1 break-words text-[34px] font-extrabold leading-tight tracking-[-0.04em] sm:text-[52px]">Liked Songs</h2>
+                  <p className="mt-2 text-[14px] text-white/75">Your saved music · {liked.length} {liked.length === 1 ? "song" : "songs"}</p>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button type="button" onClick={() => playQueue(liked, 0)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1ed760] px-5 text-[14px] font-bold text-black press">
+                      <Play className="h-4 w-4" fill="currentColor" /> Play all
+                    </button>
+                    <button type="button" onClick={playShuffled} className="inline-flex h-11 items-center gap-2 rounded-full border border-white/35 px-5 text-[14px] font-bold text-white press hover:bg-white/10">
+                      <Shuffle className="h-4 w-4" /> Shuffle
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg bg-[#181818] p-2">
+                {liked.map((song, index) => <TrackRow key={song.id} song={song} queue={liked} position={index + 1} />)}
+              </div>
+            </>
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar">
               {liked.slice(0, 12).map((song) => (

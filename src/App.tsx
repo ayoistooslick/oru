@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } 
 import { AppShell } from "./components/AppShell";
 import { Spinner } from "./components/ui";
 import { ToastViewport } from "./components/ToastViewport";
+import { StartupCapabilityGate } from "./components/StartupCapabilityGate";
 import { OruMark } from "./components/OruMark";
 import { AuthProvider, useAuth } from "./state/AuthContext";
 import { LibraryProvider } from "./state/LibraryContext";
@@ -18,6 +19,7 @@ import { ReleasePage } from "./pages/Release";
 import { Studio } from "./pages/Studio";
 import { SettingsPage } from "./pages/Settings";
 import { Moderation } from "./pages/Moderation";
+import { SongSharing } from "./pages/SongSharing";
 import { About } from "./pages/About";
 import { NotFound } from "./pages/NotFound";
 
@@ -78,11 +80,13 @@ export default function App() {
                 <Route path="/studio" element={<Studio />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/moderation" element={<Moderation />} />
+                <Route path="/shares" element={<SongSharing />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
           </BrowserRouter>
           <ToastViewport />
+          <StartupCapabilityGate />
         </PlayerProvider>
       </AuthProvider>
     </ToastProvider>

@@ -1,4 +1,4 @@
-import { Heart, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";
 import { formatDuration } from "../lib/format";
@@ -9,17 +9,19 @@ export function Scrubber({
   duration,
   onSeek,
   className = "",
+  showTimes = true,
 }: {
   position: number;
   duration: number;
   onSeek: (seconds: number) => void;
   className?: string;
+  showTimes?: boolean;
 }) {
   const percent = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <span className="w-9 text-right text-[11.5px] tabular-nums text-ink-soft">{formatDuration(position)}</span>
+      {showTimes ? <span className="w-9 text-right text-[11.5px] tabular-nums text-ink-soft">{formatDuration(position)}</span> : null}
       <input
         type="range"
         min={0}
@@ -28,24 +30,39 @@ export function Scrubber({
         value={position}
         onChange={(event) => onSeek(Number(event.target.value))}
         aria-label="Move through the song"
-        className="scrub h-1 flex-1"
+        className="scrub min-h-6 flex-1 py-2"
         style={{
           background: `linear-gradient(to right, #1ed760 0%, #1ed760 ${percent}%, #4d4d4d ${percent}%, #4d4d4d 100%)`,
         }}
       />
-      <span className="w-9 text-[11.5px] tabular-nums text-ink-soft">{formatDuration(duration)}</span>
+      {showTimes ? <span className="w-9 text-[11.5px] tabular-nums text-ink-soft">{formatDuration(duration)}</span> : null}
     </div>
   );
 }
 
 /** Spotify's bar: full width on desktop, a compact pill on phones. */
 export function PlayerBar() {
-  const { current, isPlaying, toggle, next, previous, position, duration, seek, setExpanded, volume, setVolume } = usePlayer();
+  const {
+    current,
+    isPlaying,
+    toggle,
+    next,
+    previous,
+    position,
+    duration,
+    seek,
+    setExpanded,
+    volume,
+    setVolume,
+    shuffle,
+    repeatMode,
+    toggleShuffle,
+    cycleRepeat,
+  } = usePlayer();
   const { likedIds, toggleLike } = useLibrary();
 
   if (!current) return null;
   const liked = likedIds.has(current.id);
-  const percent = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
 
   const heart = (
     <button
@@ -76,9 +93,7 @@ export function PlayerBar() {
               <span className="block truncate text-[12.5px] text-ink-soft">{current.artist_name}</span>
             </span>
           </button>
-          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[#4d4d4d]">
-            <div className="h-full bg-[#1ed760]" style={{ width: `${percent}%` }} />
-          </div>
+          <Scrubber position={position} duration={duration} onSeek={seek} showTimes={false} className="mt-0.5 w-full" />
         </div>
         {heart}
         <button
@@ -112,6 +127,16 @@ export function PlayerBar() {
           <div className="flex items-center gap-4">
             <button
               type="button"
+              onClick={toggleShuffle}
+              className={`grid h-8 w-8 place-items-center transition hover:text-white ${shuffle ? "text-[#1ed760]" : "text-ink-soft"}`}
+              aria-label={shuffle ? "Turn shuffle off" : "Turn shuffle on"}
+              aria-pressed={shuffle}
+              title={shuffle ? "Shuffle on" : "Shuffle off"}
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
               onClick={previous}
               className="text-ink-soft transition hover:text-white"
               aria-label="Previous song"
@@ -132,6 +157,16 @@ export function PlayerBar() {
             </button>
             <button type="button" onClick={next} className="text-ink-soft transition hover:text-white" aria-label="Next song">
               <SkipForward className="h-5 w-5" fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              onClick={cycleRepeat}
+              className={`relative grid h-8 w-8 place-items-center transition hover:text-white ${repeatMode !== "off" ? "text-[#1ed760]" : "text-ink-soft"}`}
+              aria-label={`Repeat ${repeatMode === "off" ? "off" : repeatMode === "all" ? "all songs" : "one song"}; change mode`}
+              title={`Repeat ${repeatMode}`}
+            >
+              <Repeat className="h-4 w-4" />
+              {repeatMode === "one" ? <span className="absolute right-0 top-0 text-[9px] font-black">1</span> : null}
             </button>
           </div>
           <Scrubber position={position} duration={duration} onSeek={seek} className="w-full max-w-xl" />

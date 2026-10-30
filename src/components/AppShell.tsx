@@ -4,11 +4,13 @@ import {
   ChevronLeft,
   ChevronRight,
   House,
+  Inbox,
   Library,
   LogOut,
   Mic,
   Plus,
   Search as SearchIcon,
+  Share2,
   ShieldCheck,
 } from "lucide-react";
 import { request } from "../lib/api";
@@ -19,6 +21,7 @@ import { useAuth } from "../state/AuthContext";
 import { OruLogo } from "./OruMark";
 import { PlayerBar } from "./PlayerBar";
 import { NowPlaying } from "./NowPlaying";
+import { OnlineStatusBanner } from "./OnlineStatusBanner";
 
 interface NavItem {
   to: string;
@@ -63,7 +66,7 @@ function Avatar({ name, size = "h-8 w-8" }: { name: string; size?: string }) {
 }
 
 function Sidebar() {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, isArtist } = useAuth();
   const playlists = useResource<Paginated<Playlist>>(
     (signal) => request("/playlists?limit=20", { signal }),
     [],
@@ -88,6 +91,14 @@ function Sidebar() {
             <li>
               <NavItemRow to="/studio" label="Studio" icon={Mic} />
             </li>
+            <li>
+              <NavItemRow to="/shares" label="Share a song" icon={Share2} />
+            </li>
+            {isArtist || isAdmin ? (
+              <li>
+                <NavItemRow to="/shares#share-inbox" label="Share inbox" icon={Inbox} />
+              </li>
+            ) : null}
             {isAdmin ? (
               <li>
                 <NavItemRow to="/moderation" label="Reports" icon={ShieldCheck} />
@@ -216,6 +227,7 @@ const TABS: NavItem[] = [
   { to: "/listen", label: "Home", icon: House },
   { to: "/search", label: "Search", icon: SearchIcon },
   { to: "/library", label: "Library", icon: Library },
+  { to: "/shares", label: "Share", icon: Share2 },
   { to: "/studio", label: "Studio", icon: Mic },
 ];
 
@@ -264,6 +276,7 @@ export function AppShell() {
           className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-black lg:rounded-lg lg:bg-[#121212]"
         >
           <TopBar />
+          <OnlineStatusBanner />
           <Outlet />
         </main>
       </div>

@@ -158,6 +158,68 @@ def test_artist_workspace_and_library_endpoints(client):
     assert client.get(f"/api/v1/songs/{draft}", headers=auth(token)).status_code == 404
 
 
+def test_song_sharing_review_attribution_and_withdrawal(client, monkeypatch):
+    artist = make_artist(client, "share-artist@example.com", "share_artist")
+    other_artist = make_artist(client, "other-share-artist@example.com", "other_share_artist")
+    listener = register(client, "sharer@example.com", "sharer_listener")
+    listener_headers = auth(listener["access_token"])
+
+    submitted = client.post(
+        "/api/v1/songs/share",
+        headers=listener_headers,
+        data={"title": "Found Song", "description": "A listener recommendation", "artist_id": artist["user"]["id"], "source_url": "https://music.example/found-song"},
+        files={"audio": ("found-song.mp3", b"fake mp3 bytes", "audio/mpeg")},
+    )
+    assert submitted.status_code == 201, submitted.text
+    song = submitted.json()["song"]
+    song_id = song["id"]
+    assert song["status"] == "pending"
+    assert song["artist_id"] == artist["user"]["id"]
+    assert song["source_url"] == "https://music.example/found-song"
+    assert song["shared_by"]["handle"] == listener["user"]["handle"]
+    assert song_id in [item["id"] for item in client.get("/api/v1/shared/songs", headers=listener_headers).json()["items"]]
+    assert song_id not in [item["id"] for item in client.get("/api/v1/songs").json()["items"]]
+
+    artist_pending = client.get("/api/v1/songs/pending-shares", headers=auth(artist["access_token"]))
+    assert [item["id"] for item in artist_pending.json()["items"]] == [song_id]
+    assert client.get("/api/v1/songs/pending-shares", headers=auth(other_artist["access_token"])).json()["items"] == []
+    denied = client.post(f"/api/v1/songs/{song_id}/share-decision", headers=auth(other_artist["access_token"]), json={"action": "approve"})
+    assert denied.status_code == 403
+
+    approved = client.post(f"/api/v1/songs/{song_id}/share-decision", headers=auth(artist["access_token"]), json={"action": "approve"})
+    assert approved.status_code == 200
+    assert approved.json()["song"]["status"] == "published"
+    public_song = client.get(f"/api/v1/songs/{song_id}").json()["song"]
+    assert public_song["shared_by"]["display_name"] == listener["user"]["display_name"]
+
+    waiting = client.post(
+        "/api/v1/songs/share",
+        headers=listener_headers,
+        data={"title": "Second Song", "artist_id": other_artist["user"]["id"], "source_url": "https://music.example/second-song"},
+        files={"audio": ("second-song.mp3", b"fake mp3 bytes", "audio/mpeg")},
+    )
+    assert waiting.status_code == 201, waiting.text
+    waiting_id = waiting.json()["song"]["id"]
+
+    monkeypatch.setattr(settings, "admin_emails", "share-moderator@example.com")
+    moderator = register(client, "share-moderator@example.com", "share_moderator")
+    moderator_pending = client.get("/api/v1/songs/pending-shares", headers=auth(moderator["access_token"]))
+    assert waiting_id in [item["id"] for item in moderator_pending.json()["items"]]
+    rejected = client.post(f"/api/v1/songs/{waiting_id}/share-decision", headers=auth(moderator["access_token"]), json={"action": "reject"})
+    assert rejected.status_code == 200
+    assert rejected.json()["action"] == "reject"
+
+    withdrawable = client.post(
+        "/api/v1/songs/share",
+        headers=listener_headers,
+        data={"title": "Third Song", "artist_id": artist["user"]["id"], "source_url": "https://music.example/third-song"},
+        files={"audio": ("third-song.mp3", b"fake mp3 bytes", "audio/mpeg")},
+    ).json()["song"]["id"]
+    assert client.delete(f"/api/v1/shared/songs/{withdrawable}", headers=auth(other_artist["access_token"])).status_code == 404
+    assert client.delete(f"/api/v1/shared/songs/{withdrawable}", headers=listener_headers).status_code == 200
+    assert withdrawable not in [item["id"] for item in client.get("/api/v1/songs/pending-shares", headers=auth(artist["access_token"])).json()["items"]]
+
+
 def test_health_check(client):
     assert client.get("/health").json()["status"] == "ok"
 

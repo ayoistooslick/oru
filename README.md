@@ -8,8 +8,9 @@ Live at [oru.freebuff.app](https://oru.freebuff.app).
 ## What the app does
 
 - **Listeners** can sign up, browse, search, like songs, build playlists, follow artists and play
-  music. Songs keep playing on the lock screen, and the app can be installed on a phone or desktop
-  and used offline.
+  music. Playback controls are available in the sticky in-app player and, on supported devices,
+  in the lock-screen or notification media controls. The installed app shell opens offline, while
+  account data, search and streamed audio still need a connection.
 - **Artists** get a studio page where they upload audio and cover art, save drafts, publish songs
   and releases, and see plays, likes and follows.
 - **Moderators** see reports from listeners and mark them resolved or dismissed.
@@ -122,30 +123,23 @@ To remove the browser address bar from the installed app, host the asset links f
 `bubblewrap fingerprint generateAssetLinks` at
 `https://oru.freebuff.app/.well-known/assetlinks.json`.
 
-## Plan for the next update
+## Recent listener update
 
-In progress right now:
+- Listeners can submit an ORU artist's song for review, track and withdraw pending submissions,
+  and see who shared an approved song. The credited artist or a moderator can approve or reject it.
+- The player has a seek bar, shuffle, repeat-one and repeat-queue controls. Its mini-player remains
+  available across signed-in pages, and supported browsers expose playback through system media
+  controls.
+- The expanded player actions menu opens and closes from its toggle, the explicit hide control,
+  Escape, or an outside click.
+- Liked songs have playlist artwork, play-all and shuffle actions, and a complete queue/list view.
+- Search supports recent terms and result scopes. Artist names on track rows link to their profile.
+- Mobile captions and touch targets are larger. The app explains offline limits and provides a
+  first-launch setup checklist for notification permission and persistent browser storage.
 
-- **Share a song without being the musician.** A listener sends in a song by an artist who is on
-  ORU. The artist keeps the credit, the person who shared it is recorded on the song page, and
-  nothing goes public until the artist or a moderator approves it. The API for this is written:
-  what is left is the pages for it, the share form, the approve and reject screen, and the
-  "shared by" line on the song page.
-
-Then planned, in no strong order:
-
-- **Better music controls.** Drag the player to any minute in the song with a proper seek bar,
-  plus repeat one song and repeat the whole album.
-- **Sticky player notification.** While a song plays, keep a small bar on screen so you can pause,
-  skip or change the song from any page without scrolling back to the player.
-- **Fix the hide button on the song page.** On the page where you like and share a song, the
-  dropdown button that should hide the menu does nothing. It needs to open and close properly.
-- **Liked songs as a playlist.** Make the liked songs page behave like a real playlist the way
-  Spotify does: cover art up top, a play all button, and a queue you can shuffle.
-- **Easier reading on phones.** Lower the site DPI on mobile so text and buttons are bigger,
-  taps are easier and there is more usable space on the screen.
-- **Listener upgrades.** Smaller quality-of-life work for people who only listen: better search,
-  clearer offline behaviour, and quicker ways to get from one song to more by the same artist.
+The browser must wait for a user action before asking for notification permission; storage
+persistence is requested through the browser storage API. A PWA/TWA cannot request Android's
+default music-player role. Android file handling is declared separately in the TWA configuration.
 
 ## Documentation
 

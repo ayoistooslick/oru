@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { ChevronDown, Heart, Loader2, Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronDown, Heart, Loader2, MoreHorizontal, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2, X } from "lucide-react";
 import gsap from "gsap";
 import { Link } from "react-router-dom";
 import { mediaUrl } from "../lib/api";
@@ -25,18 +25,36 @@ export function NowPlaying() {
     setExpanded,
     volume,
     setVolume,
+    shuffle,
+    repeatMode,
+    toggleShuffle,
+    cycleRepeat,
   } = usePlayer();
   const { likedIds, toggleLike } = useLibrary();
   const toasts = useToasts();
   const panel = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape") {
+        if (actionsOpen) setActionsOpen(false);
+        else setExpanded(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setExpanded]);
+  }, [actionsOpen, setExpanded]);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setActionsOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [actionsOpen]);
 
   useLayoutEffect(() => {
     const element = panel.current;
@@ -79,7 +97,8 @@ export function NowPlaying() {
             aria-label="Close the player"
           >
             <ChevronDown className="h-6 w-6" />
-          </button>            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">Now playing</span>
+          </button>
+          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">Now playing</span>
           <button
             type="button"
             onClick={() =>
@@ -95,11 +114,37 @@ export function NowPlaying() {
           >
             <Heart className="h-5 w-5 text-flame" fill={liked ? "currentColor" : "none"} />
           </button>
-          <div className="flex items-center gap-2">
-            <ShareButton
-              title={`${current.title} by ${current.artist_name}`}
-              text={`Listen to ${current.title} by ${current.artist_name} on ORU`}
-            />
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setActionsOpen((open) => !open)}
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/10 transition press hover:bg-white/20"
+              aria-label={actionsOpen ? "Hide track menu" : "Show track menu"}
+              aria-expanded={actionsOpen}
+              aria-controls="now-playing-actions"
+            >
+              {actionsOpen ? <X className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
+            </button>
+            {actionsOpen ? (
+              <div id="now-playing-actions" role="menu" className="absolute right-0 top-12 z-30 w-52 rounded-xl border border-white/10 bg-[#282828] p-2 shadow-xl">
+                <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-[14px] font-semibold">
+                  <span>Share this song</span>
+                  <ShareButton
+                    title={`${current.title} by ${current.artist_name}`}
+                    text={`Listen to ${current.title} by ${current.artist_name} on ORU`}
+                    className="grid h-9 w-9 place-items-center rounded-full text-white transition hover:bg-white/10"
+                  />
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => setActionsOpen(false)}
+                  className="w-full rounded-lg px-3 py-2 text-left text-[13.5px] font-semibold text-ink-soft transition hover:bg-white/10 hover:text-white"
+                >
+                  Hide menu
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -126,6 +171,9 @@ export function NowPlaying() {
               >
                 {current.artist_name}
               </Link>
+              {current.status === "published" && current.shared_by ? (
+                <p className="mt-1 text-[13px] text-white/55">Shared by {current.shared_by.display_name}</p>
+              ) : null}
             </div>
             {isLoading ? <Loader2 className="mt-2 h-5 w-5 shrink-0 animate-spin text-white/60" /> : null}
           </div>
@@ -134,7 +182,16 @@ export function NowPlaying() {
             <Scrubber position={position} duration={duration} onSeek={seek} />
           </div>
 
-          <div data-np-controls className="mt-6 flex items-center justify-center gap-7">
+          <div data-np-controls className="mt-6 flex items-center justify-center gap-1 sm:gap-5">
+            <button
+              type="button"
+              onClick={toggleShuffle}
+              className={`grid h-10 w-10 place-items-center rounded-full transition hover:bg-white/10 ${shuffle ? "text-[#1ed760]" : "text-white/55"}`}
+              aria-label={shuffle ? "Turn shuffle off" : "Turn shuffle on"}
+              aria-pressed={shuffle}
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={previous}
@@ -162,6 +219,15 @@ export function NowPlaying() {
               aria-label="Next track"
             >
               <SkipForward className="h-6 w-6" fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              onClick={cycleRepeat}
+              className={`relative grid h-10 w-10 place-items-center rounded-full transition hover:bg-white/10 ${repeatMode !== "off" ? "text-[#1ed760]" : "text-white/55"}`}
+              aria-label={`Repeat ${repeatMode}; change mode`}
+            >
+              <Repeat className="h-4 w-4" />
+              {repeatMode === "one" ? <span className="absolute right-1 top-0 text-[9px] font-black">1</span> : null}
             </button>
           </div>
 
