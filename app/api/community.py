@@ -65,6 +65,48 @@ def create_playlist(payload: PlaylistCreate, user: User = Depends(current_user),
     return {"playlist": {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public, "owner_id": user.id, "song_ids": []}}
 
 
+@router.get("/playlists")
+def list_own_playlists(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    playlists = db.scalars(select(Playlist).where(Playlist.owner_id == user.id).order_by(Playlist.created_at.desc())).all()
+    items = []
+    for playlist in playlists:
+        count = db.scalar(select(func.count(PlaylistSong.song_id)).where(PlaylistSong.playlist_id == playlist.id)) or 0
+        items.append({"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public,
+                      "owner_id": playlist.owner_id, "song_count": count, "created_at": playlist.created_at})
+    return {"items": items, "limit": len(items), "offset": 0}
+
+
+@router.get("/listeners/me/likes")
+def liked_songs(limit: int = 50, offset: int = 0, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    safe_limit = min(max(limit, 1), 50)
+    query = (
+        select(Song).join(Like, Like.song_id == Song.id)
+        .where(Like.user_id == user.id, Song.status == "published")
+        .order_by(Like.created_at.desc())
+        .offset(max(offset, 0)).limit(safe_limit)
+    )
+    songs = db.scalars(query).unique().all()
+    return {"items": [song_data(song, db, user) for song in songs], "limit": safe_limit, "offset": max(offset, 0),
+            "liked_song_ids": db.scalars(select(Like.song_id).where(Like.user_id == user.id)).all()}
+
+
+@router.get("/listeners/me/following")
+def followed_artists(limit: int = 50, offset: int = 0, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    safe_limit = min(max(limit, 1), 50)
+    query = (
+        select(User).join(Follow, Follow.artist_id == User.id)
+        .where(Follow.listener_id == user.id, User.is_active.is_(True))
+        .order_by(Follow.created_at.desc())
+        .offset(max(offset, 0)).limit(safe_limit)
+    )
+    artists = db.scalars(query).all()
+    return {"items": [{"user_id": artist.id, "handle": artist.handle,
+                       "stage_name": artist.artist_profile.stage_name if artist.artist_profile else artist.display_name,
+                       "bio": artist.bio} for artist in artists],
+            "limit": safe_limit, "offset": max(offset, 0),
+            "followed_artist_ids": db.scalars(select(Follow.artist_id).where(Follow.listener_id == user.id)).all()}
+
+
 @router.get("/playlists/{playlist_id}")
 def get_playlist(playlist_id: int, user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     playlist = db.get(Playlist, playlist_id)
@@ -75,7 +117,7 @@ def get_playlist(playlist_id: int, user: User | None = Depends(optional_current_
     for entry in entries:
         song = db.get(Song, entry.song_id)
         if song and song.status == "published":
-            songs.append({"position": entry.position, **song_data(song, db)})
+            songs.append({"position": entry.position, **song_data(song, db, user)})
     return {"playlist": {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public, "owner_id": playlist.owner_id, "songs": songs}}
 
 
@@ -123,6 +165,15 @@ def create_post(payload: ArtistPostCreate, user: User = Depends(current_user), d
     db.commit()
     db.refresh(post)
     return {"post": {"id": post.id, "artist_id": user.id, "body": post.body, "created_at": post.created_at}}
+
+
+@router.get("/artists/me/posts")
+def own_posts(limit: int = 50, offset: int = 0, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if user.artist_profile is None:
+        raise HTTPException(status_code=403, detail={"code": "artist_only", "message": "Create an artist profile first"})
+    posts = db.scalars(select(ArtistPost).where(ArtistPost.artist_id == user.id).order_by(ArtistPost.created_at.desc()).offset(max(offset, 0)).limit(min(max(limit, 1), 50))).all()
+    return {"items": [{"id": post.id, "artist_id": post.artist_id, "body": post.body, "is_hidden": post.is_hidden, "created_at": post.created_at} for post in posts],
+            "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
 
 
 @router.get("/artists/{artist_id}/posts")

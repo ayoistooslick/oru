@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import artist_user, current_user, optional_current_user
-from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, Release, ReleaseSong, Song, SongGenre, User
+from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongGenre, User
 from app.schemas import ListeningCreate, ReleaseCreate
 from app.services.discovery import discover_songs
 from app.storage import UploadTooLarge, storage
@@ -19,14 +19,22 @@ AUDIO_TYPES = {".mp3": {"audio/mpeg", "audio/mp3", "application/octet-stream"}, 
 IMAGE_TYPES = {".jpg": {"image/jpeg"}, ".jpeg": {"image/jpeg"}, ".png": {"image/png"}, ".webp": {"image/webp"}}
 
 
-def song_data(song: Song, db: Session) -> dict:
+def can_access(song: Song, viewer: User | None) -> bool:
+    """Published tracks are public; drafts stay with their owner and moderators."""
+    if song.status == "published":
+        return True
+    return viewer is not None and (viewer.id == song.artist_id or viewer.role == "admin")
+
+
+def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
     genres = db.scalars(select(Genre.name).join(SongGenre).where(SongGenre.song_id == song.id).order_by(Genre.name)).all()
+    readable = can_access(song, viewer)
     return {"id": song.id, "artist_id": song.artist_id, "artist_handle": song.artist.handle,
             "artist_name": song.artist.artist_profile.stage_name if song.artist.artist_profile else song.artist.display_name,
             "title": song.title, "description": song.description, "genres": genres, "status": song.status,
             "created_at": song.created_at, "published_at": song.published_at,
-            "audio_url": f"/api/v1/songs/{song.id}/audio" if song.status == "published" else None,
-            "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and song.status == "published" else None}
+            "audio_url": f"/api/v1/songs/{song.id}/audio" if readable else None,
+            "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and readable else None}
 
 
 def visible_song(song_id: int, db: Session, viewer: User | None = None) -> Song:
@@ -57,11 +65,25 @@ def discover(genre: str | None = None, limit: int = 20, offset: int = 0, user: U
     # Anonymous browsing is public. Personalized following boosts are currently optional.
     safe_limit = min(max(limit, 1), 50)
     songs = discover_songs(db, user.id if user else None, genre, safe_limit, max(offset, 0))
-    return {"items": [song_data(song, db) for song in songs], "limit": safe_limit, "offset": max(offset, 0), "ranking": "explainable-v1"}
+    return {"items": [song_data(song, db, user) for song in songs], "limit": safe_limit, "offset": max(offset, 0), "ranking": "explainable-v1"}
+
+
+@router.get("/genres")
+def list_genres(db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(Genre.name, func.count(SongGenre.song_id))
+        .join(SongGenre, SongGenre.genre_id == Genre.id)
+        .join(Song, Song.id == SongGenre.song_id)
+        .where(Song.status == "published")
+        .group_by(Genre.name)
+        .order_by(func.count(SongGenre.song_id).desc(), Genre.name)
+    ).all()
+    return {"items": [{"name": name, "song_count": count} for name, count in rows]}
 
 
 @router.get("/songs")
-def list_songs(q: str | None = None, genre: str | None = None, limit: int = 20, offset: int = 0, db: Session = Depends(get_db)):
+def list_songs(q: str | None = None, genre: str | None = None, limit: int = 20, offset: int = 0,
+               user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     limit = min(max(limit, 1), 50)
     query = select(Song).where(Song.status == "published").order_by(Song.published_at.desc(), Song.id.desc())
     if q:
@@ -72,7 +94,7 @@ def list_songs(q: str | None = None, genre: str | None = None, limit: int = 20, 
     if genre:
         query = query.join(SongGenre, SongGenre.song_id == Song.id).join(Genre, Genre.id == SongGenre.genre_id).where(func.lower(Genre.name) == genre.strip().lower())
     songs = db.scalars(query.offset(max(offset, 0)).limit(limit)).unique().all()
-    return {"items": [song_data(song, db) for song in songs], "limit": limit, "offset": max(offset, 0)}
+    return {"items": [song_data(song, db, user) for song in songs], "limit": limit, "offset": max(offset, 0)}
 
 
 @router.post("/artists/me/songs", status_code=201)
@@ -96,7 +118,7 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
             db.add(SongGenre(song=song, genre=genre))
         db.commit()
         db.refresh(song)
-        return {"song": song_data(song, db)}
+        return {"song": song_data(song, db, artist)}
     except Exception:
         db.rollback()
         storage.delete(audio_key)
@@ -106,8 +128,8 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
 
 
 @router.get("/songs/{song_id}")
-def get_song(song_id: int, db: Session = Depends(get_db)):
-    return {"song": song_data(visible_song(song_id, db), db)}
+def get_song(song_id: int, user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+    return {"song": song_data(visible_song(song_id, db, user), db, user)}
 
 
 @router.post("/artists/me/songs/{song_id}/publish")
@@ -119,7 +141,7 @@ def publish_song(song_id: int, artist: User = Depends(artist_user), db: Session 
     song.published_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(song)
-    return {"song": song_data(song, db)}
+    return {"song": song_data(song, db, artist)}
 
 
 @router.post("/artists/me/songs/{song_id}/unpublish")
@@ -130,7 +152,33 @@ def unpublish_song(song_id: int, artist: User = Depends(artist_user), db: Sessio
     song.status = "draft"
     song.published_at = None
     db.commit()
-    return {"song": song_data(song, db)}
+    return {"song": song_data(song, db, artist)}
+
+
+@router.get("/artists/me/songs")
+def own_songs(status: str | None = None, limit: int = 50, offset: int = 0,
+              artist: User = Depends(artist_user), db: Session = Depends(get_db)):
+    """The signed-in artist's own catalogue, drafts included."""
+    if status is not None and status not in {"draft", "published", "hidden"}:
+        raise HTTPException(status_code=422, detail={"code": "invalid_status", "message": "Status must be draft, published or hidden"})
+    query = select(Song).where(Song.artist_id == artist.id).order_by(Song.created_at.desc(), Song.id.desc())
+    if status:
+        query = query.where(Song.status == status)
+    songs = db.scalars(query.offset(max(offset, 0)).limit(min(max(limit, 1), 50))).all()
+    return {"items": [song_data(song, db, artist) for song in songs], "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
+
+
+@router.delete("/artists/me/songs/{song_id}")
+def delete_song(song_id: int, artist: User = Depends(artist_user), db: Session = Depends(get_db)):
+    song = db.get(Song, song_id)
+    if song is None or song.artist_id != artist.id:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Song not found"})
+    db.delete(song)
+    db.commit()
+    storage.delete(song.audio_key)
+    if song.cover_key:
+        storage.delete(song.cover_key)
+    return {"song_id": song_id, "deleted": True}
 
 
 @router.get("/songs/{song_id}/audio")
@@ -201,6 +249,35 @@ def publish_release(release_id: int, artist: User = Depends(artist_user), db: Se
     return {"release": {"id": release.id, "title": release.title, "kind": release.kind, "status": release.status, "song_ids": song_ids}}
 
 
+@router.get("/artists/me/releases")
+def own_releases(limit: int = 50, offset: int = 0,
+                 artist: User = Depends(artist_user), db: Session = Depends(get_db)):
+    releases = db.scalars(
+        select(Release).where(Release.artist_id == artist.id).order_by(Release.created_at.desc())
+        .offset(max(offset, 0)).limit(min(max(limit, 1), 50))
+    ).all()
+    items = []
+    for release in releases:
+        song_ids = db.scalars(select(ReleaseSong.song_id).where(ReleaseSong.release_id == release.id).order_by(ReleaseSong.position)).all()
+        items.append({"id": release.id, "artist_id": release.artist_id, "title": release.title, "kind": release.kind,
+                      "status": release.status, "published_at": release.published_at, "song_ids": song_ids})
+    return {"items": items, "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
+
+
+@router.get("/artists/{artist_id}/songs")
+def artist_songs(artist_id: int, limit: int = 50, offset: int = 0,
+                 user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+    artist = db.get(User, artist_id)
+    if artist is None or artist.artist_profile is None or not artist.is_active:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Artist not found"})
+    songs = db.scalars(
+        select(Song).where(Song.artist_id == artist_id, Song.status == "published")
+        .order_by(Song.published_at.desc(), Song.id.desc())
+        .offset(max(offset, 0)).limit(min(max(limit, 1), 50))
+    ).all()
+    return {"items": [song_data(song, db, user) for song in songs], "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
+
+
 @router.get("/artists/{artist_id}/releases")
 def list_artist_releases(artist_id: int, limit: int = 20, offset: int = 0, db: Session = Depends(get_db)):
     artist = db.get(User, artist_id)
@@ -215,12 +292,12 @@ def list_artist_releases(artist_id: int, limit: int = 20, offset: int = 0, db: S
 
 
 @router.get("/releases/{release_id}")
-def get_release(release_id: int, db: Session = Depends(get_db)):
+def get_release(release_id: int, user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     release = db.get(Release, release_id)
     if release is None or release.status != "published":
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Release not found"})
     song_ids = db.scalars(select(ReleaseSong.song_id).where(ReleaseSong.release_id == release.id).order_by(ReleaseSong.position)).all()
-    songs = [song_data(song, db) for song_id in song_ids if (song := db.get(Song, song_id)) is not None and song.status == "published"]
+    songs = [song_data(song, db, user) for song_id in song_ids if (song := db.get(Song, song_id)) is not None and song.status == "published"]
     return {"release": {"id": release.id, "artist_id": release.artist_id, "title": release.title, "kind": release.kind, "published_at": release.published_at, "songs": songs}}
 
 
@@ -228,7 +305,7 @@ def get_release(release_id: int, db: Session = Depends(get_db)):
 def following_feed(limit: int = 20, offset: int = 0, user: User = Depends(current_user), db: Session = Depends(get_db)):
     query = select(Song).join(Follow, Follow.artist_id == Song.artist_id).where(Follow.listener_id == user.id, Song.status == "published").order_by(Song.published_at.desc(), Song.id.desc())
     songs = db.scalars(query.offset(max(offset, 0)).limit(min(max(limit, 1), 50))).all()
-    return {"items": [song_data(song, db) for song in songs], "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
+    return {"items": [song_data(song, db, user) for song in songs], "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
 
 
 @router.get("/artists/me/stats")

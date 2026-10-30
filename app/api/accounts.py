@@ -58,11 +58,11 @@ def update_listener_profile(payload: ProfileUpdate, user: User = Depends(current
 
 @router.post("/artists/me", status_code=201)
 def create_artist_profile(payload: ArtistProfileCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if user.role not in ("listener", "artist"):
-        raise HTTPException(status_code=403, detail={"code": "invalid_role", "message": "This account cannot create an artist profile"})
     if user.artist_profile is not None:
         raise HTTPException(status_code=409, detail={"code": "artist_profile_exists", "message": "This account already has an artist profile"})
-    user.role = "artist"
+    # A moderator who starts publishing keeps their moderation access.
+    if user.role == "listener":
+        user.role = "artist"
     profile = ArtistProfile(user_id=user.id, stage_name=payload.stage_name.strip())
     db.add(profile)
     db.commit()

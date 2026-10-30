@@ -24,7 +24,7 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bear
 
 
 def artist_user(user: User = Depends(current_user)) -> User:
-    if user.role != "artist" or user.artist_profile is None:
+    if user.role not in ("artist", "admin") or user.artist_profile is None:
         raise HTTPException(status_code=403, detail={"code": "artist_only", "message": "Create an artist profile first"})
     return user
 

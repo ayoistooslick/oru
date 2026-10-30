@@ -114,5 +114,49 @@ def test_releases_following_feed_and_private_playlist_permissions(client):
     assert client.patch(f"/api/v1/playlists/{playlist_id}", headers=auth(artist["access_token"]), json={"title": "Not yours"}).status_code == 404
 
 
+def test_artist_workspace_and_library_endpoints(client):
+    artist = make_artist(client)
+    token = artist["access_token"]
+    song_id = upload_track(client, token, title="Workspace track")
+    client.post(f"/api/v1/artists/me/songs/{song_id}/publish", headers=auth(token))
+
+    # /artists/me/... routes must not be swallowed by /artists/{artist_id}/...
+    own_songs = client.get("/api/v1/artists/me/songs", headers=auth(token))
+    assert own_songs.status_code == 200, own_songs.text
+    assert own_songs.json()["items"][0]["audio_url"] is not None
+    assert client.get("/api/v1/artists/me/releases", headers=auth(token)).status_code == 200
+    assert client.get("/api/v1/artists/me/posts", headers=auth(token)).status_code == 200
+
+    public_tracks = client.get(f"/api/v1/artists/{artist['user']['id']}/songs")
+    assert [item["id"] for item in public_tracks.json()["items"]] == [song_id]
+    genres = client.get("/api/v1/genres")
+    assert "ambient" in [item["name"] for item in genres.json()["items"]]
+
+    listener = register(client, "library@example.com", "library_listener")
+    list_token = listener["access_token"]
+    client.post(f"/api/v1/songs/{song_id}/likes", headers=auth(list_token))
+    client.post(f"/api/v1/artists/{artist['user']['id']}/follow", headers=auth(list_token))
+    client.post("/api/v1/playlists", headers=auth(list_token), json={"title": "Night drives", "is_public": True})
+
+    likes = client.get("/api/v1/listeners/me/likes", headers=auth(list_token))
+    assert likes.status_code == 200
+    assert song_id in likes.json()["liked_song_ids"]
+    following = client.get("/api/v1/listeners/me/following", headers=auth(list_token))
+    assert artist["user"]["id"] in following.json()["followed_artist_ids"]
+    playlists = client.get("/api/v1/playlists", headers=auth(list_token))
+    assert playlists.json()["items"][0]["song_count"] == 0
+
+    # The owner keeps streaming access to a draft they have not published yet.
+    draft = upload_track(client, token, title="Untouched draft")
+    draft_view = client.get(f"/api/v1/songs/{draft}", headers=auth(token))
+    assert draft_view.status_code == 200
+    assert draft_view.json()["song"]["audio_url"] is not None
+    assert client.get(f"/api/v1/songs/{draft}").status_code == 404
+
+    removed = client.delete(f"/api/v1/artists/me/songs/{draft}", headers=auth(token))
+    assert removed.status_code == 200
+    assert client.get(f"/api/v1/songs/{draft}", headers=auth(token)).status_code == 404
+
+
 def test_health_check(client):
     assert client.get("/health").json()["status"] == "ok"

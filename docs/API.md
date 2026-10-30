@@ -36,17 +36,24 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
 
 Response includes `user`, `access_token`, and `token_type`. Keep the token private and send it as a bearer token on protected requests.
 
+Accounts listed in `ADMIN_EMAILS` register as moderators. A moderator can open an artist profile like anyone else and publish music; opening one does not take the moderation role away.
+
 ## Music and releases
 
 | Method | Path | Access | Purpose |
 | --- | --- | --- | --- |
 | GET | `/songs` | Public | Browse/search published tracks with `q`, `genre`, `limit`, `offset` |
+| GET | `/genres` | Public | Genres carried by published tracks, most used first |
 | GET | `/songs/{song_id}` | Public for published songs | Track details |
 | GET | `/songs/{song_id}/audio` | Public for published songs; owner/moderator for drafts | Stream original uploaded file |
 | GET | `/songs/{song_id}/cover` | Public for published songs; owner/moderator for drafts | Read uploaded cover artwork |
 | POST | `/artists/me/songs` | Artist | Upload audio and optional cover as multipart form data; creates a draft |
 | POST | `/artists/me/songs/{song_id}/publish` | Owning Artist | Publish a draft |
 | POST | `/artists/me/songs/{song_id}/unpublish` | Owning Artist | Return a track to draft |
+| GET | `/artists/me/songs` | Artist | Own catalogue, drafts included; optional `status=draft\|published\|hidden` |
+| DELETE | `/artists/me/songs/{song_id}` | Owning Artist | Delete the track and its stored files |
+| GET | `/artists/{artist_id}/songs` | Public | Published tracks by one artist |
+| GET | `/artists/me/releases` | Artist | Own releases, drafts included |
 | POST | `/artists/me/releases` | Artist | Create draft single, EP, or album from owned tracks |
 | POST | `/artists/me/releases/{release_id}/publish` | Owning Artist | Publish the release and its tracks |
 | GET | `/artists/{artist_id}/releases` | Public | List published releases by an artist |
@@ -95,10 +102,14 @@ The response says whether the event was stored and counted for discovery. The cl
 | POST/DELETE | `/artists/{artist_id}/follow` | Signed in | Follow/unfollow an artist |
 | POST/DELETE | `/songs/{song_id}/likes` | Signed in | Like/unlike a published track |
 | POST | `/playlists` | Signed in | Create playlist |
+| GET | `/playlists` | Signed in | Your playlists |
+| GET | `/listeners/me/likes` | Signed in | Tracks you liked |
+| GET | `/listeners/me/following` | Signed in | Artists you follow |
 | GET | `/playlists/{playlist_id}` | Public for public lists; owner for private lists | Get playlist and available tracks |
 | PATCH | `/playlists/{playlist_id}` | Owner | Edit title or visibility |
 | POST/DELETE | `/playlists/{playlist_id}/songs/{song_id}` | Owner | Add/remove a published track |
 | POST | `/artists/me/posts` | Artist | Publish a text update |
+| GET | `/artists/me/posts` | Artist | Your own posts, including ones a moderator hid |
 | GET | `/artists/{artist_id}/posts` | Public | Read visible posts |
 
 The following feed currently lists new tracks, not a personalized notification stream. It does not include release artwork or delivery notifications.
