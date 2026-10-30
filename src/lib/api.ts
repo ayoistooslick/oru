@@ -5,6 +5,18 @@ const rawBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/a
 export const API_BASE = rawBase.replace(/\/+$/, "");
 export const API_ORIGIN = /^https?:\/\//.test(API_BASE) ? new URL(API_BASE).origin : "";
 
+// Production publishes one function route and serves everything else as files,
+// so a request has to carry the path it wants: `/api?__path=/api/v1/auth/login`.
+// The API reads `__path` back before routing, which is why the same shape works
+// against the dev server and against a host that serves the build itself.
+const PATH_PARAM = "__path";
+export const API_ENTRY = API_BASE.endsWith("/v1") ? API_BASE.slice(0, -3) : API_BASE;
+
+/** Turn a full API path (`/api/v1/songs/1/audio`) into a request URL. */
+function endpoint(fullPath: string): string {
+  return `${API_ENTRY}?${PATH_PARAM}=${encodeURIComponent(fullPath)}`;
+}
+
 const TOKEN_KEY = "oru.token";
 
 export function getToken(): string | null {
@@ -38,10 +50,12 @@ export class ApiError extends Error {
 /** Media paths come back relative to the API host; resolve them for the page origin. */
 export function mediaUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
-  if (/^https?:\/\//.test(path)) return path;
-  if (!API_ORIGIN) return path;
-  if (path.startsWith(API_ORIGIN)) return path;
-  return `${API_ORIGIN}${path}`;
+  if (/^https?:\/\//.test(path)) {
+    // The server can build absolute links; they still belong on the entry route.
+    if (!API_ORIGIN || !path.startsWith(API_ORIGIN)) return path;
+    path = path.slice(API_ORIGIN.length);
+  }
+  return endpoint(path);
 }
 
 interface RequestOptions {
@@ -80,7 +94,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     payload = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, { method, headers, body: payload, signal });
+  const response = await fetch(endpoint(`${API_BASE}${path}`), { method, headers, body: payload, signal });
   if (!response.ok) throw await toError(response);
   if (response.status === 204) return undefined as T;
   const text = await response.text();
@@ -95,7 +109,7 @@ export function upload<T>(
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_BASE}${path}`);
+    xhr.open("POST", endpoint(`${API_BASE}${path}`));
     const token = getToken();
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 

@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from time import monotonic
+from urllib.parse import unquote_to_bytes
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -9,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.api import accounts, community, moderation, music
 from app.social import render_document, request_origin
@@ -43,6 +44,46 @@ class SimpleRateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(status_code=429, content={"error": {"code": "rate_limited", "message": "Too many requests. Try again shortly."}})
             bucket.append(now)
         return await call_next(request)
+
+
+class HostPathMiddleware:
+    """Put the real API path back when the host can only route one path.
+
+    The static host publishes a single function route (`/api`) and serves every
+    other path as a file, so the frontend carries the path it wants in the
+    `__path` query parameter. Restoring it here, before routing, means the dev
+    server, a single process serving the build and that function all behave the
+    same way: they all end up in this application.
+    """
+
+    PARAM = b"__path="
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        await self.app(self.rewrite(scope), receive, send)
+
+    def rewrite(self, scope):
+        if scope.get("type") != "http":
+            return scope
+        query = scope.get("query_string", b"")
+        if self.PARAM not in query:
+            return scope
+        value = query.split(self.PARAM, 1)[1].split(b"&", 1)[0]
+        # The frontend encodes the whole path with encodeURIComponent, so decode
+        # first and only then split the query string off. Decoding afterwards
+        # would leave `limit%3D5`, which is a key, not a parameter.
+        target = unquote_to_bytes(value).decode("utf-8", "replace")
+        path, _, extra = target.partition("?")
+        if not path.startswith("/") or ".." in path:
+            return scope
+        remaining = [part for part in query.split(b"&") if part and not part.startswith(self.PARAM)]
+        rewritten = dict(scope)
+        rewritten["path"] = path
+        rewritten["raw_path"] = path.encode("utf-8", "replace")
+        rewritten["query_string"] = b"&".join(([extra.encode()] if extra else []) + remaining)
+        return rewritten
 
 
 def validation_error_handler(request: Request, exc: RequestValidationError):
@@ -100,6 +141,19 @@ def ensure_schema() -> None:
     # database. On a fresh data directory this only creates the current schema so
     # the API can start wherever it is deployed.
     Base.metadata.create_all(bind=engine)
+    # create_all never alters existing tables, so columns added to a live database
+    # are attached here. Each statement is guarded, which keeps this idempotent on
+    # both SQLite and Postgres.
+    existing = {column["name"] for column in inspect(engine).get_columns("songs")}
+    additions = {
+        "shared_by_user_id": "ALTER TABLE songs ADD COLUMN shared_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
+        "source_url": "ALTER TABLE songs ADD COLUMN source_url VARCHAR(500)",
+    }
+    with engine.begin() as conn:
+        for name, statement in additions.items():
+            if name not in existing:
+                conn.execute(text(statement))
+                logger.info("added songs.%s", name)
 
 
 @asynccontextmanager
@@ -137,6 +191,9 @@ def build_app(api: FastAPI) -> FastAPI:
     root.add_exception_handler(HTTPException, http_error_handler)
     root.add_exception_handler(StarletteHTTPException, http_error_handler)
     root.add_exception_handler(Exception, unexpected_error_handler)
+    # Added last, so it runs first: the rate limiter and the handlers below must
+    # already see the path the client actually asked for.
+    root.add_middleware(HostPathMiddleware)
 
     @root.get("/health", tags=["health"])
     def health():

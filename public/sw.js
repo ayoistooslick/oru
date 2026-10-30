@@ -93,8 +93,9 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // Account data must never be served from a cache.
-  if (url.pathname.startsWith("/api/")) return;
+  // Account data must never be served from a cache. API calls travel as
+  // `/api?__path=...`, so the bare path has to be excluded too.
+  if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirstDocument(request));

@@ -22,14 +22,15 @@ Live at [oru.freebuff.app](https://oru.freebuff.app).
   `DATABASE_URL`.
 - React 19, TypeScript, Vite and Tailwind CSS 4 for the web app. GSAP for animation, lucide-react
   for icons.
-- SQLite and local files for media in development. Uploads are streamed as-is: there is no
-  transcoding, no CDN and no object storage yet.
+- SQLite and local files for media in development. Production runs on PostgreSQL and
+  S3-compatible object storage. Uploads are streamed as-is: there is no transcoding and no CDN.
 
 ## Where things live
 
 ```
 app/                  FastAPI app. Routes are in app/api/, models in app/models.py
-api/index.py          production entrypoint used by the host
+api/index.py          production entrypoint used by the host. The host only routes /api, so
+                      calls travel as /api?__path=/api/v1/... and app/main.py puts the path back
 src/                  React app: pages in src/pages, state in src/state
 public/               web manifest, service worker, icons, share images
 docs/API.md           every route with example requests
@@ -121,6 +122,31 @@ To remove the browser address bar from the installed app, host the asset links f
 `bubblewrap fingerprint generateAssetLinks` at
 `https://oru.freebuff.app/.well-known/assetlinks.json`.
 
+## Plan for the next update
+
+In progress right now:
+
+- **Share a song without being the musician.** A listener sends in a song by an artist who is on
+  ORU. The artist keeps the credit, the person who shared it is recorded on the song page, and
+  nothing goes public until the artist or a moderator approves it. The API for this is written:
+  what is left is the pages for it, the share form, the approve and reject screen, and the
+  "shared by" line on the song page.
+
+Then planned, in no strong order:
+
+- **Better music controls.** Drag the player to any minute in the song with a proper seek bar,
+  plus repeat one song and repeat the whole album.
+- **Sticky player notification.** While a song plays, keep a small bar on screen so you can pause,
+  skip or change the song from any page without scrolling back to the player.
+- **Fix the hide button on the song page.** On the page where you like and share a song, the
+  dropdown button that should hide the menu does nothing. It needs to open and close properly.
+- **Liked songs as a playlist.** Make the liked songs page behave like a real playlist the way
+  Spotify does: cover art up top, a play all button, and a queue you can shuffle.
+- **Easier reading on phones.** Lower the site DPI on mobile so text and buttons are bigger,
+  taps are easier and there is more usable space on the screen.
+- **Listener upgrades.** Smaller quality-of-life work for people who only listen: better search,
+  clearer offline behaviour, and quicker ways to get from one song to more by the same artist.
+
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) - how to send a change.
@@ -131,6 +157,6 @@ To remove the browser address bar from the installed app, host the asset links f
 ## Known limits
 
 This is a working product, not a finished hosting service. Audio is streamed in its original file,
-there is no resume or retry on uploads, no email verification or password reset, media lives on the
-local disk rather than private object storage, and rate limiting is in-process. The report endpoints
-record what people said and what moderators decided; that is a log, not a legal process.
+there is no resume or retry on uploads, no email verification or password reset, and rate limiting
+is in-process. The report endpoints record what people said and what moderators decided; that is a
+log, not a legal process.
