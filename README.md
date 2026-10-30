@@ -1,77 +1,136 @@
-# ORU backend
+# ORU
 
-ORU is a music platform for listeners to find music and for newer artists to find an audience. This repository contains its first backend API. The code is a modular monolith: one FastAPI app with a relational database and a separate media-storage adapter. That keeps local development simple without locking the music code to a storage vendor.
+ORU is a music app for artists who are just starting out. Listeners find new songs, artists upload
+their own, and the front page is scored so that small artists can still show up there.
 
-## What's here now
+Live at [oru.freebuff.app](https://oru.freebuff.app).
 
-The API has account registration and sign-in, listener profile edits, artist profiles, track uploads, draft publishing, releases, discovery, search, likes, playlists, follows, artist posts, listening events, basic artist stats, reports and moderator decisions. The exact route list and example requests are in [the API guide](docs/API.md).
+## What the app does
 
-Discovery uses a small, explainable score based on likes, qualified listens, recency, whether the listener follows the artist, and a modest opportunity boost for artists with smaller catalogs. It is a starting point, not a fairness guarantee or a tested anti-fraud system. Listen events count for ranking only after 30 seconds, and another qualifying play from the same account for the same song is ignored for 30 minutes.
+- **Listeners** can sign up, browse, search, like songs, build playlists, follow artists and play
+  music. Songs keep playing on the lock screen, and the app can be installed on a phone or desktop
+  and used offline.
+- **Artists** get a studio page where they upload audio and cover art, save drafts, publish songs
+  and releases, and see plays, likes and follows.
+- **Moderators** see reports from listeners and mark them resolved or dismissed.
+- The whole thing is one FastAPI process serving one React build, so there is no CORS setup and no
+  second server to keep running.
 
 ## Stack
 
-- Python 3.11 or newer and FastAPI for the HTTP API and generated OpenAPI docs.
-- SQLAlchemy and Alembic for relational data and database migrations.
-- SQLite by default for a quick local start. Set `DATABASE_URL` to PostgreSQL for a shared or production database.
-- Argon2 password hashing and signed bearer tokens for authentication.
-- Local media files by default, stored outside the database through a small storage adapter. This makes local uploads real and keeps the storage choice out of the music models.
+- Python 3.11+ with FastAPI, SQLAlchemy and Alembic. SQLite by default, PostgreSQL through
+  `DATABASE_URL`.
+- React 19, TypeScript, Vite and Tailwind CSS 4 for the web app. GSAP for animation, lucide-react
+  for icons.
+- SQLite and local files for media in development. Uploads are streamed as-is: there is no
+  transcoding, no CDN and no object storage yet.
 
-This version does not yet include a production S3-compatible storage adapter, transcoding, resumable uploads, adaptive bitrate streaming, email verification, or password reset. The API streams the uploaded original file; there is no audio conversion pipeline. Those are separate product and deployment decisions, not features to assume are working.
+## Where things live
+
+```
+app/                  FastAPI app. Routes are in app/api/, models in app/models.py
+api/index.py          production entrypoint used by the host
+src/                  React app: pages in src/pages, state in src/state
+public/               web manifest, service worker, icons, share images
+docs/API.md           every route with example requests
+docs/DECISIONS.md     why discovery and ranking work the way they do
+tests/                pytest suite
+scripts/preview.sh    runs API and built frontend on one port
+scripts/generate_images.py   regenerates icons and share images
+twa-manifest.json     Android app config, read by CI
+.github/workflows/    CI: tests, then the Android build and release
+```
 
 ## Run it locally
+
+Backend only:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-The API health check is at `http://127.0.0.1:8000/health`. Versioned routes start at `http://127.0.0.1:8000/api/v1`. Interactive docs are at `http://127.0.0.1:8000/api/v1/docs`, and the OpenAPI JSON is at `http://127.0.0.1:8000/api/v1/openapi.json`.
+API is at `http://127.0.0.1:8000/api/v1`, docs at `http://127.0.0.1:8000/api/v1/docs`, health at
+`/health`.
 
-The default database is `./oru.db`; uploaded media goes into `./data/media`. Both are ignored by Git. To use PostgreSQL, set a SQLAlchemy URL such as `postgresql+psycopg://oru:password@localhost:5432/oru`, then run `alembic upgrade head` again.
+Everything on one port, which is how production runs:
 
-## Configuration
+```bash
+sh ./scripts/preview.sh
+```
 
-Copy `.env.example` to `.env`. Important settings:
+The script builds the frontend if `dist/` is missing, then starts the API process that serves it.
+One process, one port.
 
-- `DATABASE_URL`: SQLite or PostgreSQL connection URL.
-- `JWT_SECRET`: set a long, random value outside local development. Never reuse the example value in a deployed environment.
-- `JWT_EXPIRE_MINUTES`: access-token lifetime.
-- `CORS_ORIGINS`: JSON array of frontend origins allowed to call the API.
-- `MEDIA_DIRECTORY`: local media directory.
-- `MAX_AUDIO_BYTES` and `MAX_IMAGE_BYTES`: upload limits.
-- `ADMIN_EMAILS`: comma-separated addresses that receive moderator access when an account is registered. Keep this private and configure it before creating moderators.
+If you would rather run Vite on its own, point it at the API with `VITE_API_BASE_URL` and add its
+origin to `CORS_ORIGINS` in `.env`:
 
-No third-party credentials are needed for local development. A real public launch still needs a production media-storage service, reliable backups, HTTPS, deployment secrets, and an operational process for copyright and safety reports.
+```bash
+npm install
+VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1 npm run dev
+```
 
 ## Tests
 
 ```bash
 pytest -q
+npm run build        # typechecks, then bundles
 ```
 
-The test suite uses a separate in-memory SQLite database and temporary media directory. It does not write to your development database.
+Both run on every push. The test suite uses its own in-memory database and a temporary media
+directory, so it never touches your development data.
 
-## Frontend connection
+## Configuration
 
-The frontend can call any `/api/v1/...` URL with normal HTTP requests. Register or log in to receive `access_token`, then send `Authorization: Bearer <access_token>` for protected actions. Uploads use `multipart/form-data`; JSON endpoints use `application/json`. The local development base URL is `http://127.0.0.1:8000/api/v1`. Set the frontend URL in `CORS_ORIGINS` when it runs on another origin.
+Copy `.env.example` to `.env`. The settings that matter:
 
-A frontend should treat the API response as the contract, not rely on database tables or backend file names. Errors use `{ "error": { "code", "message", "details?" } }`.
+- `DATABASE_URL` - SQLite file or a PostgreSQL URL.
+- `JWT_SECRET` - a long random value. Never reuse the example value in production.
+- `JWT_EXPIRE_MINUTES` - access token lifetime.
+- `CORS_ORIGINS` - JSON array of frontend origins, only needed when the frontend runs elsewhere.
+- `MEDIA_DIRECTORY` - where uploads land, `./data/media` by default.
+- `MAX_AUDIO_BYTES`, `MAX_IMAGE_BYTES` - upload limits.
+- `ADMIN_EMAILS` - addresses that get moderator access on registration. Keep it private.
+- `SITE_URL` - the public origin of the app, for example `https://oru.freebuff.app`. Used to build
+  absolute links in share previews. Leave it empty locally.
 
-## Database changes
+`.env` and the database files are ignored by Git. Never commit them.
 
-After editing a model, create and review a migration:
+## The Android app
 
-```bash
-alembic revision --autogenerate -m "describe the change"
-alembic upgrade head
-```
+CI (`.github/workflows/ci.yml`) runs the test suite, then builds a Trusted Web Activity package
+with Bubblewrap and publishes a GitHub release with `oru.apk` attached. The same APK is also
+attached to the workflow run as an artifact.
 
-Do not use `Base.metadata.create_all()` as a replacement for migrations in deployed environments.
+- Pushes to `main` create a release tagged `build-<run number>`.
+- Pushing a tag like `v1.0.0` creates a release with that tag instead.
+- `twa-manifest.json` holds the Android config: package id `app.oru.music`, host
+  `oru.freebuff.app`, icons and colors. Edit it and rerun the workflow to change the app.
+- The build reads the live site, so it needs `oru.freebuff.app` to be up.
 
-## Before public launch
+Signing needs four repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS`). Without them CI generates a throwaway key, which is
+fine for sideloading a test build but not for Play Store uploads or upgrades. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to create them.
 
-This is a working foundation, not a launch-ready music-hosting service. Review upload scanning and file-signature checks, move media to private object storage, add upload retry/resume and transcoding if needed, move rate limiting to a shared edge service, test with PostgreSQL, set up monitoring and backups, and decide how disputes, takedowns, appeals, privacy requests, and moderation staffing will work. The report endpoints record submissions and moderator actions; they do not establish legal compliance or prove an infringement claim.
+To remove the browser address bar from the installed app, host the asset links file generated by
+`bubblewrap fingerprint generateAssetLinks` at
+`https://oru.freebuff.app/.well-known/assetlinks.json`.
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) - how to send a change.
+- [docs/API.md](docs/API.md) - routes, payloads, example requests.
+- [docs/DECISIONS.md](docs/DECISIONS.md) - ranking and discovery choices, and what is deliberately
+  not claimed.
+
+## Known limits
+
+This is a working product, not a finished hosting service. Audio is streamed in its original file,
+there is no resume or retry on uploads, no email verification or password reset, media lives on the
+local disk rather than private object storage, and rate limiting is in-process. The report endpoints
+record what people said and what moderators decided; that is a log, not a legal process.

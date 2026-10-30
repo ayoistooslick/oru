@@ -1,0 +1,54 @@
+{
+  "packageId": "app.oru.music",
+  "host": "oru.freebuff.app",
+  "name": "ORU",
+  "launcherName": "ORU",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#121212",
+  "themeColorDark": "#121212",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#121212",
+  "enableNotifications": true,
+  "enableSiteSettingsShortcut": true,
+  "fallbackType": "customtabs",
+  "minSdkVersion": 24,
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "startUrl": "/listen?source=pwa",
+  "iconUrl": "https://oru.freebuff.app/icons/icon-512.png",
+  "maskableIconUrl": "https://oru.freebuff.app/icons/icon-maskable-512.png",
+  "webManifestUrl": "https://oru.freebuff.app/manifest.webmanifest",
+  "splashScreenFadeOutDuration": 300,
+  "generatorApp": "bubblewrap-cli",
+  "signingKey": {
+    "path": "release.keystore",
+    "alias": "oru"
+  },
+  "protocolHandlers": [
+    {
+      "protocol": "web+oru",
+      "url": "https://oru.freebuff.app/search?q=%s"
+    }
+  ],
+  "fileHandlers": [
+    {
+      "actionUrl": "https://oru.freebuff.app/studio",
+      "mimeTypes": [
+        "audio/mpeg",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/ogg",
+        "audio/mp4",
+        "audio/flac",
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ]
+    }
+  ],
+  "launchHandlerClientMode": "navigate-existing"
+}

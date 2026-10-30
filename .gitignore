@@ -1,4 +1,18 @@
 .venv/
+node_modules/
+dist/
+isolate/
+tsconfig.tsbuildinfo
+
+# Local environment and data. Never commit these.
+.env.local
+*.db-shm
+*.db-wal
+
+# Android signing keys are private. CI generates its own when none is set.
+*.keystore
+*.jks
+
 __pycache__/
 *.py[cod]
 .pytest_cache/

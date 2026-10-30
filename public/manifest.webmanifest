@@ -1,0 +1,104 @@
+{
+  "id": "/",
+  "name": "ORU, music from new artists",
+  "short_name": "ORU",
+  "description": "ORU is where new artists upload a song, publish it and get heard. Listen free, follow artists, make playlists and publish your own music.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/listen?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser", "fullscreen"],
+  "orientation": "any",
+  "theme_color": "#121212",
+  "background_color": "#000000",
+  "categories": ["music", "entertainment"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "standalone"]
+  },
+  "serviceworker": {
+    "src": "/sw.js",
+    "scope": "/"
+  },
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-phone.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "The ORU home screen with new songs and the player",
+      "form_factor": "narrow",
+      "platform": "android"
+    },
+    {
+      "src": "/screenshots/home-desktop.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "label": "ORU on a wide screen with the sidebar and player",
+      "form_factor": "wide",
+      "platform": "android"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search songs",
+      "short_name": "Search",
+      "description": "Find a song, artist or playlist",
+      "url": "/search",
+      "icons": [{ "src": "/icons/shortcut-search.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Upload a song",
+      "short_name": "Studio",
+      "description": "Put a new song up and publish it",
+      "url": "/studio",
+      "icons": [{ "src": "/icons/shortcut-studio.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Liked songs",
+      "short_name": "Liked",
+      "description": "Everything you saved with the heart",
+      "url": "/library",
+      "icons": [{ "src": "/icons/shortcut-liked.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+  "protocol_handlers": [
+    { "protocol": "web+oru", "url": "/search?q=%s" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/studio",
+      "accept": {
+        "audio/mpeg": [".mp3"],
+        "audio/wav": [".wav"],
+        "audio/x-wav": [".wav"],
+        "audio/ogg": [".ogg"],
+        "audio/mp4": [".m4a"],
+        "audio/flac": [".flac"],
+        "image/png": [".png"],
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/webp": [".webp"]
+      },
+      "launch_type": "single-client-handled"
+    }
+  ]
+}
