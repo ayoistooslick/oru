@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b --noEmit && vite build",
+    "build": "tsc -b --noEmit && vite build && sh ./scripts/bundle_api.sh",
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {

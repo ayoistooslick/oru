@@ -4,26 +4,43 @@ Freebuff installs the root requirements.txt and runs the Python files in this
 folder while the built frontend in dist/ is served separately. The routes are
 the same ones the local server exposes; this file only adapts the shared
 FastAPI application to whichever calling convention the host uses.
+
+The host publishes this one function at `/api`, so requests arrive with the
+path they want in the `__path` query parameter and the application restores it
+before routing. Failures are written to the log rather than the response, and
+every response carries the path it was routed as `x-oru-path`, which is how the
+routing of the host can be checked from the outside.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote_to_bytes
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.main import app, ensure_schema  # noqa: E402  (needs ROOT on sys.path)
+# Loading the application is the step most likely to break on the host: a
+# missing package, a bad setting or a read-only disk all fail here. The error
+# is kept for the log so a broken deployment can still answer a request.
+_LOAD_ERROR: str | None = None
 
-# Hosts look for either of these names; both point at the same application.
-application = app
-asgi_app = app
+try:
+    from app.main import app as fastapi_app
+    from app.main import ensure_schema
+except Exception:  # noqa: BLE001 - the traceback is the point of keeping it
+    _LOAD_ERROR = traceback.format_exc()
+    fastapi_app = None
+
+    def ensure_schema() -> None:  # type: ignore[misc]
+        return None
 
 _ready = False
 
@@ -31,13 +48,71 @@ _ready = False
 def _prepare() -> None:
     global _ready
     if not _ready:
+        if _LOAD_ERROR:
+            print(_LOAD_ERROR, file=sys.stderr)  # the log keeps the detail
+            raise RuntimeError("the API could not start")
         ensure_schema()
         _ready = True
 
 
+async def _error(send, status: int, path: str = "") -> None:
+    """Answer in the API's own error shape, carrying the path that was seen."""
+    headers = [(b"content-type", b"application/json")]
+    if path:
+        headers.append((b"x-oru-path", path.encode("utf-8", "replace")))
+    body = json.dumps({"error": {"code": "service_error", "message": "Something went wrong. Try again."}})
+    await send({"type": "http.response.start", "status": status, "headers": headers})
+    await send({"type": "http.response.body", "body": body.encode("utf-8")})
+
+
+async def _call(scope, receive, send, path: str) -> None:
+    """Run the request through the application; failures go to the log."""
+    started = False
+
+    async def send_with_path(message):
+        nonlocal started
+        if message["type"] == "http.response.start":
+            started = True
+            headers = list(message.get("headers", []))
+            headers.append((b"x-oru-path", path.encode("utf-8", "replace")))
+            message = {"type": "http.response.start", "status": message["status"], "headers": headers}
+        await send(message)
+
+    try:
+        _prepare()
+        await fastapi_app(scope, receive, send_with_path)
+    except Exception:  # noqa: BLE001 - details belong in the log, not the reply
+        if started:
+            raise
+        traceback.print_exc()
+        await _error(send, 500, path)
+
+
+def _requested_path(scope: dict) -> str:
+    """The path the application will route, which may arrive in `__path`."""
+    query = scope.get("query_string", b"")
+    marker = b"__path="
+    if marker not in query:
+        return scope.get("path", "")
+    value = query.split(marker, 1)[1].split(b"&", 1)[0]
+    target = unquote_to_bytes(value).decode("utf-8", "replace")
+    return target.partition("?")[0]
+
+
+async def app(scope, receive, send):
+    """ASGI entrypoint: the host may call the module's `app` directly."""
+    if scope.get("type") != "http":
+        return
+    await _call(scope, receive, send, _requested_path(scope))
+
+
+# Hosts look for either of these names; both point at the same application.
+application = app
+asgi_app = app
+
+
 def handler(*args, **kwargs):
     """Accept both an ASGI call and a serverless (event, context) call."""
-    _prepare()
     if len(args) == 3:
         return app(*args, **kwargs)
     if args and isinstance(args[0], dict):
@@ -48,10 +123,10 @@ def handler(*args, **kwargs):
 def _event_headers(event: dict) -> list[tuple[bytes, bytes]]:
     multi = event.get("multiValueHeaders") or {}
     source = multi if multi else (event.get("headers") or {})
-    pairs: list[tuple[bytes, bytes]] = []
+    pairs = []
     for key, value in source.items():
-        values = value if isinstance(value, list) else [value]
-        for item in values:
+        items = value if isinstance(value, list) else [value]
+        for item in items:
             if item is None:
                 continue
             pairs.append((key.lower().encode("latin-1"), str(item).encode("latin-1")))

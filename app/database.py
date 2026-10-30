@@ -14,8 +14,9 @@ is_sqlite = settings.database_url.startswith("sqlite")
 # the database file.
 connect_args = {"check_same_thread": False, "timeout": 30} if is_sqlite else {}
 
-if is_sqlite and settings.sqlite_path is not None:
-    settings.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+sqlite_path = getattr(settings, "sqlite_path", None)
+if is_sqlite and sqlite_path is not None:
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(settings.database_url, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

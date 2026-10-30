@@ -64,5 +64,9 @@ class ModerationDecision(BaseModel):
     reason: str = Field(min_length=5, max_length=1000)
 
 
+class ShareDecision(BaseModel):
+    action: Literal["approve", "reject"]
+
+
 class ArtistPostCreate(BaseModel):
     body: str = Field(min_length=1, max_length=3000)

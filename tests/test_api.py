@@ -160,3 +160,40 @@ def test_artist_workspace_and_library_endpoints(client):
 
 def test_health_check(client):
     assert client.get("/health").json()["status"] == "ok"
+
+
+def test_entry_route_carries_the_api_path(client):
+    """Production only routes /api, so the path travels in the query string.
+
+    The frontend sends every call as `/api?__path=/api/v1/...`; the middleware
+    puts the path back before routing, so this has to behave exactly like the
+    direct route the dev server uses.
+    """
+    register(client)
+    login = client.post("/api?__path=%2Fapi%2Fv1%2Fauth%2Flogin", json={"email": "listener@example.com", "password": "a-long-test-password"})
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+
+    me = client.get("/api?__path=%2Fapi%2Fv1%2Fauth%2Fme", headers=auth(token))
+    assert me.status_code == 200, me.text
+    assert me.json()["user"]["handle"] == "listener_one"
+
+    genres = client.get("/api?__path=%2Fapi%2Fv1%2Fgenres")
+    assert genres.status_code == 200, genres.text
+    assert genres.headers["content-type"].startswith("application/json")
+
+    # A query string inside the path stays a query string after the rewrite.
+    songs = client.get("/api?__path=%2Fapi%2Fv1%2Fsongs%3Flimit%3D5")
+    assert songs.status_code == 200, songs.text
+    assert songs.headers["content-type"].startswith("application/json")
+    assert songs.json()["limit"] == 5
+
+    # Several parameters, still decoded in one piece.
+    page = client.get("/api?__path=%2Fapi%2Fv1%2Fsongs%3Flimit%3D3%26offset%3D0")
+    assert page.json()["limit"] == 3
+    assert page.json()["offset"] == 0
+
+    # Unknown paths still answer with the API's own 404, not the app shell.
+    missing = client.get("/api?__path=%2Fapi%2Fv1%2Fnope")
+    assert missing.status_code == 404
+    assert missing.headers["content-type"].startswith("application/json")

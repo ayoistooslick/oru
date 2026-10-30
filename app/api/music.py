@@ -1,8 +1,9 @@
+import mimetypes
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import artist_user, current_user, optional_current_user
 from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongGenre, User
-from app.schemas import ListeningCreate, ReleaseCreate
+from app.schemas import ListeningCreate, ReleaseCreate, ShareDecision
 from app.services.discovery import discover_songs
 from app.storage import UploadTooLarge, storage
 
@@ -19,11 +20,20 @@ AUDIO_TYPES = {".mp3": {"audio/mpeg", "audio/mp3", "application/octet-stream"}, 
 IMAGE_TYPES = {".jpg": {"image/jpeg"}, ".jpeg": {"image/jpeg"}, ".png": {"image/png"}, ".webp": {"image/webp"}}
 
 
+def is_insider(song: Song, viewer: User | None) -> bool:
+    """The credited artist, the listener who shared the song, and moderators."""
+    if viewer is None:
+        return False
+    if viewer.role == "admin" or viewer.id == song.artist_id:
+        return True
+    return song.shared_by_user_id is not None and viewer.id == song.shared_by_user_id
+
+
 def can_access(song: Song, viewer: User | None) -> bool:
-    """Published tracks are public; drafts stay with their owner and moderators."""
+    """Published tracks are public; drafts and shares stay with the people involved."""
     if song.status == "published":
         return True
-    return viewer is not None and (viewer.id == song.artist_id or viewer.role == "admin")
+    return is_insider(song, viewer)
 
 
 def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
@@ -34,14 +44,17 @@ def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
             "title": song.title, "description": song.description, "genres": genres, "status": song.status,
             "created_at": song.created_at, "published_at": song.published_at,
             "audio_url": f"/api/v1/songs/{song.id}/audio" if readable else None,
-            "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and readable else None}
+            "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and readable else None,
+            "source_url": song.source_url,
+            "shared_by": ({"handle": song.shared_by.handle, "display_name": song.shared_by.display_name}
+                          if song.shared_by is not None else None)}
 
 
 def visible_song(song_id: int, db: Session, viewer: User | None = None) -> Song:
     song = db.get(Song, song_id)
     if song is None or song.status == "hidden":
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Song not found"})
-    if song.status != "published" and (viewer is None or (viewer.id != song.artist_id and viewer.role != "admin")):
+    if song.status != "published" and not is_insider(song, viewer):
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Song not found"})
     return song
 
@@ -58,6 +71,18 @@ def _save_upload(file: UploadFile, allowed: dict[str, set[str]], max_bytes: int)
         storage.delete(key)
         raise HTTPException(status_code=400, detail={"code": "empty_file", "message": "The uploaded file is empty"})
     return key
+
+
+def _attach_genres(db: Session, song: Song, genres: list[str]) -> None:
+    for value in dict.fromkeys(name.strip().lower() for name in genres if name.strip()):
+        if len(value) > 48:
+            raise HTTPException(status_code=422, detail={"code": "invalid_genre", "message": "Genre names can be up to 48 characters"})
+        genre = db.scalar(select(Genre).where(Genre.name == value))
+        if genre is None:
+            genre = Genre(name=value)
+            db.add(genre)
+            db.flush()
+        db.add(SongGenre(song=song, genre=genre))
 
 
 @router.get("/discover")
@@ -103,19 +128,11 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
     cover_key = None
     try:
         if cover is not None and cover.filename:
-            cover_key = _save_upload(cover, IMAGE_TYPES, settings.max_image_bytes)
+            cover_key = _save_upload(cover, IMAGE_TYPES, settings.max_cover_bytes)
         song = Song(artist_id=artist.id, title=title.strip(), description=description.strip(), audio_key=audio_key,
                     cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream", status="draft")
         db.add(song)
-        for value in dict.fromkeys(name.strip().lower() for name in genres if name.strip()):
-            if len(value) > 48:
-                raise HTTPException(status_code=422, detail={"code": "invalid_genre", "message": "Genre names can be up to 48 characters"})
-            genre = db.scalar(select(Genre).where(Genre.name == value))
-            if genre is None:
-                genre = Genre(name=value)
-                db.add(genre)
-                db.flush()
-            db.add(SongGenre(song=song, genre=genre))
+        _attach_genres(db, song, genres)
         db.commit()
         db.refresh(song)
         return {"song": song_data(song, db, artist)}
@@ -125,6 +142,98 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
         if cover_key:
             storage.delete(cover_key)
         raise
+
+
+@router.post("/songs/share", status_code=201)
+def share_song(title: str = Form(min_length=1, max_length=120), description: str = Form(default="", max_length=2000),
+               genres: list[str] = Form(default=[]), artist_id: int = Form(...),
+               source_url: str = Form(min_length=4, max_length=500),
+               audio: UploadFile = File(...), cover: UploadFile | None = File(default=None),
+               user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """A listener shares a song by an artist who is on ORU. The artist keeps the
+    credit, the uploader is recorded as the sharer, and the song waits for approval."""
+    target = db.get(User, artist_id)
+    if target is None or target.artist_profile is None or not target.is_active:
+        raise HTTPException(status_code=404, detail={"code": "artist_not_found", "message": "That artist is not on ORU yet"})
+    url = source_url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail={"code": "invalid_source", "message": "Add a link that starts with http:// or https://"})
+    audio_key = _save_upload(audio, AUDIO_TYPES, settings.max_audio_bytes)
+    cover_key = None
+    try:
+        if cover is not None and cover.filename:
+            cover_key = _save_upload(cover, IMAGE_TYPES, settings.max_cover_bytes)
+        song = Song(artist_id=target.id, title=title.strip(), description=description.strip(), audio_key=audio_key,
+                    cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream", status="pending",
+                    shared_by_user_id=user.id, source_url=url)
+        db.add(song)
+        _attach_genres(db, song, genres)
+        db.commit()
+        db.refresh(song)
+        return {"song": song_data(song, db, user)}
+    except Exception:
+        db.rollback()
+        storage.delete(audio_key)
+        if cover_key:
+            storage.delete(cover_key)
+        raise
+
+
+@router.get("/shared/songs")
+def own_shared_songs(limit: int = 50, offset: int = 0, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Songs the signed-in listener shared, with their review status."""
+    limit = min(max(limit, 1), 50)
+    songs = db.scalars(
+        select(Song).where(Song.shared_by_user_id == user.id)
+        .order_by(Song.created_at.desc(), Song.id.desc()).offset(max(offset, 0)).limit(limit)
+    ).all()
+    return {"items": [song_data(song, db, user) for song in songs], "limit": limit, "offset": max(offset, 0)}
+
+
+@router.delete("/shared/songs/{song_id}")
+def withdraw_share(song_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """A sharer can take a request back while it is still waiting for approval."""
+    song = db.get(Song, song_id)
+    if song is None or song.shared_by_user_id != user.id or song.status != "pending":
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Share request not found"})
+    db.delete(song)
+    db.commit()
+    storage.delete(song.audio_key)
+    if song.cover_key:
+        storage.delete(song.cover_key)
+    return {"song_id": song_id, "deleted": True}
+
+
+@router.get("/songs/pending-shares")
+def pending_shares(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Requests waiting on me: songs shared with my artist profile, or all of them for moderators."""
+    query = select(Song).where(Song.status == "pending", Song.shared_by_user_id.is_not(None)).order_by(Song.created_at, Song.id)
+    if user.role != "admin":
+        query = query.where(Song.artist_id == user.id)
+    songs = db.scalars(query.limit(50)).all()
+    return {"items": [song_data(song, db, user) for song in songs]}
+
+
+@router.post("/songs/{song_id}/share-decision")
+def decide_share(song_id: int, payload: ShareDecision, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Only the credited artist or a moderator can approve or reject a share."""
+    song = db.get(Song, song_id)
+    if song is None or song.status != "pending" or song.shared_by_user_id is None:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Share request not found"})
+    if user.role != "admin" and song.artist_id != user.id:
+        raise HTTPException(status_code=403, detail={"code": "not_allowed", "message": "Only the artist or a moderator can decide on this"})
+    if payload.action == "approve":
+        song.status = "published"
+        song.published_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(song)
+        return {"song": song_data(song, db, user)}
+    db.delete(song)
+    db.commit()
+    storage.delete(song.audio_key)
+    if song.cover_key:
+        storage.delete(song.cover_key)
+    return {"song_id": song_id, "action": "reject", "deleted": True}
 
 
 @router.get("/songs/{song_id}")
@@ -184,11 +293,18 @@ def delete_song(song_id: int, artist: User = Depends(artist_user), db: Session =
 @router.get("/songs/{song_id}/audio")
 def stream_audio(song_id: int, viewer: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     song = visible_song(song_id, db, viewer)
+    path = None
     try:
         path = storage.path_for(song.audio_key)
     except FileNotFoundError:
+        pass
+    if path is not None:
+        return FileResponse(path, media_type=song.audio_type, filename=f"{song.title}.audio", content_disposition_type="inline")
+    data = storage.read_bytes(song.audio_key)
+    if data is None:
         raise HTTPException(status_code=503, detail={"code": "media_unavailable", "message": "This audio file is temporarily unavailable"})
-    return FileResponse(path, media_type=song.audio_type, filename=f"{song.title}.audio", content_disposition_type="inline")
+    return Response(content=data, media_type=song.audio_type,
+                    headers={"Content-Disposition": f'inline; filename="{song.title}.audio"'})
 
 
 @router.get("/songs/{song_id}/cover")
@@ -196,11 +312,17 @@ def get_cover(song_id: int, viewer: User | None = Depends(optional_current_user)
     song = visible_song(song_id, db, viewer)
     if not song.cover_key:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Cover artwork not found"})
+    path = None
     try:
         path = storage.path_for(song.cover_key)
     except FileNotFoundError:
+        pass
+    if path is not None:
+        return FileResponse(path)
+    data = storage.read_bytes(song.cover_key)
+    if data is None:
         raise HTTPException(status_code=503, detail={"code": "media_unavailable", "message": "This artwork is temporarily unavailable"})
-    return FileResponse(path)
+    return Response(content=data, media_type=mimetypes.guess_type(song.cover_key)[0] or "image/jpeg")
 
 
 @router.post("/songs/{song_id}/listen", status_code=201)

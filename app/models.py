@@ -51,7 +51,12 @@ class Song(Base):
     status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    artist: Mapped[User] = relationship()
+    # Set when a listener shares someone else's song: the artist keeps the credit,
+    # the uploader is recorded for transparency and can withdraw it before approval.
+    shared_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    artist: Mapped[User] = relationship(foreign_keys=[artist_id])
+    shared_by: Mapped[User | None] = relationship(foreign_keys=[shared_by_user_id])
     genres: Mapped[list["SongGenre"]] = relationship(back_populates="song", cascade="all, delete-orphan")
 
 
