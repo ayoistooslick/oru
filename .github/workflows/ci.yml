@@ -79,12 +79,19 @@ jobs:
       - uses: android-actions/setup-android@v4
 
       - name: Install the Android packages the build needs
-        run: yes | sdkmanager "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
-
-      - name: Point Bubblewrap at the JDK and the Android SDK
         run: |
-          npx --yes @bubblewrap/cli updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          npx --yes @bubblewrap/cli doctor
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+
+      # Bubblewrap's own setup wizard asks questions on stdin, which does not
+      # exist on a runner, so the config file is written by hand instead.
+      - name: Tell Bubblewrap where the JDK and the Android SDK are
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > "$HOME/.bubblewrap/config.json"
+          cat "$HOME/.bubblewrap/config.json"
+          test -d "$JAVA_HOME"
+          test -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
 
       - name: Check the live PWA against the quality criteria
         continue-on-error: true
@@ -131,7 +138,7 @@ jobs:
           KEYSTORE_ALIAS: ${{ steps.keystore.outputs.alias }}
         run: |
           cd "$RUNNER_TEMP/twa"
-          npx --yes @bubblewrap/cli build \
+          yes | npx --yes @bubblewrap/cli build \
             --skipPwaValidation \
             --signingKeyPath="$KEYSTORE_PATH" \
             --signingKeyAlias="$KEYSTORE_ALIAS"
