@@ -144,16 +144,26 @@ def ensure_schema() -> None:
     # create_all never alters existing tables, so columns added to a live database
     # are attached here. Each statement is guarded, which keeps this idempotent on
     # both SQLite and Postgres.
-    existing = {column["name"] for column in inspect(engine).get_columns("songs")}
     additions = {
-        "shared_by_user_id": "ALTER TABLE songs ADD COLUMN shared_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
-        "source_url": "ALTER TABLE songs ADD COLUMN source_url VARCHAR(500)",
+        "songs": {
+            "shared_by_user_id": "ALTER TABLE songs ADD COLUMN shared_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
+            "source_url": "ALTER TABLE songs ADD COLUMN source_url VARCHAR(500)",
+        },
+        "users": {
+            "avatar_key": "ALTER TABLE users ADD COLUMN avatar_key VARCHAR(500)",
+        },
+        "artist_profiles": {
+            "banner_key": "ALTER TABLE artist_profiles ADD COLUMN banner_key VARCHAR(500)",
+        },
     }
+    inspector = inspect(engine)
     with engine.begin() as conn:
-        for name, statement in additions.items():
-            if name not in existing:
-                conn.execute(text(statement))
-                logger.info("added songs.%s", name)
+        for table, columns in additions.items():
+            known = {column["name"] for column in inspector.get_columns(table)}
+            for name, statement in columns.items():
+                if name not in known:
+                    conn.execute(text(statement))
+                    logger.info("added %s.%s", table, name)
 
 
 @asynccontextmanager

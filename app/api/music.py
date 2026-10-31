@@ -1,23 +1,20 @@
-import mimetypes
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.uploads import AUDIO_TYPES, IMAGE_TYPES, guess_image_type, media_response, save_upload
 from app.config import settings
 from app.database import get_db
 from app.dependencies import artist_user, current_user, optional_current_user
-from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongGenre, User
+from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongFeature, SongGenre, User
 from app.schemas import ListeningCreate, ReleaseCreate, ShareDecision
 from app.services.discovery import discover_songs
-from app.storage import UploadTooLarge, storage
+from app.storage import storage
 
 router = APIRouter(tags=["music"])
-AUDIO_TYPES = {".mp3": {"audio/mpeg", "audio/mp3", "application/octet-stream"}, ".wav": {"audio/wav", "audio/x-wav", "application/octet-stream"}, ".ogg": {"audio/ogg", "application/ogg", "application/octet-stream"}, ".m4a": {"audio/mp4", "audio/x-m4a", "application/octet-stream"}, ".flac": {"audio/flac", "audio/x-flac", "application/octet-stream"}, ".opus": {"audio/ogg", "audio/opus", "application/octet-stream"}}
-IMAGE_TYPES = {".jpg": {"image/jpeg"}, ".jpeg": {"image/jpeg"}, ".png": {"image/png"}, ".webp": {"image/webp"}}
+MAX_FEATURES = 5
 
 
 def is_insider(song: Song, viewer: User | None) -> bool:
@@ -36,16 +33,30 @@ def can_access(song: Song, viewer: User | None) -> bool:
     return is_insider(song, viewer)
 
 
+def featuring(song: Song, db: Session) -> list[dict]:
+    rows = db.execute(
+        select(User.id, User.handle, ArtistProfile.stage_name)
+        .select_from(SongFeature)
+        .join(User, User.id == SongFeature.artist_id)
+        .outerjoin(ArtistProfile, ArtistProfile.user_id == User.id)
+        .where(SongFeature.song_id == song.id)
+        .order_by(SongFeature.artist_id)
+    ).all()
+    return [{"artist_id": row[0], "handle": row[1], "name": row[2] or row[1]} for row in rows]
+
+
 def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
     genres = db.scalars(select(Genre.name).join(SongGenre).where(SongGenre.song_id == song.id).order_by(Genre.name)).all()
     readable = can_access(song, viewer)
     return {"id": song.id, "artist_id": song.artist_id, "artist_handle": song.artist.handle,
             "artist_name": song.artist.artist_profile.stage_name if song.artist.artist_profile else song.artist.display_name,
+            "artist_avatar_url": f"/api/v1/users/{song.artist_id}/avatar" if song.artist.avatar_key else None,
             "title": song.title, "description": song.description, "genres": genres, "status": song.status,
             "created_at": song.created_at, "published_at": song.published_at,
             "audio_url": f"/api/v1/songs/{song.id}/audio" if readable else None,
             "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and readable else None,
             "source_url": song.source_url,
+            "featuring": featuring(song, db),
             "shared_by": ({"handle": song.shared_by.handle, "display_name": song.shared_by.display_name}
                           if song.shared_by is not None else None)}
 
@@ -60,17 +71,23 @@ def visible_song(song_id: int, db: Session, viewer: User | None = None) -> Song:
 
 
 def _save_upload(file: UploadFile, allowed: dict[str, set[str]], max_bytes: int) -> str:
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in allowed or file.content_type not in allowed[suffix]:
-        raise HTTPException(status_code=415, detail={"code": "unsupported_file", "message": "Use a supported audio or image file type"})
-    try:
-        key, size = storage.save(file.file, suffix, max_bytes)
-    except UploadTooLarge:
-        raise HTTPException(status_code=413, detail={"code": "file_too_large", "message": "The uploaded file is larger than the allowed limit"})
-    if size == 0:
-        storage.delete(key)
-        raise HTTPException(status_code=400, detail={"code": "empty_file", "message": "The uploaded file is empty"})
+    key, _ = save_upload(file, allowed, max_bytes)
     return key
+
+
+def _attach_features(db: Session, song: Song, artist_ids: list[int], owner: User) -> None:
+    """Credit other artists on a song. They keep their own profile; this only links them."""
+    wanted = [value for value in dict.fromkeys(artist_ids) if value != owner.id]
+    if len(wanted) > MAX_FEATURES:
+        raise HTTPException(status_code=422, detail={"code": "too_many_features", "message": f"A song can credit up to {MAX_FEATURES} other artists"})
+    if not wanted:
+        return
+    guests = db.scalars(select(User).where(User.id.in_(wanted), User.is_active.is_(True))).all()
+    if len(guests) != len(wanted):
+        raise HTTPException(status_code=404, detail={"code": "artist_not_found", "message": "One of the featured artists was not found"})
+    if any(guest.artist_profile is None for guest in guests):
+        raise HTTPException(status_code=422, detail={"code": "artist_profile_required", "message": "Featured artists need an artist profile first"})
+    db.add_all([SongFeature(song=song, artist_id=guest.id) for guest in guests])
 
 
 def _attach_genres(db: Session, song: Song, genres: list[str]) -> None:
@@ -123,7 +140,10 @@ def list_songs(q: str | None = None, genre: str | None = None, limit: int = 20, 
 
 
 @router.post("/artists/me/songs", status_code=201)
-def upload_song(title: str = Form(min_length=1, max_length=120), description: str = Form(default="", max_length=2000), genres: list[str] = Form(default=[]), audio: UploadFile = File(...), cover: UploadFile | None = File(default=None), artist: User = Depends(artist_user), db: Session = Depends(get_db)):
+def upload_song(title: str = Form(min_length=1, max_length=120), description: str = Form(default="", max_length=2000),
+                genres: list[str] = Form(default=[]), featured: list[int] = Form(default=[]),
+                audio: UploadFile = File(...), cover: UploadFile | None = File(default=None),
+                artist: User = Depends(artist_user), db: Session = Depends(get_db)):
     audio_key = _save_upload(audio, AUDIO_TYPES, settings.max_audio_bytes)
     cover_key = None
     try:
@@ -133,6 +153,7 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
                     cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream", status="draft")
         db.add(song)
         _attach_genres(db, song, genres)
+        _attach_features(db, song, featured, artist)
         db.commit()
         db.refresh(song)
         return {"song": song_data(song, db, artist)}
@@ -291,38 +312,18 @@ def delete_song(song_id: int, artist: User = Depends(artist_user), db: Session =
 
 
 @router.get("/songs/{song_id}/audio")
-def stream_audio(song_id: int, viewer: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+def stream_audio(song_id: int, request: Request, viewer: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     song = visible_song(song_id, db, viewer)
-    path = None
-    try:
-        path = storage.path_for(song.audio_key)
-    except FileNotFoundError:
-        pass
-    if path is not None:
-        return FileResponse(path, media_type=song.audio_type, filename=f"{song.title}.audio", content_disposition_type="inline")
-    data = storage.read_bytes(song.audio_key)
-    if data is None:
-        raise HTTPException(status_code=503, detail={"code": "media_unavailable", "message": "This audio file is temporarily unavailable"})
-    return Response(content=data, media_type=song.audio_type,
-                    headers={"Content-Disposition": f'inline; filename="{song.title}.audio"'})
+    # Range requests are what let the player jump to a point in the track.
+    return media_response(song.audio_key, song.audio_type, request, filename=f"{song.title}.audio")
 
 
 @router.get("/songs/{song_id}/cover")
-def get_cover(song_id: int, viewer: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+def get_cover(song_id: int, request: Request, viewer: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
     song = visible_song(song_id, db, viewer)
     if not song.cover_key:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Cover artwork not found"})
-    path = None
-    try:
-        path = storage.path_for(song.cover_key)
-    except FileNotFoundError:
-        pass
-    if path is not None:
-        return FileResponse(path)
-    data = storage.read_bytes(song.cover_key)
-    if data is None:
-        raise HTTPException(status_code=503, detail={"code": "media_unavailable", "message": "This artwork is temporarily unavailable"})
-    return Response(content=data, media_type=mimetypes.guess_type(song.cover_key)[0] or "image/jpeg")
+    return media_response(song.cover_key, guess_image_type(song.cover_key), request, cache_control="public, max-age=86400")
 
 
 @router.post("/songs/{song_id}/listen", status_code=201)
@@ -430,6 +431,10 @@ def following_feed(limit: int = 20, offset: int = 0, user: User = Depends(curren
     return {"items": [song_data(song, db, user) for song in songs], "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
 
 
+def _week_ago() -> datetime:
+    return datetime.now(timezone.utc) - timedelta(days=7)
+
+
 @router.get("/artists/me/stats")
 def artist_stats(artist: User = Depends(artist_user), db: Session = Depends(get_db)):
     song_ids = select(Song.id).where(Song.artist_id == artist.id)
@@ -440,7 +445,71 @@ def artist_stats(artist: User = Depends(artist_user), db: Session = Depends(get_
         .join(Song, Song.id == ListeningEvent.song_id)
         .where(Song.artist_id == artist.id, ListeningEvent.counted.is_(True))
     ) or 0
+    since = _week_ago()
+    weekly_plays = db.scalar(
+        select(func.count(ListeningEvent.id))
+        .join(Song, Song.id == ListeningEvent.song_id)
+        .where(Song.artist_id == artist.id, ListeningEvent.counted.is_(True), ListeningEvent.created_at >= since)
+    ) or 0
+    weekly_likes = db.scalar(
+        select(func.count())
+        .select_from(Like)
+        .join(Song, Song.id == Like.song_id)
+        .where(Song.artist_id == artist.id, Like.created_at >= since)
+    ) or 0
+    top = db.execute(
+        select(Song.id, func.count(ListeningEvent.id).label("plays"))
+        .join(ListeningEvent, ListeningEvent.song_id == Song.id)
+        .where(Song.artist_id == artist.id, ListeningEvent.counted.is_(True), ListeningEvent.created_at >= since)
+        .group_by(Song.id)
+        .order_by(func.count(ListeningEvent.id).desc())
+        .limit(1)
+    ).first()
+    top_song = None
+    if top is not None:
+        song = db.get(Song, top[0])
+        if song is not None:
+            top_song = {"id": song.id, "title": song.title, "plays": top[1]}
     return {"artist_id": artist.id,
             "published_songs": published_songs,
             "likes": likes,
-            "qualified_listens": qualified_listens}
+            "qualified_listens": qualified_listens,
+            "weekly_plays": weekly_plays,
+            "weekly_likes": weekly_likes,
+            "weekly_top_song": top_song,
+            "window_days": 7}
+
+
+@router.get("/rankings/weekly")
+def weekly_rankings(limit: int = 10, user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+    """The songs people actually listened to over the last seven days."""
+    limit = min(max(limit, 1), 50)
+    since = _week_ago()
+    rows = db.execute(
+        select(ListeningEvent.song_id, func.count(ListeningEvent.id).label("plays"))
+        .join(Song, Song.id == ListeningEvent.song_id)
+        .where(Song.status == "published", ListeningEvent.counted.is_(True), ListeningEvent.created_at >= since)
+        .group_by(ListeningEvent.song_id)
+        .order_by(func.count(ListeningEvent.id).desc(), ListeningEvent.song_id)
+        .limit(limit)
+    ).all()
+    items = []
+    for rank, (song_id, plays) in enumerate(rows, start=1):
+        song = db.get(Song, song_id)
+        if song is not None:
+            items.append({"rank": rank, "plays": plays, "song": song_data(song, db, user)})
+    return {"items": items, "window_days": 7}
+
+
+@router.get("/artists/{artist_id}/appears-on")
+def appears_on(artist_id: int, limit: int = 20, user: User | None = Depends(optional_current_user), db: Session = Depends(get_db)):
+    """Songs by other artists where this artist is credited as a feature."""
+    limit = min(max(limit, 1), 50)
+    songs = db.scalars(
+        select(Song)
+        .join(SongFeature, SongFeature.song_id == Song.id)
+        .where(SongFeature.artist_id == artist_id, Song.status == "published")
+        .order_by(Song.published_at.desc(), Song.id.desc())
+        .limit(limit)
+    ).all()
+    return {"items": [song_data(song, db, user) for song in songs], "limit": limit}

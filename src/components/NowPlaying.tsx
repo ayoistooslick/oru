@@ -22,6 +22,7 @@ export function NowPlaying() {
     seek,
     position,
     duration,
+    expanded,
     setExpanded,
     volume,
     setVolume,
@@ -69,8 +70,14 @@ export function NowPlaying() {
     return () => ctx.revert();
   }, []);
 
-  if (!current) return null;
+  // The panel only exists while it is open. It used to render whenever a song
+  // was loaded, so the close button flipped a flag nothing was reading.
+  if (!current || !expanded) return null;
   const liked = likedIds.has(current.id);
+  const close = () => {
+    setActionsOpen(false);
+    setExpanded(false);
+  };
   const artwork = mediaUrl(current.cover_url);
 
   return (
@@ -92,7 +99,7 @@ export function NowPlaying() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => setExpanded(false)}
+            onClick={close}
             className="grid h-11 w-11 place-items-center rounded-full bg-white/10 transition press hover:bg-white/20"
             aria-label="Close the player"
           >
@@ -164,13 +171,14 @@ export function NowPlaying() {
               <h1 className="truncate text-[26px] font-extrabold leading-tight tracking-[-0.03em] sm:text-[32px]">
                 {current.title}
               </h1>
-              <Link
-                to={`/artist/${current.artist_id}`}
-                onClick={() => setExpanded(false)}
-                className="mt-1 inline-block truncate text-[16px] text-white/60 transition hover:text-white"
-              >
-                {current.artist_name}
-              </Link>
+              <p className="mt-1 truncate text-[16px] text-white/60">
+                <Link to={`/artist/${current.artist_id}`} onClick={close} className="transition hover:text-white hover:underline">
+                  {current.artist_name}
+                </Link>
+                {current.featuring?.length ? (
+                  <span className="text-white/45"> feat. {current.featuring.map((guest) => guest.name).join(", ")}</span>
+                ) : null}
+              </p>
               {current.status === "published" && current.shared_by ? (
                 <p className="mt-1 text-[13px] text-white/55">Shared by {current.shared_by.display_name}</p>
               ) : null}

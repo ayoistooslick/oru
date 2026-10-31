@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Play, Pause, Upload } from "lucide-react";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
-import type { Paginated, Song } from "../lib/types";
+import type { Paginated, Song, WeeklyRanking } from "../lib/types";
 import { TrackCard } from "../components/TrackCard";
 import { TrackRow } from "../components/TrackRow";
 import { EmptyState, Spinner } from "../components/ui";
@@ -51,8 +51,10 @@ function QuickTile({ song, queue }: { song: Song; queue: Song[] }) {
 export function Listen() {
   const feed = useResource((signal) => request<Paginated<Song>>("/discover?limit=30", { signal }), []);
   const follows = useResource((signal) => request<Paginated<Song>>("/feed/following?limit=12", { signal }), []);
+  const weekly = useResource((signal) => request<WeeklyRanking>("/rankings/weekly?limit=5", { signal }), []);
   const songs = feed.data?.items ?? [];
   const fromFollows = follows.data?.items ?? [];
+  const top = weekly.data?.items ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
@@ -100,6 +102,32 @@ export function Listen() {
               <QuickTile key={song.id} song={song} queue={songs} />
             ))}
           </section>
+
+          {top.length > 0 ? (
+            <section className="mb-8">
+              <div className="mb-3 flex items-baseline justify-between gap-4">
+                <h2 className="text-[22px] font-bold tracking-[-0.02em]">This week</h2>
+                <span className="text-[12px] font-bold uppercase tracking-wide text-ink-faint">Most played</span>
+              </div>
+              <ol className="overflow-hidden rounded-lg bg-[#181818]">
+                {top.map((entry) => (
+                  <li key={entry.song.id} className="border-b border-white/5 last:border-0">
+                    <div className="flex items-center gap-3 pr-2">
+                      <span className="w-7 shrink-0 text-center text-[15px] font-extrabold tabular-nums text-ink-faint">
+                        {entry.rank}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <TrackRow song={entry.song} queue={top.map((item) => item.song)} showArtist />
+                      </div>
+                      <span className="shrink-0 text-[12.5px] tabular-nums text-ink-faint">
+                        {entry.plays} {entry.plays === 1 ? "play" : "plays"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
 
           <section className="mb-8">
             <div className="mb-3 flex items-baseline justify-between gap-4">

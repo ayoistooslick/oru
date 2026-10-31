@@ -8,6 +8,9 @@ from app.database import Base, get_db
 from app.main import app, api
 from app.storage import LocalStorage
 import app.api.music as music_api
+import app.api.uploads as uploads_api
+import app.api.accounts as accounts_api
+import app.storage as storage_module
 
 
 @pytest.fixture
@@ -25,7 +28,13 @@ def client(tmp_path, monkeypatch):
 
     app.dependency_overrides[get_db] = test_db
     api.dependency_overrides[get_db] = test_db
-    monkeypatch.setattr(music_api, "storage", LocalStorage(str(tmp_path / "media")))
+    # Every module holds its own reference to the storage object, so a test that
+    # only patches one of them silently writes to the real bucket.
+    local = LocalStorage(str(tmp_path / "media"))
+    monkeypatch.setattr(music_api, "storage", local)
+    monkeypatch.setattr(uploads_api, "storage", local)
+    monkeypatch.setattr(accounts_api, "storage", local)
+    monkeypatch.setattr(storage_module, "storage", local)
     with TestClient(app) as test_client:
         stack = app.middleware_stack
         while stack is not None:

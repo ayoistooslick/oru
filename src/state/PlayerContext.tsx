@@ -278,6 +278,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const sameTrack = current && songs[startIndex]?.id === current.id;
       setQueue(songs);
       setIndex(startIndex);
+      // Picking a song opens the full player, the way tapping a track does in
+      // every music app. The down arrow closes it and playback carries on.
+      setExpanded(true);
       if (sameTrack) {
         audio().play().catch(() => setIsPlaying(false));
       }
@@ -301,7 +304,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const seek = useCallback((seconds: number) => {
     const element = audioRef.current;
     if (!element) return;
-    element.currentTime = seconds;
+    const apply = () => {
+      // `duration` is NaN until the browser knows how long the file is, which
+      // happens on the first byte range. Clamp so a seek cannot overrun it.
+      const total = Number.isFinite(element.duration) && element.duration > 0 ? element.duration : seconds;
+      element.currentTime = Math.max(0, Math.min(seconds, total));
+    };
+    if (element.readyState >= 1) apply();
+    else element.addEventListener("loadedmetadata", apply, { once: true });
     setPosition(seconds);
   }, []);
 

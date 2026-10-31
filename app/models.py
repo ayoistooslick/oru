@@ -19,6 +19,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), default="listener")
     display_name: Mapped[str] = mapped_column(String(80))
     bio: Mapped[str] = mapped_column(Text, default="")
+    # Everyone, listeners included, can put a face on their profile.
+    avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     artist_profile: Mapped["ArtistProfile"] = relationship(back_populates="user", uselist=False)
@@ -28,6 +30,8 @@ class ArtistProfile(Base):
     __tablename__ = "artist_profiles"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     stage_name: Mapped[str] = mapped_column(String(100))
+    # A wide picture behind the artist page header. Artists only.
+    banner_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     user: Mapped[User] = relationship(back_populates="artist_profile")
 
@@ -58,6 +62,16 @@ class Song(Base):
     artist: Mapped[User] = relationship(foreign_keys=[artist_id])
     shared_by: Mapped[User | None] = relationship(foreign_keys=[shared_by_user_id])
     genres: Mapped[list["SongGenre"]] = relationship(back_populates="song", cascade="all, delete-orphan")
+    features: Mapped[list["SongFeature"]] = relationship(back_populates="song", cascade="all, delete-orphan")
+
+
+class SongFeature(Base):
+    """Another artist credited on a song, shown as "feat." everywhere it plays."""
+    __tablename__ = "song_features"
+    song_id: Mapped[int] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), primary_key=True)
+    artist_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    song: Mapped[Song] = relationship(back_populates="features")
+    artist: Mapped[User] = relationship()
 
 
 class SongGenre(Base):

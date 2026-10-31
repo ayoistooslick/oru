@@ -24,3 +24,6 @@ __pycache__/
 data/media/
 .coverage
 htmlcov/
+
+# Promo build scratch space (fonts, frames, soundtrack).
+.promo/
