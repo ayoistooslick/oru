@@ -22,7 +22,13 @@ Validation errors are `422`, missing or private resources are `404`, duplicate a
 | POST | `/auth/login` | Public | Sign in and get a token |
 | GET | `/auth/me` | Signed in | Current account |
 | PATCH | `/listeners/me` | Signed in | Change display name or bio |
+| POST | `/listeners/me/avatar` | Signed in | Upload a profile picture (`file` field) |
+| DELETE | `/listeners/me/avatar` | Signed in | Remove the profile picture |
+| GET | `/users/{user_id}/avatar` | Public | Read a profile picture |
 | POST | `/artists/me` | Signed in | Create an artist profile |
+| POST | `/artists/me/banner` | Artist | Upload the wide banner picture (`file` field) |
+| DELETE | `/artists/me/banner` | Artist | Remove the banner |
+| GET | `/artists/{artist_id}/banner` | Public | Read an artist banner |
 | GET | `/artists` | Public | Search/list artists with `q`, `limit`, `offset` |
 | GET | `/artists/{artist_id}` | Public | Artist profile and counts |
 
@@ -45,7 +51,7 @@ Accounts listed in `ADMIN_EMAILS` register as moderators. A moderator can open a
 | GET | `/songs` | Public | Browse/search published tracks with `q`, `genre`, `limit`, `offset` |
 | GET | `/genres` | Public | Genres carried by published tracks, most used first |
 | GET | `/songs/{song_id}` | Public for published songs | Track details |
-| GET | `/songs/{song_id}/audio` | Public for published songs; owner/moderator for drafts | Stream original uploaded file |
+| GET | `/songs/{song_id}/audio` | Public for published songs; owner/moderator for drafts | Stream original uploaded file, with HTTP Range support so the player can seek |
 | GET | `/songs/{song_id}/cover` | Public for published songs; owner/moderator for drafts | Read uploaded cover artwork |
 | POST | `/artists/me/songs` | Artist | Upload audio and optional cover as multipart form data; creates a draft |
 | POST | `/artists/me/songs/{song_id}/publish` | Owning Artist | Publish a draft |
@@ -53,13 +59,15 @@ Accounts listed in `ADMIN_EMAILS` register as moderators. A moderator can open a
 | GET | `/artists/me/songs` | Artist | Own catalogue, drafts included; optional `status=draft\|published\|hidden` |
 | DELETE | `/artists/me/songs/{song_id}` | Owning Artist | Delete the track and its stored files |
 | GET | `/artists/{artist_id}/songs` | Public | Published tracks by one artist |
+| GET | `/artists/{artist_id}/appears-on` | Public | Tracks by other artists where this artist is credited as a feature |
 | GET | `/artists/me/releases` | Artist | Own releases, drafts included |
 | POST | `/artists/me/releases` | Artist | Create draft single, EP, or album from owned tracks |
 | POST | `/artists/me/releases/{release_id}/publish` | Owning Artist | Publish the release and its tracks |
 | GET | `/artists/{artist_id}/releases` | Public | List published releases by an artist |
 | GET | `/releases/{release_id}` | Public | Get a published release and its published tracks |
 | GET | `/feed/following` | Signed in | Recent published tracks by artists you follow |
-| GET | `/artists/me/stats` | Artist | Counts for own catalog |
+| GET | `/artists/me/stats` | Artist | Counts for own catalog, including the trailing seven days |
+| GET | `/rankings/weekly` | Public | Most played published tracks over the trailing seven days |
 
 Create an artist profile first. Upload example:
 
@@ -71,9 +79,16 @@ curl -X POST http://127.0.0.1:8000/api/v1/artists/me/songs \
   -F 'audio=@first-light.mp3' -F 'cover=@cover.jpg'
 ```
 
+`featured` is optional and can repeat: pass the artist ids of up to five other artists to credit
+on the song. They appear as `featuring` on the track everywhere it plays, and on their own profile
+under "Featured on".
+
 The upload is private until published. Supported audio suffixes are MP3, WAV, OGG, M4A, FLAC, and OPUS. Artwork accepts JPEG, PNG, or WebP. Type is checked using the filename extension and multipart content type, and size is capped by settings. This is not a malware scanner or media transcoder. Upload goes through the API with normal multipart progress events in the browser; interrupted uploads must be restarted.
 
-The original media is stored outside the relational database. This version only implements local disk storage. Production object storage, resumable uploads, metadata probing, transcoding and adaptive streaming are not implemented yet.
+The original media is stored outside the relational database. Local disk storage is used in
+development; production writes to an S3-compatible bucket when `STORAGE=s3` and the AWS settings are
+present, and falls back to local disk if they are not. Resumable uploads, metadata probing,
+transcoding and adaptive streaming are not implemented yet.
 
 ## Discovery and listening
 

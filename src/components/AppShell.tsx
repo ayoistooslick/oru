@@ -15,9 +15,9 @@ import {
 } from "lucide-react";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
-import { initials } from "../lib/format";
 import type { Paginated, Playlist } from "../lib/types";
 import { useAuth } from "../state/AuthContext";
+import { Avatar } from "./Avatar";
 import { OruLogo } from "./OruMark";
 import { PlayerBar } from "./PlayerBar";
 import { NowPlaying } from "./NowPlaying";
@@ -55,15 +55,7 @@ function NavItemRow({ to, label, icon: Icon }: NavItem) {
   );
 }
 
-function Avatar({ name, size = "h-8 w-8" }: { name: string; size?: string }) {
-  return (
-    <span
-      className={`${size} grid shrink-0 place-items-center rounded-full bg-[#3e3e3e] text-[12px] font-bold text-white`}
-    >
-      {initials(name)}
-    </span>
-  );
-}
+
 
 function Sidebar() {
   const { user, signOut, isAdmin, isArtist } = useAuth();
@@ -154,7 +146,7 @@ function Sidebar() {
       <div className="rounded-lg bg-[#121212] p-3">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="flex min-w-0 flex-1 items-center gap-3 press">
-            <Avatar name={user.display_name} />
+            <Avatar name={user.display_name} src={user.avatar_url} />
             <span className="min-w-0">
               <span className="block truncate text-[14px] font-bold">{user.display_name}</span>
               <span className="block truncate text-[12.5px] text-ink-soft">@{user.handle}</span>
@@ -176,6 +168,7 @@ function Sidebar() {
 
 function TopBar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="sticky top-0 z-20 hidden items-center justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 py-3 sm:px-6 lg:flex">
@@ -198,7 +191,7 @@ function TopBar() {
         </button>
       </div>
       <Link to="/settings" className="rounded-full bg-black/70 p-1 transition hover:bg-black" aria-label="Your account">
-        <Avatar name="me" size="h-7 w-7" />
+        <Avatar name="me" src={user?.avatar_url} size="h-7 w-7" />
       </Link>
     </div>
   );
@@ -216,7 +209,7 @@ function MobileShell() {
           <OruLogo />
         </Link>
         <Link to="/settings" aria-label="Your account" className="flex items-center gap-2">
-          <Avatar name={user.display_name} size="h-8 w-8" />
+          <Avatar name={user.display_name} src={user.avatar_url} size="h-8 w-8" />
         </Link>
       </header>
     </>
@@ -265,7 +258,7 @@ export function AppShell() {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-black text-white">
+    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-black text-white max-sm:h-[108.7dvh]">
       <MobileShell />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-2 lg:p-2">

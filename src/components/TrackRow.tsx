@@ -98,9 +98,14 @@ export function TrackRow({
         </p>
         <p className="mt-0.5 flex items-center gap-2 truncate text-[13.5px] text-ink-soft">
           {showArtist ? (
-            <Link to={`/artist/${song.artist_id}`} onClick={(event) => event.stopPropagation()} className="truncate hover:text-white hover:underline">
-              {song.artist_name}
-            </Link>
+            <>
+              <Link to={`/artist/${song.artist_id}`} onClick={(event) => event.stopPropagation()} className="truncate hover:text-white hover:underline">
+                {song.artist_name}
+              </Link>
+              {song.featuring?.length ? (
+                <span className="truncate text-white/45">feat. {song.featuring.map((guest) => guest.name).join(", ")}</span>
+              ) : null}
+            </>
           ) : song.genres.slice(0, 2).join(", ") || "No genre"}
           {published && song.shared_by ? <span className="truncate">· Shared by {song.shared_by.display_name}</span> : null}
           {showStatus && !published ? (

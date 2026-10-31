@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, ImagePlus, Music4, Send, Trash2, UploadCloud } from "lucide-react";
+import { Check, ImagePlus, Mic, Music4, Scissors, Send, Trash2, UploadCloud, Users, X } from "lucide-react";
 import { ApiError, auth, request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
-import type { ArtistPost, ArtistStats, Paginated, Release, Song } from "../lib/types";
+import type { Artist, ArtistPost, ArtistStats, Paginated, Release, Song } from "../lib/types";
 import { TrackRow } from "../components/TrackRow";
 import { Cover } from "../components/Cover";
+import { AudioEditor } from "../components/AudioEditor";
+import { RecorderSheet } from "../components/AudioRecorder";
 import { Button, EmptyState, Field, Spinner, TextArea } from "../components/ui";
 import { useAuth } from "../state/AuthContext";
 import { useToasts } from "../state/ToastContext";
@@ -24,10 +26,10 @@ function Block({ label }: { label: string }) {
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="rounded-lg bg-[#181818] px-4 py-4">
-      <p className="text-[28px] font-extrabold leading-none tracking-[-0.04em]">{value}</p>
+    <div className="rounded-lg bg-[#181818] px-4 py-3.5">
+      <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em]">{value}</p>
       <p className="label-caps mt-2">{label}</p>
     </div>
   );
@@ -104,10 +106,47 @@ function Desk({ onLeave }: { onLeave: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [genres, setGenres] = useState("");
-  const [audioName, setAudioName] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverName, setCoverName] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [recording, setRecording] = useState(false);
+  const [editing, setEditing] = useState<File | null>(null);
+  const [featuredIds, setFeaturedIds] = useState<number[]>([]);
+  const [guestQuery, setGuestQuery] = useState("");
+  const [guestResults, setGuestResults] = useState<Artist[]>([]);
+  const audioName = audioFile?.name ?? "";
+  const { user } = useAuth();
+  const selfId = user?.id;
+
+  // Look up other artists to credit on the song. Two letters is enough to
+  // start, and the list closes as soon as one is picked.
+  useEffect(() => {
+    const query = guestQuery.trim();
+    if (query.length < 2) {
+      setGuestResults([]);
+      return;
+    }
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      request<Paginated<Artist>>(`/artists?q=${encodeURIComponent(query)}&limit=6`)
+        .then((result) => alive && setGuestResults(result.items.filter((artist) => artist.user_id !== selfId)))
+        .catch(() => alive && setGuestResults([]));
+    }, 220);
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [guestQuery, selfId]);
+
+  const takeFile = (file: File) => {
+    setAudioFile(file);
+    if (audioRef.current) {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      audioRef.current.files = transfer.files;
+    }
+  };
 
   const [releasing, setReleasing] = useState(false);
   const [releaseTitle, setReleaseTitle] = useState("");
@@ -126,12 +165,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
       const files = (event as CustomEvent<File[]>).detail ?? [];
       const audio = files.find((file) => file.type.startsWith("audio/"));
       const picture = files.find((file) => file.type.startsWith("image/"));
-      if (audio && audioRef.current) {
-        const transfer = new DataTransfer();
-        transfer.items.add(audio);
-        audioRef.current.files = transfer.files;
-        setAudioName(audio.name);
-      }
+      if (audio) takeFile(audio);
       if (picture && coverRef.current) {
         const transfer = new DataTransfer();
         transfer.items.add(picture);
@@ -150,7 +184,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
 
   const submitUpload = async (event: FormEvent) => {
     event.preventDefault();
-    const chosen = audioRef.current?.files?.[0];
+    const chosen = audioFile ?? audioRef.current?.files?.[0];
     if (!chosen) {
       toasts.error("Choose a song file", "MP3, WAV, M4A, OGG or FLAC. Up to 100 MB.");
       return;
@@ -168,6 +202,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
       .filter(Boolean)
       .forEach((value) => form.append("genres", value));
     form.append("audio", chosen);
+    featuredIds.forEach((id) => form.append("featured", String(id)));
     const art = coverRef.current?.files?.[0];
     if (art) {
       if (art.size > MAX_IMAGE) {
@@ -185,7 +220,9 @@ function Desk({ onLeave }: { onLeave: () => void }) {
       setTitle("");
       setDescription("");
       setGenres("");
-      setAudioName("");
+      setAudioFile(null);
+      setFeaturedIds([]);
+      setGuestQuery("");
       setCoverName("");
       if (audioRef.current) audioRef.current.value = "";
       if (coverRef.current) coverRef.current.value = "";
@@ -306,10 +343,20 @@ function Desk({ onLeave }: { onLeave: () => void }) {
         </button>
       </header>
 
-      <section className="mb-8 grid grid-cols-3 gap-3">
-        <Stat value={stats.data?.published_songs ?? 0} label="Published" />
-        <Stat value={stats.data?.likes ?? 0} label="Likes" />
-        <Stat value={stats.data?.qualified_listens ?? 0} label="Plays" />
+      <section className="mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat value={stats.data?.weekly_plays ?? 0} label="Plays this week" />
+          <Stat value={stats.data?.weekly_likes ?? 0} label="Likes this week" />
+          <Stat value={stats.data?.qualified_listens ?? 0} label="Plays all time" />
+          <Stat value={stats.data?.published_songs ?? 0} label="Songs live" />
+        </div>
+        {stats.data?.weekly_top_song ? (
+          <p className="mt-2 text-[13.5px] text-ink-soft">
+            Top this week: <strong className="font-bold text-white">{stats.data.weekly_top_song.title}</strong>
+            <span className="mx-1.5 opacity-50">·</span>
+            {stats.data.weekly_top_song.plays} plays
+          </p>
+        ) : null}
       </section>
 
       <section className="mb-9">
@@ -340,6 +387,69 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                 placeholder="afrobeats, rap, gospel"
                 hint="Separate with commas"
               />
+
+              <div>
+                <span className="label-caps">Featuring</span>
+                {featuredIds.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {featuredIds.map((id) => {
+                      const guest = guestResults.find((artist) => artist.user_id === id);
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#1ed760]/15 px-3 text-[13px] font-bold text-[#1ed760]"
+                        >
+                          {guest?.stage_name ?? `Artist ${id}`}
+                          <button
+                            type="button"
+                            onClick={() => setFeaturedIds((current) => current.filter((value) => value !== id))}
+                            aria-label={`Remove ${guest?.stage_name ?? "artist"}`}
+                            className="grid h-4 w-4 place-items-center rounded-full hover:bg-white/15"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                <div className="relative mt-2">
+                  <input
+                    value={guestQuery}
+                    onChange={(event) => setGuestQuery(event.target.value)}
+                    placeholder="Add another artist"
+                    className="h-10 w-full rounded-lg border border-transparent bg-white/10 px-3.5 text-[14.5px] outline-none transition placeholder:text-ink-faint focus:border-white"
+                    aria-label="Search artists to feature"
+                  />
+                  {guestQuery.trim().length >= 2 && guestResults.length > 0 ? (
+                    <ul className="absolute left-0 right-0 top-11 z-20 max-h-56 overflow-y-auto rounded-lg border border-white/10 bg-[#282828] p-1.5 shadow-xl">
+                      {guestResults.map((artist) => {
+                        const picked = featuredIds.includes(artist.user_id);
+                        const full = !picked && featuredIds.length >= 5;
+                        return (
+                          <li key={artist.user_id}>
+                            <button
+                              type="button"
+                              disabled={full}
+                              onClick={() => {
+                                if (picked) setFeaturedIds((current) => current.filter((value) => value !== artist.user_id));
+                                else setFeaturedIds((current) => [...current, artist.user_id]);
+                                setGuestQuery("");
+                              }}
+                              className="flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition hover:bg-white/10 disabled:opacity-40"
+                            >
+                              <Users className="h-3.5 w-3.5 text-ink-soft" />
+                              <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{artist.stage_name}</span>
+                              {picked ? <Check className="h-3.5 w-3.5 text-[#1ed760]" /> : null}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </div>
+                <p className="mt-1.5 text-[12.5px] text-ink-soft">Optional. They keep their own profile and get the credit.</p>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -358,9 +468,35 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                   type="file"
                   accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.opus"
                   className="sr-only"
-                  onChange={(event) => setAudioName(event.target.files?.[0]?.name ?? "")}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) takeFile(file);
+                  }}
                 />
               </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRecording(true)}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-3 text-[13.5px] font-bold transition hover:bg-white/10"
+                >
+                  <Mic className="h-4 w-4 text-[#1ed760]" /> Record
+                </button>
+                <button
+                  type="button"
+                  onClick={() => audioFile && setEditing(audioFile)}
+                  disabled={!audioFile}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-3 text-[13.5px] font-bold transition hover:bg-white/10 disabled:opacity-40"
+                >
+                  <Scissors className="h-4 w-4 text-[#1ed760]" /> Trim and fade
+                </button>
+              </div>
+              {audioFile ? (
+                <p className="text-[12.5px] text-ink-soft">
+                  {(audioFile.size / (1024 * 1024)).toFixed(1)} MB ready. Trim it, or save it as a draft.
+                </p>
+              ) : null}
 
               <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white/5 px-4 py-4 transition hover:bg-white/10">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/10 text-white">
@@ -672,6 +808,29 @@ function Desk({ onLeave }: { onLeave: () => void }) {
           </ul>
         ) : null}
       </section>
+
+      {editing ? (
+        <AudioEditor
+          file={editing}
+          onClose={() => setEditing(null)}
+          onApply={(next) => {
+            takeFile(next);
+            setEditing(null);
+            toasts.saved("Clip ready", "Trimmed and saved to this draft");
+          }}
+        />
+      ) : null}
+
+      {recording ? (
+        <RecorderSheet
+          onClose={() => setRecording(false)}
+          onRecorded={(blob, name) => {
+            const file = new File([blob], `${name}.webm`, { type: blob.type || "audio/webm" });
+            setRecording(false);
+            setEditing(file);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

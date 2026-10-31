@@ -8,6 +8,7 @@ export interface User {
   bio: string;
   role: Role;
   created_at: string;
+  avatar_url: string | null;
 }
 
 export interface AuthResponse {
@@ -21,6 +22,12 @@ export type SongStatus = "draft" | "pending" | "published" | "hidden";
 export interface SongSharer {
   handle: string;
   display_name: string;
+}
+
+export interface SongFeature {
+  artist_id: number;
+  handle: string;
+  name: string;
 }
 
 export interface Song {
@@ -37,6 +44,8 @@ export interface Song {
   audio_url: string | null;
   cover_url: string | null;
   source_url: string | null;
+  artist_avatar_url?: string | null;
+  featuring?: SongFeature[];
   shared_by: SongSharer | null;
 }
 
@@ -45,6 +54,8 @@ export interface Artist {
   handle: string;
   stage_name: string;
   bio: string;
+  avatar_url?: string | null;
+  banner_url?: string | null;
   published_song_count?: number;
   follower_count?: number;
 }
@@ -99,6 +110,15 @@ export interface ArtistStats {
   published_songs: number;
   likes: number;
   qualified_listens: number;
+  weekly_plays?: number;
+  weekly_likes?: number;
+  weekly_top_song?: { id: number; title: string; plays: number } | null;
+  window_days?: number;
+}
+
+export interface WeeklyRanking {
+  items: { rank: number; plays: number; song: Song }[];
+  window_days: number;
 }
 
 export interface Report {

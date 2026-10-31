@@ -141,6 +141,49 @@ The browser must wait for a user action before asking for notification permissio
 persistence is requested through the browser storage API. A PWA/TWA cannot request Android's
 default music-player role. Android file handling is declared separately in the TWA configuration.
 
+## Recording, pictures and weekly charts
+
+- **Record in the app.** The studio can record straight from the device microphone, or take a
+  file. Either way the sound lands in the same editor before it is uploaded.
+- **Trim, fade and level.** The editor draws a waveform, sets a start and an end, adds a fade in
+  and a fade out, can even out the volume, and saves a WAV. The cut happens in the browser, so
+  nothing is uploaded until the artist saves the clip.
+- **Seek properly.** Audio responses answer HTTP Range requests, so dragging the player no longer
+  restarts the song. The scrubber follows the finger while it is held, then hands control back to
+  the audio clock.
+- **Pictures.** Everyone can add a profile picture. Artists also get a wide banner behind their
+  name. Both use the same storage and size rules as cover artwork.
+- **Features.** A song can credit up to five other artists. They show as `feat.` wherever the song
+  plays and appear on their own page under "Featured on".
+- **This week.** The home page shows the most played tracks of the last seven days, the studio
+  shows weekly plays, weekly likes and the week's top song, and `/rankings/weekly` serves the same
+  numbers over the API.
+- **Phones.** The signed-in app is drawn at 92 percent on small screens, so more of it fits without
+  shrinking touches below a comfortable size.
+
+The expanded player closes from its down arrow again, and opens whenever a song starts.
+
+## Promo video
+
+`public/promo/oru-promo.mp4` is a 34 second 1080p promo built from the real product screenshots.
+`scripts/promo/build_video.py` draws every frame with Pillow, writes the soundtrack with numpy and
+hands the frames to ffmpeg. To rebuild it:
+
+```bash
+.venv/bin/pip install pillow numpy
+npm install --no-save --ignore-scripts ffmpeg-static && node node_modules/ffmpeg-static/install.js
+.venv/bin/python scripts/promo/build_video.py
+```
+
+## Plan for the next update
+
+- **Listener upgrades.** Smaller quality-of-life work for people who only listen: better search,
+  clearer offline behaviour, and quicker ways to get from one song to more by the same artist.
+- **Playlists that feel like playlists.** A collapsible queue, drag to reorder, and a proper next
+  up view while a song plays.
+- **Saved takes.** Keep several recordings in the studio, so a second attempt does not replace the
+  first.
+
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) - how to send a change.

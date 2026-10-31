@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { Check, Pause, Play, UserPlus } from "lucide-react";
-import { request } from "../lib/api";
+import { mediaUrl, request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
 import type { Artist, ArtistPost, Paginated, Release, Song } from "../lib/types";
@@ -43,8 +43,14 @@ export function ArtistPage() {
     (signal) => request(`/artists/${artistId}/posts?limit=10`, { signal }),
     [artistId],
   );
+  // Songs by other artists where this one is credited as a feature.
+  const appearances = useResource<Paginated<Song>>(
+    (signal) => request(`/artists/${artistId}/appears-on?limit=20`, { signal }),
+    [artistId],
+  );
 
   const catalogue = songs.data?.items ?? [];
+  const guests = appearances.data?.items ?? [];
   const following = followedIds.has(artistId);
   const isSelf = user?.id === artistId;
   const playingThisArtist = catalogue.some((song) => current?.id === song.id);
@@ -86,13 +92,19 @@ export function ArtistPage() {
 
   return (
     <div className="pb-8">
-      <header className="relative bg-gradient-to-b from-[#2b5c46]/85 to-[#121212] px-4 pb-6 pt-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-end">
+      <header className="relative overflow-hidden bg-gradient-to-b from-[#2b5c46]/85 to-[#121212] px-4 pb-6 pt-8 sm:px-6 lg:px-8">
+        {profile.banner_url ? (
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <img src={mediaUrl(profile.banner_url)} alt="" className="h-full w-full object-cover opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/55 to-[#121212]" />
+          </div>
+        ) : null}
+        <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-end">
           <Cover
-            src={null}
+            src={profile.avatar_url ?? null}
             alt={profile.stage_name}
             seed={profile.user_id}
-            className="h-32 w-32 shrink-0 sm:h-48 sm:w-48"
+            className="h-32 w-32 shrink-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] sm:h-48 sm:w-48"
             rounded="rounded-full"
           />
           <div className="min-w-0 flex-1">
@@ -187,6 +199,17 @@ export function ArtistPage() {
             </div>
           )}
         </section>
+
+        {guests.length > 0 ? (
+          <section className="mb-8">
+            <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Featured on</h2>
+            <div className="rounded-lg bg-[#181818] p-2">
+              {guests.map((song) => (
+                <TrackRow key={song.id} song={song} queue={guests} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {(releases.data?.items.length ?? 0) > 0 ? (
           <section className="mb-8">

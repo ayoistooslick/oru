@@ -83,6 +83,14 @@
   }
 }
 
+/* Phones get the same layout at 92 percent: more of it fits on the screen,
+   text stays readable and the player stops covering half the page. */
+@media (max-width: 639px) {
+  #root {
+    zoom: 0.92;
+  }
+}
+
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {

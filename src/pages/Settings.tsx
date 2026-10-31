@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Download, Github, LogOut, Mic2, User } from "lucide-react";
-import { ApiError, request } from "../lib/api";
+import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "lucide-react";
+import { ApiError, mediaUrl, request, upload } from "../lib/api";
+import { Avatar } from "../components/Avatar";
 import { Page } from "../components/Page";
 import { Button, Field, SectionHeader, TextArea } from "../components/ui";
 import { useAuth } from "../state/AuthContext";
@@ -25,6 +26,11 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [hasStudio, setHasStudio] = useState<boolean | null>(null);
   const [showDeviceSetup, setShowDeviceSetup] = useState(false);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [bannerVersion, setBannerVersion] = useState(0);
+  const [pictureBusy, setPictureBusy] = useState<"avatar" | "banner" | null>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const bannerInput = useRef<HTMLInputElement>(null);
   const { canInstall, installed, install } = useInstallPrompt();
 
   useEffect(() => {
@@ -68,6 +74,54 @@ export function SettingsPage() {
     navigate("/");
   };
 
+  const sendPicture = async (kind: "avatar" | "banner", file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toasts.error("Picture too big", "Keep it under 10 MB.");
+      return;
+    }
+    setPictureBusy(kind);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      if (kind === "avatar") {
+        const response = await upload<{ user: NonNullable<typeof user> }>("/listeners/me/avatar", form);
+        updateUser(response.user);
+        setAvatarVersion((value) => value + 1);
+        toasts.saved("Profile picture updated", "People will see it beside your name");
+      } else {
+        await upload("/artists/me/banner", form);
+        setBannerVersion((value) => value + 1);
+        toasts.saved("Banner updated", "It shows at the top of your artist page");
+      }
+    } catch (error) {
+      toasts.error("Could not save that picture", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setPictureBusy(null);
+    }
+  };
+
+  const dropPicture = async (kind: "avatar" | "banner") => {
+    setPictureBusy(kind);
+    try {
+      if (kind === "avatar") {
+        const response = await request<{ user: NonNullable<typeof user> }>("/listeners/me/avatar", { method: "DELETE" });
+        updateUser(response.user);
+        setAvatarVersion((value) => value + 1);
+      } else {
+        await request("/artists/me/banner", { method: "DELETE" });
+        setBannerVersion((value) => value + 1);
+      }
+      toasts.info("Removed", kind === "avatar" ? "Your initials are back" : "The banner is gone");
+    } catch (error) {
+      toasts.error("Could not remove it", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setPictureBusy(null);
+    }
+  };
+
+  const avatarSrc = user?.avatar_url ? `${user.avatar_url}?v=${avatarVersion}` : null;
+  const bannerSrc = hasStudio && user ? `/artists/${user.id}/banner?v=${bannerVersion}` : null;
+
   if (!user) return null;
 
   const dirty = displayName.trim() !== user.display_name || bio.trim() !== user.bio;
@@ -81,6 +135,103 @@ export function SettingsPage() {
         </Button>
       }
     >
+      <section className="mb-8">
+        <SectionHeader title="Your pictures" />
+        <div className="rounded-lg bg-[#181818] p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <Avatar name={user.display_name} src={avatarSrc} size="h-16 w-16" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15.5px] font-bold">Profile picture</p>
+              <p className="mt-0.5 text-[13.5px] text-ink-soft">A square picture. It shows beside your name everywhere on ORU.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => avatarInput.current?.click()}
+                disabled={pictureBusy === "avatar"}
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-3.5 text-[13.5px] font-bold transition hover:bg-white/20 disabled:opacity-50"
+              >
+                <ImagePlus className="h-4 w-4" /> {user.avatar_url ? "Change" : "Add"}
+              </button>
+              {user.avatar_url ? (
+                <button
+                  type="button"
+                  onClick={() => void dropPicture("avatar")}
+                  disabled={pictureBusy === "avatar"}
+                  className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  aria-label="Remove your profile picture"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : null}
+              <input
+                ref={avatarInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void sendPicture("avatar", file);
+                  event.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
+          {hasStudio ? (
+            <div className="mt-5 border-t border-white/10 pt-5">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="block h-16 w-32 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                  {bannerSrc ? (
+                    <img src={mediaUrl(bannerSrc)} alt="Your banner" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+                      No banner
+                    </span>
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15.5px] font-bold">Artist banner</p>
+                  <p className="mt-0.5 text-[13.5px] text-ink-soft">A wide picture behind your name on your artist page.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => bannerInput.current?.click()}
+                    disabled={pictureBusy === "banner"}
+                    className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-3.5 text-[13.5px] font-bold transition hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <ImagePlus className="h-4 w-4" /> {bannerSrc ? "Change" : "Add"}
+                  </button>
+                  {bannerSrc ? (
+                    <button
+                      type="button"
+                      onClick={() => void dropPicture("banner")}
+                      disabled={pictureBusy === "banner"}
+                      className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                      aria-label="Remove your banner"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                  <input
+                    ref={bannerInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void sendPicture("banner", file);
+                      event.target.value = "";
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
       <section className="mb-8">
         <SectionHeader title="Your profile" />
         <form onSubmit={save} className="rounded-lg bg-[#181818] p-5 sm:p-6">

@@ -58,6 +58,20 @@ class LocalStorage:
         except FileNotFoundError:
             return None
 
+    def size(self, key: str) -> int | None:
+        try:
+            return self.path_for(key).stat().st_size
+        except FileNotFoundError:
+            return None
+
+    def read_range(self, key: str, start: int, end: int) -> bytes | None:
+        try:
+            with self.path_for(key).open("rb") as handle:
+                handle.seek(start)
+                return handle.read(end - start + 1)
+        except FileNotFoundError:
+            return None
+
 
 class S3Storage:
     """Same interface, backed by an S3-compatible bucket for audio + cover images."""
@@ -131,6 +145,26 @@ class S3Storage:
             return resp["Body"].read()
         except Exception as e:
             log.warning("failed to read s3 object %r: %s", key, e)
+            return None
+
+    def size(self, key: str) -> int | None:
+        if self.client is None or self.bucket is None:
+            return None
+        try:
+            resp = self.client.head_object(Bucket=self.bucket, Key=key)
+            return int(resp["ContentLength"])
+        except Exception as e:
+            log.warning("failed to stat s3 object %r: %s", key, e)
+            return None
+
+    def read_range(self, key: str, start: int, end: int) -> bytes | None:
+        if self.client is None or self.bucket is None:
+            return None
+        try:
+            resp = self.client.get_object(Bucket=self.bucket, Key=key, Range=f"bytes={start}-{end}")
+            return resp["Body"].read()
+        except Exception as e:
+            log.warning("failed to read s3 object range %r: %s", key, e)
             return None
 
     def list_files(self, prefix: str) -> list[str]:
