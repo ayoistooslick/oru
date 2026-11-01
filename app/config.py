@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=list, validation_alias="CORS_ORIGINS")
     allow_wildcard_cors: bool = Field(default=False, validation_alias="ALLOW_WILDCARD_CORS")
     admin_emails: str = Field(default="", validation_alias="ADMIN_EMAILS")
+    # Google sign-in stays off until a client id is supplied. The id is public;
+    # it is only used to check that an incoming Google token was meant for us.
+    google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
     jwt_expire_minutes: int = Field(default=60 * 24, validation_alias="JWT_EXPIRE_MINUTES")
     max_audio_bytes: int = Field(default=100 * 1024 * 1024, validation_alias="MAX_AUDIO_BYTES")
     max_cover_bytes: int = Field(default=5 * 1024 * 1024, validation_alias="MAX_COVER_BYTES")

@@ -1,25 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Github, Globe } from "lucide-react";
+import { ArrowLeft, Github, Globe } from "../components/icons";
 import { OruLogo, OruMark } from "../components/OruMark";
 
 const PORTRAIT = "https://res.cloudinary.com/dejkqmt3q/image/upload/v1791147133/linkforge/file_amiw7z.jpg";
-const PORTFOLIO = "https://ayo-portal.netlify.app";
+const PORTFOLIO = "https://ayoistooslick.netlify.app";
 const GITHUB = "https://github.com/ayoistooslick";
 
 export function About() {
   const [portraitBroken, setPortraitBroken] = useState(false);
 
   return (
-    <div className="min-h-[100dvh] bg-black text-white">
-      <header className="sticky top-0 z-40 bg-black/85 backdrop-blur">
+    <div className="min-h-[100dvh] bg-paper text-ink">
+      <header className="sticky top-0 z-40 bg-paper/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-5 sm:px-8">
           <Link to="/" aria-label="ORU home">
             <OruLogo />
           </Link>
           <Link
             to="/"
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/30 px-4 text-[14.5px] font-bold transition hover:bg-white/10"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-ink/30 px-4 text-[14.5px] font-semibold transition hover:bg-ink/10"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to ORU
@@ -30,7 +30,7 @@ export function About() {
       <main className="mx-auto w-full max-w-3xl px-5 pb-20 pt-8 sm:px-8">
         <div className="flex items-center gap-5">
           {portraitBroken ? (
-            <span className="grid h-28 w-28 shrink-0 place-items-center rounded-full bg-[#181818]">
+            <span className="grid h-28 w-28 shrink-0 place-items-center rounded-full bg-card">
               <OruMark className="h-12 w-12" />
             </span>
           ) : (
@@ -41,7 +41,7 @@ export function About() {
               height={112}
               loading="lazy"
               onError={() => setPortraitBroken(true)}
-              className="h-28 w-28 shrink-0 rounded-full border border-white/10 object-cover"
+              className="h-28 w-28 shrink-0 rounded-full border border-hair object-cover"
             />
           )}
           <div className="min-w-0">
@@ -52,7 +52,7 @@ export function About() {
           </div>
         </div>
 
-        <p className="mt-6 text-[18px] leading-relaxed text-white">
+        <p className="mt-6 text-[18px] leading-relaxed text-ink">
           I am a teenager who builds software and experiments with useful ideas.
         </p>
 
@@ -73,29 +73,29 @@ export function About() {
             href={PORTFOLIO}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1ed760] px-5 text-[15px] font-bold text-black transition press hover:scale-105"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-flame px-5 text-[15px] font-semibold text-cream transition press hover:scale-105"
           >
             <Globe className="h-4 w-4" />
-            ayo-portal.netlify.app
+            ayoistooslick.netlify.app
           </a>
           <a
             href={GITHUB}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-white/30 px-5 text-[15px] font-bold transition hover:bg-white/10"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-ink/30 px-5 text-[15px] font-semibold transition hover:bg-ink/10"
           >
             <Github className="h-4 w-4" />
             ayoistooslick on GitHub
           </a>
           <Link
             to="/listen"
-            className="inline-flex h-11 items-center rounded-full border border-white/30 px-5 text-[15px] font-bold transition hover:bg-white/10"
+            className="inline-flex h-11 items-center rounded-full border border-ink/30 px-5 text-[15px] font-semibold transition hover:bg-ink/10"
           >
             Open ORU
           </Link>
         </div>
 
-        <p className="mt-10 border-t border-white/10 pt-6 text-[13.5px] text-ink-faint">
+        <p className="mt-10 border-t border-hair pt-6 text-[13.5px] text-ink-faint">
           ORU 1.0 · Made for upcoming musicians · Free on any phone
         </p>
       </main>

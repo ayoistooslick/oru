@@ -142,9 +142,11 @@ export function upload<T>(
 }
 
 export const auth = {
-  register: (input: { email: string; handle: string; display_name: string; password: string }) =>
+  register: (input: { email: string; password: string; handle?: string; display_name?: string }) =>
     request<AuthResponse>("/auth/register", { method: "POST", body: input, token: null }),
   login: (input: { email: string; password: string }) =>
     request<AuthResponse>("/auth/login", { method: "POST", body: input, token: null }),
+  google: (idToken: string) => request<AuthResponse>("/auth/google", { method: "POST", body: { id_token: idToken }, token: null }),
+  config: () => request<{ google_enabled: boolean; google_client_id: string | null }>("/auth/config", { token: null }),
   me: () => request<{ user: AuthResponse["user"] }>("/auth/me"),
 };

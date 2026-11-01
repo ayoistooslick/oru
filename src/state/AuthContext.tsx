@@ -4,9 +4,9 @@ import type { AuthResponse, User } from "../lib/types";
 
 interface SignUpInput {
   email: string;
-  handle: string;
-  display_name: string;
   password: string;
+  handle?: string;
+  display_name?: string;
 }
 
 interface AuthValue {
@@ -16,6 +16,7 @@ interface AuthValue {
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (input: SignUpInput) => Promise<User>;
+  signInWithGoogle: (idToken: string) => Promise<User>;
   signOut: () => void;
   updateUser: (user: User) => void;
 }
@@ -92,6 +93,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persist],
   );
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string) => {
+      const response = await auth.google(idToken);
+      setToken(response.access_token);
+      persist(response.user);
+      return response.user;
+    },
+    [persist],
+  );
+
   const signOut = useCallback(() => {
     setToken(null);
     persist(null);
@@ -105,10 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: user?.role === "admin",
       signIn,
       signUp,
+      signInWithGoogle,
       signOut,
       updateUser: persist,
     }),
-    [user, loading, signIn, signUp, signOut, persist],
+    [user, loading, signIn, signUp, signInWithGoogle, signOut, persist],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

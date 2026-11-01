@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check, ImagePlus, Music4 } from "lucide-react";
+import { Check, ImagePlus, Music4 } from "../components/icons";
 import { request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Paginated, Song } from "../lib/types";
@@ -15,8 +15,18 @@ const MAX_IMAGE = 10 * 1024 * 1024;
 
 type Inbox = { items: Song[] };
 
+interface ExternalShare {
+  id: number;
+  title: string;
+  artist_name: string;
+  url: string;
+  note: string;
+  created_at: string;
+  sharer: { handle: string; display_name: string };
+}
+
 export function SongSharing() {
-  const { isArtist, isAdmin } = useAuth();
+  const { user, isArtist, isAdmin } = useAuth();
   const canReview = isArtist || isAdmin;
   const { hash } = useLocation();
   const toasts = useToasts();
@@ -34,6 +44,13 @@ export function SongSharing() {
   const [progress, setProgress] = useState(0);
   const [withdrawing, setWithdrawing] = useState<number | null>(null);
   const [deciding, setDeciding] = useState<number | null>(null);
+  // A song that lives somewhere else, for an artist who is not on ORU yet.
+  const [extTitle, setExtTitle] = useState("");
+  const [extArtist, setExtArtist] = useState("");
+  const [extUrl, setExtUrl] = useState("");
+  const [extNote, setExtNote] = useState("");
+  const [extBusy, setExtBusy] = useState(false);
+  const [withdrawingExt, setWithdrawingExt] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedArtistQuery(artistQuery.trim()), 220);
@@ -48,6 +65,10 @@ export function SongSharing() {
     return () => window.clearTimeout(timer);
   }, [hash, canReview]);
 
+  const externalShares = useResource<Paginated<ExternalShare>>(
+    (signal) => request("/shared/external?limit=50", { signal }),
+    [],
+  );
   const artists = useResource<Paginated<Artist>>(
     (signal) => debouncedArtistQuery
       ? request(`/artists?limit=8&q=${encodeURIComponent(debouncedArtistQuery)}`, { signal })
@@ -140,17 +161,53 @@ export function SongSharing() {
     }
   };
 
+  const submitExternal = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!extTitle.trim() || !extArtist.trim() || !extUrl.trim()) return;
+    setExtBusy(true);
+    try {
+      await request("/shared/external", {
+        method: "POST",
+        body: { title: extTitle.trim(), artist_name: extArtist.trim(), url: extUrl.trim(), note: extNote.trim() },
+      });
+      toasts.saved("Shared", `${extTitle.trim()} is now in the list for others to hear.`);
+      setExtTitle("");
+      setExtArtist("");
+      setExtUrl("");
+      setExtNote("");
+      externalShares.reload();
+    } catch (error) {
+      toasts.error("Could not share the song", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setExtBusy(false);
+    }
+  };
+
+  const withdrawExternal = async (share: ExternalShare) => {
+    setWithdrawingExt(share.id);
+    try {
+      await request(`/shared/external/${share.id}`, { method: "DELETE" });
+      toasts.info("Share removed", share.title);
+      externalShares.reload();
+    } catch (error) {
+      toasts.error("Could not remove it", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setWithdrawingExt(null);
+    }
+  };
+
   const artistMatches = artists.data?.items ?? [];
   const myShares = ownShares.data?.items ?? [];
   const pendingShares = inbox.data?.items ?? [];
+  const outside = externalShares.data?.items ?? [];
 
   return (
     <Page
       title="Share a song"
       subtitle="Help listeners find music from ORU artists. The artist keeps the credit, and nothing goes public until the artist or a moderator approves it."
-      actions={canReview ? <a href="#share-inbox" className="text-[14px] font-bold text-white underline underline-offset-4">Review pending shares</a> : undefined}
+      actions={canReview ? <a href="#share-inbox" className="text-[14px] font-bold text-ink underline underline-offset-4">Review pending shares</a> : undefined}
     >
-      <section className="mb-9 rounded-lg bg-[#181818] p-5 sm:p-6">
+      <section className="mb-9 rounded-xl bg-card p-5 sm:p-6">
         <h2 className="text-[21px] font-bold tracking-[-0.02em]">Send a song for approval</h2>
         <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">Find its ORU artist, add the source link and upload the audio. You can withdraw it while it is pending.</p>
 
@@ -179,7 +236,7 @@ export function SongSharing() {
               </div>
             ) : null}
             {!selectedArtist && debouncedArtistQuery ? (
-              <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-[#242424]">
+              <div className="mt-2 overflow-hidden rounded-lg border border-hair bg-card-hi">
                 {artists.loading ? <p className="px-4 py-3 text-[13.5px] text-ink-soft">Searching artists…</p> : null}
                 {!artists.loading && artistMatches.length === 0 ? <p className="px-4 py-3 text-[13.5px] text-ink-soft">No ORU artist found. Try another name.</p> : null}
                 {artistMatches.map((artist) => (
@@ -207,7 +264,7 @@ export function SongSharing() {
 
             <div className="flex flex-col gap-3">
               <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white/5 px-4 py-4 transition hover:bg-white/10">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-[#1ed760] text-black"><Music4 className="h-5 w-5" /></span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-flame text-cream"><Music4 className="h-5 w-5" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[14.5px] font-bold">Audio file · Required</span>
                   <span className="block truncate text-[13px] text-ink-soft">{audioName || "MP3, WAV, M4A, OGG, FLAC or OPUS · Up to 100 MB"}</span>
@@ -215,7 +272,7 @@ export function SongSharing() {
                 <input ref={audioRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.opus" required className="sr-only" onChange={(event) => setAudioName(event.target.files?.[0]?.name ?? "")} />
               </label>
               <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white/5 px-4 py-4 transition hover:bg-white/10">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/10 text-white">{coverName ? <Check className="h-5 w-5 text-[#1ed760]" /> : <ImagePlus className="h-5 w-5" />}</span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-ink/10 text-ink">{coverName ? <Check className="h-5 w-5 text-flame-ink" /> : <ImagePlus className="h-5 w-5" />}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[14.5px] font-bold">Cover picture</span>
                   <span className="block truncate text-[13px] text-ink-soft">{coverName || "Optional · JPEG, PNG or WebP · Up to 10 MB"}</span>
@@ -233,15 +290,81 @@ export function SongSharing() {
         </form>
       </section>
 
+      <section className="mb-9 rounded-xl bg-card p-5 sm:p-6">
+        <h2 className="text-[19px] font-bold tracking-[-0.02em]">Share a song not on ORU yet</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-ink-soft">
+          Heard something good by an artist who has not joined ORU? Paste the link. Anyone can open it from the list below.
+        </p>
+        <form onSubmit={submitExternal} className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="space-y-4">
+            <Field label="Song title · Required" value={extTitle} onChange={(event) => setExtTitle(event.target.value)} placeholder="Song title" maxLength={120} required />
+            <Field label="Artist name · Required" value={extArtist} onChange={(event) => setExtArtist(event.target.value)} placeholder="Who sings it" maxLength={120} required />
+          </div>
+          <div className="space-y-4">
+            <Field label="Link to the song · Required" type="url" value={extUrl} onChange={(event) => setExtUrl(event.target.value)} placeholder="https://…" maxLength={500} required />
+            <TextArea label="Why you like it" value={extNote} onChange={(event) => setExtNote(event.target.value)} placeholder="A short note for other listeners" rows={2} maxLength={1000} hint="Optional" />
+          </div>
+          <div className="lg:col-span-2">
+            <Button type="submit" disabled={extBusy || !extTitle.trim() || !extArtist.trim() || !extUrl.trim()}>
+              {extBusy ? "Sharing" : "Share this song"}
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      <section className="mb-9" aria-labelledby="outside-heading">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="outside-heading" className="text-[19px] font-bold tracking-[-0.02em]">Shared from outside ORU</h2>
+          {externalShares.loading ? <Spinner className="h-4 w-4 text-ink-faint" /> : null}
+        </div>
+        {externalShares.error ? <EmptyState title="Could not load these shares" message={externalShares.error} /> : null}
+        {!externalShares.loading && outside.length === 0 ? (
+          <p className="rounded-xl bg-card px-5 py-6 text-[14px] text-ink-soft">No songs shared from outside ORU yet.</p>
+        ) : null}
+        {outside.length > 0 ? (
+          <ul className="space-y-2">
+            {outside.map((share) => {
+              const mine = share.sharer.handle === user?.handle;
+              return (
+                <li key={share.id} className="rounded-xl bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15.5px] font-bold">{share.title}</p>
+                      <p className="truncate text-[13.5px] text-ink-soft">{share.artist_name}</p>
+                      {share.note ? <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">{share.note}</p> : null}
+                      <p className="mt-1 text-[12.5px] text-ink-faint">Shared by {share.sharer.display_name}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {mine ? (
+                        <Button type="button" variant="outline" size="sm" disabled={withdrawingExt === share.id} onClick={() => void withdrawExternal(share)}>
+                          {withdrawingExt === share.id ? "Removing" : "Remove"}
+                        </Button>
+                      ) : null}
+                      <a
+                        href={share.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="inline-flex h-9 items-center rounded-full bg-flame px-4 text-[13px] font-semibold text-cream press"
+                      >
+                        Listen
+                      </a>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
+
       <section className="mb-9" aria-labelledby="my-shares-heading">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="my-shares-heading" className="text-[21px] font-bold tracking-[-0.02em]">Your shared songs</h2>
           {ownShares.loading ? <Spinner className="h-4 w-4 text-ink-faint" /> : null}
         </div>
-        {ownShares.error ? <EmptyState title="Could not load your submissions" message={ownShares.error} /> : null}
-        {!ownShares.loading && myShares.length === 0 ? <p className="rounded-lg bg-[#181818] px-5 py-6 text-[14px] text-ink-soft">You have not shared a song yet.</p> : null}
+        {ownShares.error ? <EmptyState title="Could not load your submissions" message={ownShares.error} /> : null}          {!ownShares.loading && myShares.length === 0 ? <p className="rounded-xl bg-card px-5 py-6 text-[14px] text-ink-soft">You have not shared a song yet.</p> : null}
         {myShares.length > 0 ? (
-          <ul className="space-y-2 rounded-lg bg-[#181818] p-2">
+          <ul className="space-y-2 rounded-xl bg-card p-2">
             {myShares.map((song) => (
               <li key={song.id}>
                 <TrackRow
@@ -269,11 +392,11 @@ export function SongSharing() {
             {inbox.loading ? <Spinner className="h-4 w-4 text-ink-faint" /> : null}
           </div>
           {inbox.error ? <EmptyState title="Could not load the share inbox" message={inbox.error} /> : null}
-          {!inbox.loading && pendingShares.length === 0 ? <p className="rounded-lg bg-[#181818] px-5 py-6 text-[14px] text-ink-soft">There are no songs waiting for review.</p> : null}
+          {!inbox.loading && pendingShares.length === 0 ? <p className="rounded-xl bg-card px-5 py-6 text-[14px] text-ink-soft">There are no songs waiting for review.</p> : null}
           {pendingShares.length > 0 ? (
             <ul className="space-y-3">
               {pendingShares.map((song) => (
-                <li key={song.id} className="rounded-lg bg-[#181818] p-3 sm:p-4">
+                <li key={song.id} className="rounded-xl bg-card p-3 sm:p-4">
                   <TrackRow song={song} showStatus />
                   <div className="ml-[52px] mt-2 space-y-2">
                     {song.shared_by ? <p className="text-[13px] text-ink-soft">Shared by <strong className="text-white">{song.shared_by.display_name}</strong> (@{song.shared_by.handle})</p> : null}

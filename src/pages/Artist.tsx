@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Check, Pause, Play, UserPlus } from "lucide-react";
+import { Check, Pause, Play, UserPlus } from "../components/icons";
 import { mediaUrl, request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
@@ -71,7 +71,7 @@ export function ArtistPage() {
           title="Artist not found"
           message="This profile may be gone or hidden."
           action={
-            <Link to="/search" className="rounded-full bg-white px-5 py-2.5 text-[14.5px] font-bold text-black press">
+            <Link to="/search" className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press">
               Search again
             </Link>
           }
@@ -92,11 +92,11 @@ export function ArtistPage() {
 
   return (
     <div className="pb-8">
-      <header className="relative overflow-hidden bg-gradient-to-b from-[#2b5c46]/85 to-[#121212] px-4 pb-6 pt-8 sm:px-6 lg:px-8">
+      <header className="relative overflow-hidden bg-gradient-to-b from-[#3a2a20]/80 to-paper px-4 pb-6 pt-8 sm:px-6 lg:px-8">
         {profile.banner_url ? (
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <img src={mediaUrl(profile.banner_url)} alt="" className="h-full w-full object-cover opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/55 to-[#121212]" />
+            <img src={mediaUrl(profile.banner_url)} alt="" className="h-full w-full object-cover opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-paper" />
           </div>
         ) : null}
         <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-end">
@@ -132,7 +132,7 @@ export function ArtistPage() {
             }}
             disabled={!catalogue.length}
             className={`grid h-14 w-14 place-items-center rounded-full transition press ${
-              catalogue.length ? "bg-[#1ed760] text-black hover:scale-105" : "bg-white/10 text-white/40"
+              catalogue.length ? "bg-flame text-cream hover:scale-105" : "bg-ink/10 text-ink/40"
             }`}
             aria-label={playingThisArtist && isPlaying ? "Pause" : "Play all songs"}
           >
@@ -184,7 +184,7 @@ export function ArtistPage() {
                 isSelf ? (
                   <Link
                     to="/studio"
-                    className="rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+                    className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
                   >
                     Open studio
                   </Link>
@@ -192,7 +192,7 @@ export function ArtistPage() {
               }
             />
           ) : (
-            <div className="rounded-lg bg-[#181818] p-2">
+            <div className="rounded-xl bg-card p-2">
               {catalogue.slice(0, 8).map((song, index) => (
                 <TrackRow key={song.id} song={song} queue={catalogue} position={index + 1} />
               ))}
@@ -203,7 +203,7 @@ export function ArtistPage() {
         {guests.length > 0 ? (
           <section className="mb-8">
             <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Featured on</h2>
-            <div className="rounded-lg bg-[#181818] p-2">
+            <div className="rounded-xl bg-card p-2">
               {guests.map((song) => (
                 <TrackRow key={song.id} song={song} queue={guests} />
               ))}
@@ -221,7 +221,7 @@ export function ArtistPage() {
                   <Link
                     key={release.id}
                     to={`/release/${release.id}`}
-                    className="w-[168px] shrink-0 rounded-lg bg-[#181818] p-3 transition hover:bg-[#282828]"
+                    className="w-[168px] shrink-0 rounded-xl bg-card p-3 transition hover:bg-card-hi"
                   >
                     <Cover
                       src={art?.cover_url ?? null}
@@ -246,7 +246,7 @@ export function ArtistPage() {
             <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">About the artist</h2>
             <div className="space-y-3">
               {posts.data?.items.map((post) => (
-                <article key={post.id} className="rounded-lg bg-[#181818] p-5">
+                <article key={post.id} className="rounded-xl bg-card p-5">
                   <p className="whitespace-pre-wrap text-[15.5px] leading-relaxed">{post.body}</p>
                   <p className="mt-3 text-[13px] text-ink-faint">{formatTimeAgo(post.created_at)}</p>
                 </article>

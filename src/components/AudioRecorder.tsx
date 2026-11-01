@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, X } from "lucide-react";
+import { Mic, Square, X } from "./icons";
 
 function clock(seconds: number): string {
   const whole = Math.floor(seconds);
@@ -75,12 +75,12 @@ export function RecorderSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[95] grid place-items-center bg-black/80 px-5 backdrop-blur-sm"
+      className="fixed inset-0 z-[95] grid place-items-center bg-night/80 px-5 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Record a song"
     >
-      <div className="w-full max-w-sm rounded-2xl bg-[#181818] p-6 text-center shadow-2xl">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
         <div className="flex items-start justify-between">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-faint">Record</p>
           <button
@@ -100,7 +100,7 @@ export function RecorderSheet({
         <div className="mx-auto mt-5 grid h-24 w-24 place-items-center rounded-full bg-white/5">
           <span
             className={`grid h-16 w-16 place-items-center rounded-full transition ${
-              state === "recording" ? "bg-[#f0463c] text-white" : "bg-[#1ed760] text-black"
+              state === "recording" ? "bg-[#e5484d] text-white" : "bg-flame text-cream"
             }`}
           >
             <Mic className="h-7 w-7" />
@@ -124,7 +124,7 @@ export function RecorderSheet({
               type="button"
               onClick={() => void start()}
               disabled={state === "asking"}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1ed760] px-5 text-[14.5px] font-bold text-black transition press disabled:opacity-50"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-flame px-5 text-[14.5px] font-semibold text-cream transition press disabled:opacity-50"
             >
               <Mic className="h-4 w-4" /> Start recording
             </button>
@@ -132,7 +132,7 @@ export function RecorderSheet({
             <button
               type="button"
               onClick={stop}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14.5px] font-bold text-black transition press"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-flame px-5 text-[14.5px] font-semibold text-cream transition press"
             >
               <Square className="h-4 w-4" fill="currentColor" /> Stop and edit
             </button>

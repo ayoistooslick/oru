@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "lucide-react";
+import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "../components/icons";
 import { ApiError, mediaUrl, request, upload } from "../lib/api";
 import { Avatar } from "../components/Avatar";
 import { Page } from "../components/Page";
@@ -120,7 +120,10 @@ export function SettingsPage() {
   };
 
   const avatarSrc = user?.avatar_url ? `${user.avatar_url}?v=${avatarVersion}` : null;
-  const bannerSrc = hasStudio && user ? `/artists/${user.id}/banner?v=${bannerVersion}` : null;
+  // The API returns the banner path with its `/api/v1` prefix. Hand-building it
+  // here used to drop that prefix, so the request 404'd and the alt text showed
+  // in place of the picture.
+  const bannerSrc = user?.banner_url ? `${user.banner_url}?v=${bannerVersion}` : null;
 
   if (!user) return null;
 
@@ -137,7 +140,7 @@ export function SettingsPage() {
     >
       <section className="mb-8">
         <SectionHeader title="Your pictures" />
-        <div className="rounded-lg bg-[#181818] p-5 sm:p-6">
+        <div className="rounded-xl bg-card p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-4">
             <Avatar name={user.display_name} src={avatarSrc} size="h-16 w-16" />
             <div className="min-w-0 flex-1">
@@ -178,7 +181,7 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {hasStudio ? (
+          {isArtist ? (
             <div className="mt-5 border-t border-white/10 pt-5">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="block h-16 w-32 shrink-0 overflow-hidden rounded-lg bg-white/5">
@@ -234,7 +237,7 @@ export function SettingsPage() {
 
       <section className="mb-8">
         <SectionHeader title="Your profile" />
-        <form onSubmit={save} className="rounded-lg bg-[#181818] p-5 sm:p-6">
+        <form onSubmit={save} className="rounded-xl bg-card p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Name"
@@ -269,11 +272,11 @@ export function SettingsPage() {
         <SectionHeader title="Music" />
         <Link
           to="/studio"
-          className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-[#181818] p-5 transition hover:bg-[#282828]"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-card p-5 transition hover:bg-card-hi"
         >
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-[16px] font-bold">
-              <Mic2 className="h-4 w-4 text-[#1ed760]" />
+              <Mic2 className="h-4 w-4 text-flame-ink" />
               {hasStudio === null ? "Checking" : hasStudio ? "Your studio is open" : "Open a studio"}
             </span>
             <span className="mt-1 block max-w-xl text-[14.5px] text-ink-soft">
@@ -282,19 +285,19 @@ export function SettingsPage() {
                 : "Upload your own songs and publish them."}
             </span>
           </span>
-          <span className="shrink-0 text-[14px] font-bold text-[#1ed760]">Open</span>
+          <span className="shrink-0 text-[14px] font-semibold text-flame-ink">Open</span>
         </Link>
 
         {isAdmin ? (
           <Link
             to="/moderation"
-            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#181818] p-5 transition hover:bg-[#282828]"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-5 transition hover:bg-card-hi"
           >
             <span className="min-w-0">
               <span className="block text-[16px] font-bold">Reports</span>
               <span className="mt-1 block text-[14.5px] text-ink-soft">Songs and profiles people have reported.</span>
             </span>
-            <span className="shrink-0 text-[14px] font-bold text-[#1ed760]">Open</span>
+            <span className="shrink-0 text-[14px] font-semibold text-flame-ink">Open</span>
           </Link>
         ) : null}
       </section>
@@ -304,7 +307,7 @@ export function SettingsPage() {
         {showDeviceSetup ? (
           <BrowserCapabilitySetupPrompt onDismiss={() => setShowDeviceSetup(false)} />
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-[#181818] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-card p-5">
             <p className="max-w-xl text-[14.5px] leading-relaxed text-ink-soft">
               Review notification permission and whether your browser protects ORU’s stored app data from cleanup.
             </p>
@@ -319,45 +322,45 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => void install()}
-            className="flex w-full flex-wrap items-center justify-between gap-4 rounded-lg bg-[#181818] p-5 text-left transition hover:bg-[#282828]"
+            className="flex w-full flex-wrap items-center justify-between gap-4 rounded-xl bg-card p-5 text-left transition hover:bg-card-hi"
           >
             <span className="min-w-0">
               <span className="flex items-center gap-2 text-[16px] font-bold">
-                <Download className="h-4 w-4 text-[#1ed760]" />
+                <Download className="h-4 w-4 text-flame-ink" />
                 Install ORU on this device
               </span>
               <span className="mt-1 block max-w-xl text-[14.5px] text-ink-soft">
                 It opens like any other app on your phone, with no browser bar.
               </span>
             </span>
-            <span className="shrink-0 text-[14px] font-bold text-[#1ed760]">Install</span>
+            <span className="shrink-0 text-[14px] font-semibold text-flame-ink">Install</span>
           </button>
         ) : installed ? (
-          <p className="rounded-lg bg-[#181818] px-5 py-4 text-[14.5px] text-ink-soft">
+          <p className="rounded-xl bg-card px-5 py-4 text-[14.5px] text-ink-soft">
             ORU is already installed on this device.
           </p>
         ) : null}
 
         <Link
           to="/about"
-          className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-[#181818] p-5 transition hover:bg-[#282828]"
+          className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-card p-5 transition hover:bg-card-hi"
         >
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-[16px] font-bold">
-              <User className="h-4 w-4 text-[#1ed760]" />
+              <User className="h-4 w-4 text-flame-ink" />
               About the developer
             </span>
             <span className="mt-1 block max-w-xl text-[14.5px] text-ink-soft">
               Who built ORU, and where to see the rest of his work.
             </span>
           </span>
-          <span className="shrink-0 text-[14px] font-bold text-[#1ed760]">Open</span>
+          <span className="shrink-0 text-[14px] font-semibold text-flame-ink">Open</span>
         </Link>
       </section>
 
       <section>
         <SectionHeader title="About" />
-        <div className="rounded-lg bg-[#181818] p-5">
+        <div className="rounded-xl bg-card p-5">
           <p className="max-w-2xl text-[15px] leading-relaxed text-ink-soft">
             ORU is for musicians who are just starting out. One person builds it, and the ranking rules are written
             down in the docs where anyone can read them.

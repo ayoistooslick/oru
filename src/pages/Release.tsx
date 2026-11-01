@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Play } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
@@ -36,7 +36,7 @@ export function ReleasePage() {
           title="Release not found"
           message={release.error}
           action={
-            <Link to="/listen" className="rounded-full bg-white px-5 py-2.5 text-[14.5px] font-bold text-black press">
+            <Link to="/listen" className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press">
               Back to Home
             </Link>
           }
@@ -60,10 +60,10 @@ export function ReleasePage() {
 
   return (
     <div className="pb-8">
-      <header className="bg-gradient-to-b from-[#3f3f3f]/85 to-[#121212] px-4 pb-6 pt-6 sm:px-6 lg:px-8">
+      <header className="bg-gradient-to-b from-[#3a2a1e]/85 to-paper px-4 pb-6 pt-6 sm:px-6 lg:px-8">
         <Link
           to={artist.data ? `/artist/${artist.data.user_id}` : "/listen"}
-          className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-white/70 transition hover:text-white"
+          className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-soft transition hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" /> {artist.data ? artist.data.stage_name : "Back"}
         </Link>
@@ -77,13 +77,13 @@ export function ReleasePage() {
             rounded="rounded-md"
           />
           <div className="min-w-0">
-            <p className="text-[13px] font-bold text-white/70">{kindLabel}</p>
+            <p className="text-[13px] font-bold text-ink-soft">{kindLabel}</p>
             <h1 className="mt-1 break-words text-[34px] font-extrabold leading-none tracking-[-0.035em] sm:text-[52px]">
               {data.title}
             </h1>
-            <p className="mt-3 text-[14.5px] text-white/80">
+            <p className="mt-3 text-[14.5px] text-ink-soft">
               {artist.data ? (
-                <Link to={`/artist/${artist.data.user_id}`} className="font-bold text-white hover:underline">
+                <Link to={`/artist/${artist.data.user_id}`} className="font-bold text-ink hover:text-flame-ink">
                   {artist.data.stage_name}
                 </Link>
               ) : (
@@ -105,7 +105,7 @@ export function ReleasePage() {
             onClick={() => songs.length && playQueue(songs, 0)}
             disabled={!songs.length}
             className={`grid h-14 w-14 place-items-center rounded-full transition press ${
-              songs.length ? "bg-[#1ed760] text-black hover:scale-105" : "bg-white/10 text-white/40"
+              songs.length ? "bg-flame text-cream hover:scale-105" : "bg-ink/10 text-ink/40"
             }`}
             aria-label="Play this release"
           >
@@ -115,11 +115,11 @@ export function ReleasePage() {
           <ShareButton
             title={`${data.title} by ${artist.data?.stage_name ?? "an ORU artist"}`}
             text={`Listen to ${data.title} on ORU`}
-            className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white transition press hover:bg-white/20"
+            className="grid h-11 w-11 place-items-center rounded-full bg-ink/10 text-ink transition press hover:bg-ink/20"
           />
         </div>
 
-        <div className="rounded-lg bg-[#181818] p-2">
+        <div className="rounded-xl bg-card p-2">
           {songs.length === 0 ? (
             <p className="px-4 py-8 text-center text-[15px] text-ink-soft">This release has no songs yet.</p>
           ) : (

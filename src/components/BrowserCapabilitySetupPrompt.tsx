@@ -105,11 +105,11 @@ export function BrowserCapabilitySetupPrompt({ onDismiss }: BrowserCapabilitySet
   return (
     <section
       aria-labelledby="browser-capability-setup-title"
-      className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#181818] p-5 shadow-xl sm:p-7"
+      className="mx-auto w-full max-w-2xl rounded-2xl border border-hair bg-card p-5 shadow-xl sm:p-7"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#1ed760]">Quick setup</p>
+          <p className="label-caps text-flame-ink">Quick setup</p>
           <h2
             id="browser-capability-setup-title"
             className="mt-1 text-[24px] font-extrabold tracking-[-0.025em]"

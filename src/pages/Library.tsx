@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Globe2, Heart, Lock, Play, Plus, Shuffle, X } from "lucide-react";
+import { Globe2, Heart, Lock, Play, Plus, Shuffle, X } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Paginated, Playlist } from "../lib/types";
@@ -104,7 +104,7 @@ export function Library() {
       </div>
 
       {composing ? (
-        <form onSubmit={createPlaylist} className="mb-6 rounded-lg bg-[#181818] p-5">
+        <form onSubmit={createPlaylist} className="mb-6 rounded-xl bg-card p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex-1">
               <Field
@@ -121,11 +121,11 @@ export function Library() {
                 type="checkbox"
                 checked={isPublic}
                 onChange={(event) => setIsPublic(event.target.checked)}
-                className="h-4 w-4 accent-[#1ed760]"
+                className="h-4 w-4 accent-flame"
               />
               {isPublic ? (
                 <>
-                  <Globe2 className="h-4 w-4 text-[#1ed760]" /> Anyone can see it
+                  <Globe2 className="h-4 w-4 text-flame-ink" /> Anyone can see it
                 </>
               ) : (
                 <>
@@ -147,7 +147,7 @@ export function Library() {
           action={
             <Link
               to="/listen"
-              className="rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+              className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
             >
               Go to Home
             </Link>
@@ -168,8 +168,8 @@ export function Library() {
           {loading && !likes.data ? (
             <Loader label="Loading your likes" />
           ) : liked.length === 0 ? (
-            <div className="flex items-center gap-4 rounded-lg bg-[#181818] p-4">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-[#1ed760] text-black">
+            <div className="flex items-center gap-4 rounded-xl bg-card p-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-flame text-cream">
                 <Heart className="h-7 w-7" fill="currentColor" />
               </span>
               <p className="text-[14.5px] leading-relaxed text-ink-soft">
@@ -178,7 +178,7 @@ export function Library() {
             </div>
           ) : filter === "liked" ? (
             <>
-              <div className="mb-5 flex flex-col gap-5 rounded-lg bg-gradient-to-br from-[#5536a7] via-[#362477] to-[#181818] p-5 sm:flex-row sm:items-end sm:p-7">
+              <div className="mb-5 flex flex-col gap-5 rounded-xl bg-gradient-to-br from-[#4a2c1e] via-[#2e1c12] to-[#17120e] p-5 sm:flex-row sm:items-end sm:p-7">
                 <div className="grid aspect-square w-40 shrink-0 grid-cols-2 grid-rows-2 overflow-hidden rounded-md bg-white/10 shadow-xl sm:w-52">
                   {liked.slice(0, 4).map((song) => (
                     <Cover key={song.id} src={song.cover_url} alt={song.title} seed={song.id} className="h-full w-full" rounded="rounded-none" />
@@ -190,7 +190,7 @@ export function Library() {
                   <h2 className="mt-1 break-words text-[34px] font-extrabold leading-tight tracking-[-0.04em] sm:text-[52px]">Liked Songs</h2>
                   <p className="mt-2 text-[14px] text-white/75">Your saved music · {liked.length} {liked.length === 1 ? "song" : "songs"}</p>
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => playQueue(liked, 0)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1ed760] px-5 text-[14px] font-bold text-black press">
+                    <button type="button" onClick={() => playQueue(liked, 0)} className="inline-flex h-11 items-center gap-2 rounded-full bg-flame px-5 text-[14px] font-semibold text-cream press">
                       <Play className="h-4 w-4" fill="currentColor" /> Play all
                     </button>
                     <button type="button" onClick={playShuffled} className="inline-flex h-11 items-center gap-2 rounded-full border border-white/35 px-5 text-[14px] font-bold text-white press hover:bg-white/10">
@@ -199,7 +199,7 @@ export function Library() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-lg bg-[#181818] p-2">
+              <div className="rounded-xl bg-card p-2">
                 {liked.map((song, index) => <TrackRow key={song.id} song={song} queue={liked} position={index + 1} />)}
               </div>
             </>
@@ -228,7 +228,7 @@ export function Library() {
                 <button
                   type="button"
                   onClick={() => setComposing(true)}
-                  className="rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+                  className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
                 >
                   Create playlist
                 </button>
@@ -240,7 +240,7 @@ export function Library() {
                 <Link
                   key={playlist.id}
                   to={`/library/${playlist.id}`}
-                  className="rounded-lg bg-[#181818] p-3 transition hover:bg-[#282828]"
+                  className="rounded-xl bg-card p-3 transition hover:bg-card-hi"
                 >
                   <Cover
                     src={null}
@@ -273,7 +273,7 @@ export function Library() {
               action={
                 <Link
                   to="/search"
-                  className="rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+                  className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
                 >
                   Find artists
                 </Link>
@@ -285,7 +285,7 @@ export function Library() {
                 <Link
                   key={artist.user_id}
                   to={`/artist/${artist.user_id}`}
-                  className="rounded-lg bg-[#181818] p-4 text-center transition hover:bg-[#282828]"
+                  className="rounded-xl bg-card p-4 text-center transition hover:bg-card-hi"
                 >
                   <Cover
                     src={null}

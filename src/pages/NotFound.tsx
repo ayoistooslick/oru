@@ -13,7 +13,7 @@ export function NotFound() {
       <div className="mt-7 flex flex-wrap justify-center gap-3">
         <Link
           to="/listen"
-          className="h-11 rounded-full bg-[#1ed760] px-6 text-[15px] font-bold leading-[44px] text-black press"
+          className="h-11 rounded-full bg-flame px-6 text-[15px] font-semibold leading-[44px] text-cream shadow-ember press"
         >
           Go to Home
         </Link>

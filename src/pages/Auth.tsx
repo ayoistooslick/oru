@@ -1,9 +1,10 @@
-import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { ApiError } from "../lib/api";
+import { ApiError, auth } from "../lib/api";
 import { useAuth } from "../state/AuthContext";
 import { useToasts } from "../state/ToastContext";
 import { OruLogo } from "../components/OruMark";
+import { Spinner } from "../components/ui";
 
 type Mode = "signin" | "signup";
 
@@ -15,10 +16,10 @@ function LightField({
 }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; error?: string }) {
   return (
     <label className="block">
-      <span className="text-[13px] font-bold text-[#121212]">{label}</span>
+      <span className="text-[13px] font-bold text-paper">{label}</span>
       <input
-        className={`mt-1.5 h-12 w-full rounded border-2 bg-white px-4 text-[15px] text-black outline-none transition placeholder:text-[#757575] ${
-          error ? "border-[#d31c2a]" : "border-[#757575] focus:border-black"
+        className={`mt-1.5 h-12 w-full rounded-lg border-2 bg-white px-4 text-[15px] text-paper outline-none transition placeholder:text-[#8a8175] ${
+          error ? "border-[#d31c2a]" : "border-hair focus:border-flame"
         }`}
         {...rest}
       />
@@ -31,10 +32,30 @@ function LightField({
   );
 }
 
+/** Loads Google's sign-in script once and reports when it is ready to use. */
+function useGoogleScript(enabled: boolean): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    if (document.getElementById("gsi-script")) {
+      setReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "gsi-script";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setReady(true);
+    document.head.appendChild(script);
+  }, [enabled]);
+  return ready;
+}
+
 export function AuthPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
   const toasts = useToasts();
 
   const returnTo = params.get("returnTo") || "/listen";
@@ -44,7 +65,52 @@ export function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [values, setValues] = useState({ email: "", password: "", handle: "", display_name: "" });
+  const [values, setValues] = useState({ email: "", password: "" });
+  const [google, setGoogle] = useState<{ enabled: boolean; client_id: string | null }>({ enabled: false, client_id: null });
+
+  // Only offer Google when the server confirms it is configured. A dead button
+  // is worse than no button.
+  useEffect(() => {
+    let alive = true;
+    auth
+      .config()
+      .then((config) => {
+        if (alive) setGoogle({ enabled: config.google_enabled, client_id: config.google_client_id });
+      })
+      .catch(() => {
+        /* leave Google hidden */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const scriptReady = useGoogleScript(google.enabled && Boolean(google.client_id));
+
+  useEffect(() => {
+    if (!scriptReady || !google.client_id) return;
+    interface GoogleIdApi {
+      initialize: (options: Record<string, unknown>) => void;
+      renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
+    }
+    const g = (window as unknown as { google?: { accounts?: { id?: GoogleIdApi } } }).google;
+    const googleApi = g?.accounts?.id;
+    if (!googleApi) return;
+    googleApi.initialize({
+      client_id: google.client_id,
+      callback: (response: { credential?: string }) => {
+        if (!response.credential) return;
+        signInWithGoogle(response.credential)
+          .then(() => navigate(returnTo, { replace: true }))
+          .catch((error: unknown) => setFormError(error instanceof Error ? error.message : "Google sign-in failed. Try again."));
+      },
+    });
+    const holder = document.getElementById("google-button");
+    if (holder) {
+      holder.innerHTML = "";
+      googleApi.renderButton(holder, { theme: "outline", size: "large", width: 320, text: "continue_with" });
+    }
+  }, [scriptReady, google.client_id, signInWithGoogle, navigate, returnTo]);
 
   if (!loading && user) return <Navigate to={returnTo} replace />;
 
@@ -76,12 +142,9 @@ export function AuthPage() {
         const signedIn = await signIn(values.email.trim(), values.password);
         toasts.saved(`Welcome back, ${signedIn.display_name.split(" ")[0]}`);
       } else {
-        await signUp({
-          email: values.email.trim(),
-          handle: values.handle.trim(),
-          display_name: values.display_name.trim(),
-          password: values.password,
-        });
+        // Email and password is all we ask for. The name and handle are worked
+        // out on the server so sign-up stays to one short step.
+        await signUp({ email: values.email.trim(), password: values.password });
         toasts.saved("Account created", "You can start listening right away.");
       }
       navigate(returnTo, { replace: true });
@@ -98,48 +161,35 @@ export function AuthPage() {
     setFieldErrors({});
   };
 
+  const showGoogle = google.enabled && Boolean(google.client_id);
+
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-black px-4 py-8">
+    <div className="flex min-h-[100dvh] flex-col bg-paper px-4 py-8">
       <Link to="/" className="mx-auto" aria-label="ORU home">
         <OruLogo />
       </Link>
 
       <main className="mx-auto flex w-full max-w-[480px] flex-1 flex-col justify-center py-10">
-        <div className="rounded-lg bg-white p-8 shadow-[0_16px_48px_rgba(0,0,0,0.5)] sm:p-10">
-          <h1 className="text-[30px] font-extrabold tracking-[-0.02em] text-black">
+        <div className="rounded-2xl bg-white p-8 shadow-float sm:p-10">
+          <h1 className="font-display text-[30px] font-semibold tracking-[-0.01em] text-paper">
             {tab === "signin" ? "Log in to ORU" : "Create your account"}
           </h1>
           <p className="mt-2 text-[14.5px] text-[#4d4d4d]">
             {tab === "signin" ? "Welcome back." : "Free to join. One minute to finish."}
           </p>
 
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            {tab === "signup" ? (
-              <>
-                <LightField
-                  label="Name"
-                  name="display_name"
-                  placeholder="Your name"
-                  autoComplete="name"
-                  value={values.display_name}
-                  onChange={update("display_name")}
-                  error={fieldErrors.display_name}
-                  required
-                />
-                <LightField
-                  label="Username"
-                  name="handle"
-                  placeholder="yourname"
-                  autoComplete="username"
-                  hint="Letters, numbers and underscores only."
-                  value={values.handle}
-                  onChange={update("handle")}
-                  error={fieldErrors.handle}
-                  required
-                />
-              </>
-            ) : null}
+          {showGoogle ? (
+            <>
+              <div id="google-button" className="mt-6 flex min-h-[44px] justify-center" />
+              <div className="my-5 flex items-center gap-3 text-[13px] font-semibold text-[#8a8175]">
+                <span className="h-px flex-1 bg-[#e0e0e0]" />
+                or
+                <span className="h-px flex-1 bg-[#e0e0e0]" />
+              </div>
+            </>
+          ) : null}
 
+          <form onSubmit={submit} className={showGoogle ? "space-y-4" : "mt-6 space-y-4"}>
             <LightField
               label="Email"
               name="email"
@@ -173,9 +223,17 @@ export function AuthPage() {
             <button
               type="submit"
               disabled={busy}
-              className="h-12 w-full rounded-full bg-[#1ed760] text-[16px] font-bold text-black transition hover:bg-[#3be477] disabled:opacity-60"
+              className="h-12 w-full rounded-full bg-flame text-[16px] font-semibold text-cream shadow-ember transition hover:scale-[1.01] disabled:opacity-60 press"
             >
-              {busy ? "One moment" : tab === "signin" ? "Log in" : "Sign up free"}
+              {busy ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner /> One moment
+                </span>
+              ) : tab === "signin" ? (
+                "Log in"
+              ) : (
+                "Sign up free"
+              )}
             </button>
           </form>
 
@@ -184,7 +242,7 @@ export function AuthPage() {
             <button
               type="button"
               onClick={() => switchTab(tab === "signin" ? "signup" : "signin")}
-              className="font-bold text-black underline underline-offset-4"
+              className="font-bold text-paper underline underline-offset-4"
             >
               {tab === "signin" ? "Sign up for free" : "Log in"}
             </button>

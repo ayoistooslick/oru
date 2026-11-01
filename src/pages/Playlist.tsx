@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Globe2, Lock, Play, Plus, Search, X } from "lucide-react";
+import { Globe2, Lock, Play, Plus, Search, X } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Paginated, Playlist, Song } from "../lib/types";
@@ -75,7 +75,7 @@ export function PlaylistPage() {
           title="Playlist not found"
           message={detail.error ?? "It may be private or deleted."}
           action={
-            <Link to="/library" className="rounded-full bg-white px-5 py-2.5 text-[14.5px] font-bold text-black press">
+            <Link to="/library" className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press">
               Back to library
             </Link>
           }
@@ -126,7 +126,7 @@ export function PlaylistPage() {
 
   return (
     <div className="pb-8">
-      <header className="bg-gradient-to-b from-[#4a3d8f]/80 to-[#121212] px-4 pb-6 pt-8 sm:px-6 lg:px-8">
+      <header className="bg-gradient-to-b from-[#4a2c1e]/85 to-paper px-4 pb-6 pt-8 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-end">
           <Cover
             src={null}
@@ -156,7 +156,7 @@ export function PlaylistPage() {
             onClick={() => songs.length && playQueue(songs, 0)}
             disabled={!songs.length}
             className={`grid h-14 w-14 place-items-center rounded-full transition press ${
-              songs.length ? "bg-[#1ed760] text-black hover:scale-105" : "bg-white/10 text-white/40"
+              songs.length ? "bg-flame text-cream hover:scale-105" : "bg-ink/10 text-ink/40"
             }`}
             aria-label="Play all songs"
           >
@@ -171,7 +171,7 @@ export function PlaylistPage() {
         </div>
 
         {editing && isOwner ? (
-          <form onSubmit={saveEdits} className="mb-6 rounded-lg bg-[#181818] p-5">
+          <form onSubmit={saveEdits} className="mb-6 rounded-xl bg-card p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="flex-1">
                 <Field label="Name" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={100} />
@@ -180,12 +180,11 @@ export function PlaylistPage() {
                 <input
                   type="checkbox"
                   checked={isPublic}
-                  onChange={(event) => setIsPublic(event.target.checked)}
-                  className="h-4 w-4 accent-[#1ed760]"
+                  onChange={(event) => setIsPublic(event.target.checked)}                    className="h-4 w-4 accent-flame"
                 />
                 {isPublic ? (
                   <>
-                    <Globe2 className="h-4 w-4 text-[#1ed760]" /> Anyone can see it
+                    <Globe2 className="h-4 w-4 text-flame-ink" /> Anyone can see it
                   </>
                 ) : (
                   <>
@@ -201,7 +200,7 @@ export function PlaylistPage() {
         ) : null}
 
         {songs.length ? (
-          <div className="rounded-lg bg-[#181818] p-2">
+          <div className="rounded-xl bg-card p-2">
             {songs.map((song, index) => (
               <TrackRow
                 key={song.id}
@@ -229,7 +228,7 @@ export function PlaylistPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search for songs"
-                className="h-12 w-full rounded-full border border-[#3e3e3e] bg-[#242424] pl-11 pr-4 text-[15px] text-white outline-none transition placeholder:text-ink-faint focus:border-white"
+                className="h-12 w-full rounded-full border border-hair bg-card-hi pl-11 pr-4 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-flame"
                 aria-label="Search songs to add"
               />
             </div>
@@ -240,11 +239,11 @@ export function PlaylistPage() {
                 <span className="text-[14.5px] font-semibold">Searching</span>
               </div>
             ) : candidates.length === 0 ? (
-              <p className="rounded-lg bg-[#181818] px-5 py-6 text-[14.5px] text-ink-soft">
+              <p className="rounded-xl bg-card px-5 py-6 text-[14.5px] text-ink-soft">
                 {debounced ? `Nothing found for "${debounced}".` : "Start typing to search songs."}
               </p>
             ) : (
-              <div className="rounded-lg bg-[#181818] p-2">
+              <div className="rounded-xl bg-card p-2">
                 {candidates.map((song) => (
                   <TrackRow
                     key={song.id}
@@ -255,7 +254,7 @@ export function PlaylistPage() {
                         type="button"
                         onClick={() => void addSong(song)}
                         disabled={adding === song.id}
-                        className="grid h-9 w-9 place-items-center rounded-full bg-white text-black transition hover:scale-105 disabled:opacity-50"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-flame text-cream transition hover:scale-105 disabled:opacity-50"
                         aria-label={`Add ${song.title} to ${playlist.title}`}
                       >
                         <Plus className="h-4 w-4" />

@@ -2,7 +2,7 @@ interface MarkProps {
   className?: string;
 }
 
-/** The ORU record mark: a green disc with a play notch. */
+/** The ORU record mark: an ember disc with a play notch. */
 export function OruMark({ className = "h-6 w-6" }: MarkProps) {
   return (
     <svg viewBox="0 0 64 64" className={className} role="img" aria-label="ORU">

@@ -5,10 +5,17 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
+    """Only email and password are required. Handle and name are derived from
+    the email when they are left out, so signing up takes one step."""
     email: EmailStr
-    handle: str = Field(min_length=3, max_length=32, pattern=r"^[a-zA-Z0-9_]+$")
-    display_name: str = Field(min_length=1, max_length=80)
     password: str = Field(min_length=10, max_length=128)
+    handle: str | None = Field(default=None, min_length=3, max_length=32, pattern=r"^[a-zA-Z0-9_]+$")
+    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class GoogleLoginRequest(BaseModel):
+    """The credential Google hands the browser after someone picks an account."""
+    id_token: str = Field(min_length=10, max_length=4096)
 
 
 class LoginRequest(BaseModel):

@@ -4,18 +4,18 @@ type Variant = "primary" | "soft" | "ink" | "ghost" | "outline" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-[#1ed760] text-black hover:bg-[#3be477] font-bold",
-  soft: "bg-white/12 text-white hover:bg-white/20",
-  ink: "bg-white text-black hover:bg-white/85 font-bold",
-  ghost: "text-ink-soft hover:text-ink hover:bg-white/10",
-  outline: "border border-white/25 text-white hover:border-white hover:bg-white/10",
-  danger: "bg-[#f0463c] text-white hover:bg-[#ff5c52] font-bold",
+  primary: "bg-flame text-cream hover:bg-flame-ink font-bold shadow-ember",
+  soft: "bg-ink/10 text-ink hover:bg-ink/18",
+  ink: "bg-ink text-paper font-bold hover:bg-ink/90",
+  ghost: "text-ink-soft hover:text-ink hover:bg-ink/10",
+  outline: "border border-hair text-ink hover:border-ink-soft hover:bg-ink/8",
+  danger: "bg-[#e5484d] text-white hover:bg-[#f2555a] font-bold",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3.5 text-[13.5px] rounded-full gap-1.5",
-  md: "h-11 px-5 text-[15px] rounded-full gap-2",
-  lg: "h-12 px-7 text-[16px] rounded-full gap-2",
+  sm: "h-8 px-3.5 text-[13px] rounded-xl gap-1.5",
+  md: "h-10 px-5 text-[14.5px] rounded-xl gap-2",
+  lg: "h-12 px-7 text-[15.5px] rounded-xl gap-2",
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -41,8 +41,8 @@ export function Chip({
   return (
     <button
       type="button"
-      className={`h-9 shrink-0 rounded-full px-4 text-[14px] font-bold transition press ${
-        active ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20"
+      className={`h-8 shrink-0 rounded-lg px-3.5 text-[13.5px] font-semibold transition press ${
+        active ? "bg-flame text-cream" : "bg-ink/8 text-ink-soft hover:bg-ink/14 hover:text-ink"
       }`}
       {...rest}
     >
@@ -71,12 +71,12 @@ export function SectionHeader({
 }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 className="text-[22px] font-bold tracking-[-0.02em]">{title}</h2>
+      <h2 className="font-display text-[21px] font-semibold tracking-[-0.01em] text-ink">{title}</h2>
       {action ? (
         <button
           type="button"
           onClick={onAction}
-          className="text-[13px] font-bold uppercase tracking-wide text-ink-soft hover:text-ink"
+          className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-faint hover:text-flame-ink"
         >
           {action}
         </button>
@@ -95,7 +95,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl bg-card px-6 py-12 text-center">
+    <div className="rounded-2xl border border-hair bg-card px-6 py-12 text-center">
       <p className="text-[18px] font-bold tracking-[-0.01em]">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-ink-soft">{message}</p>
       {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
@@ -113,13 +113,13 @@ export function Field({
     <label className="block">
       <span className="label-caps">{label}</span>
       <input
-        className={`mt-2 h-12 w-full rounded-lg border border-transparent bg-white/10 px-4 text-[16px] text-white outline-none transition placeholder:text-ink-faint focus:border-white ${
-          error ? "border-[#f0463c]" : ""
+        className={`mt-2 h-11 w-full rounded-xl border bg-ink/6 px-4 text-[15.5px] text-ink outline-none transition placeholder:text-ink-faint focus:border-flame-ink focus:bg-ink/10 ${
+          error ? "border-[#e5484d]" : "border-hair"
         }`}
         {...rest}
       />
       {error ? (
-        <span className="mt-1.5 block text-[13px] font-semibold text-[#ff6b60]">{error}</span>
+        <span className="mt-1.5 block text-[13px] font-semibold text-[#ff8a80]">{error}</span>
       ) : hint ? (
         <span className="mt-1.5 block text-[13px] text-ink-soft">{hint}</span>
       ) : null}
@@ -136,7 +136,7 @@ export function TextArea({
     <label className="block">
       <span className="label-caps">{label}</span>
       <textarea
-        className="mt-2 w-full rounded-lg border border-transparent bg-white/10 px-4 py-3 text-[16px] leading-relaxed text-white outline-none transition placeholder:text-ink-faint focus:border-white"
+        className="mt-2 w-full rounded-xl border border-hair bg-ink/6 px-4 py-3 text-[15.5px] leading-relaxed text-ink outline-none transition placeholder:text-ink-faint focus:border-flame-ink focus:bg-ink/10"
         {...rest}
       />
       {hint ? <span className="mt-1.5 block text-[13px] text-ink-soft">{hint}</span> : null}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Flag, X } from "lucide-react";
+import { Flag, X } from "./icons";
 import { request } from "../lib/api";
 import { useToasts } from "../state/ToastContext";
 
@@ -76,7 +76,7 @@ export function ReportButton({ targetType, targetId, targetLabel, compact = fals
 
       {open ? (
         <div
-          className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] grid place-items-center bg-night/75 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label={`Report ${targetLabel}`}
@@ -85,7 +85,7 @@ export function ReportButton({ targetType, targetId, targetLabel, compact = fals
           <form
             onSubmit={submit}
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md rounded-xl bg-[#282828] p-6 shadow-float"
+            className="w-full max-w-md rounded-xl bg-card p-6 shadow-float"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -118,7 +118,7 @@ export function ReportButton({ targetType, targetId, targetLabel, compact = fals
                       value={item.value}
                       checked={reason === item.value}
                       onChange={() => setReason(item.value)}
-                      className="mt-1 h-4 w-4 accent-[#1ed760]"
+                      className="mt-1 h-4 w-4 accent-flame"
                     />
                     <span>
                       <span className="block text-[14.5px] font-semibold">{item.label}</span>
@@ -152,7 +152,7 @@ export function ReportButton({ targetType, targetId, targetLabel, compact = fals
               <button
                 type="submit"
                 disabled={busy}
-                className="h-11 rounded-full bg-[#1ed760] px-5 text-[14.5px] font-bold text-black transition disabled:opacity-50"
+                className="h-11 rounded-xl bg-flame px-5 text-[14.5px] font-semibold text-cream transition disabled:opacity-50"
               >
                 {busy ? "Sending…" : "Send report"}
               </button>
