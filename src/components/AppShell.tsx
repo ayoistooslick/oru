@@ -259,8 +259,12 @@ export function AppShell() {
     scrollRegion.current?.scrollTo({ top: 0 });
   }, [location.pathname]);
 
+  // #root is scaled by `zoom` (0.93 desktop / 0.85 mobile), which shrinks a
+  // plain 100dvh box to ~93%/85% of the real viewport and leaves a gap under
+  // the bottom nav. Divide by the zoom factor so the shell fills the screen
+  // exactly after scaling: 100/0.93 = 107.527, 100/0.85 = 117.647.
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-paper text-ink max-sm:h-[108.7dvh]">
+    <div className="flex h-[107.527dvh] w-full flex-col overflow-hidden bg-paper text-ink max-sm:h-[117.647dvh]">
       <MobileShell />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-2 lg:p-2">
