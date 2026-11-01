@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search as SearchIcon, X } from "lucide-react";
+import { Search as SearchIcon, X } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Genre, Paginated, Song } from "../lib/types";
@@ -64,9 +64,9 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-      <div className="sticky top-0 z-10 -mx-4 bg-[#121212]/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky top-0 z-10 -mx-4 bg-paper/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div className="relative max-w-xl">
-          <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-faint" />
+          <SearchIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
           <input
             type="search"
             value={query}
@@ -74,8 +74,8 @@ export function SearchPage() {
             onKeyDown={(event) => {
               if (event.key === "Enter") saveRecentSearch();
             }}
-            placeholder="What do you want to listen to?"
-            className="h-12 w-full rounded-full border border-[#3e3e3e] bg-[#242424] pl-12 pr-11 text-[15px] text-white outline-none transition placeholder:text-ink-faint focus:border-white"
+            placeholder="Search songs or artists"
+            className="h-10 w-full rounded-full border border-hair bg-card-hi pl-11 pr-10 text-[14.5px] text-ink outline-none transition placeholder:text-ink-faint focus:border-flame-ink"
             aria-label="Search for songs or artists"
           />
           {query ? (
@@ -114,7 +114,7 @@ export function SearchPage() {
       </div>
 
       {hasQuery ? (
-        <div className="mb-5 flex gap-2" aria-label="Filter search results">
+        <div className="mb-4 flex gap-2" aria-label="Filter search results">
           {(["all", "songs", "artists"] as SearchScope[]).map((value) => (
             <Chip key={value} active={scope === value} onClick={() => setScope(value)}>
               {value === "all" ? "All results" : value[0].toUpperCase() + value.slice(1)}
@@ -140,14 +140,14 @@ export function SearchPage() {
       ) : null}
 
       {visibleArtists.length > 0 ? (
-        <section className="mb-8">
-          <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Artists</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <section className="mb-6">
+          <h2 className="mb-2 text-[17px] font-bold tracking-[-0.02em]">Artists</h2>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
             {visibleArtists.map((artist) => (
               <Link
                 key={artist.user_id}
                 to={`/artist/${artist.user_id}`}
-                className="rounded-lg bg-[#181818] p-4 text-center transition hover:bg-[#282828]"
+                className="rounded-lg bg-card p-2.5 text-center transition hover:bg-card-hi"
               >
                 <Cover
                   src={null}
@@ -156,8 +156,8 @@ export function SearchPage() {
                   className="mx-auto aspect-square w-full"
                   rounded="rounded-full"
                 />
-                <p className="mt-3 truncate text-[15px] font-bold">{artist.stage_name}</p>
-                <p className="truncate text-[13px] text-ink-soft">Artist</p>
+                <p className="mt-2 truncate text-[13.5px] font-bold">{artist.stage_name}</p>
+                <p className="truncate text-[11.5px] text-ink-faint">Artist</p>
               </Link>
             ))}
           </div>
@@ -166,8 +166,8 @@ export function SearchPage() {
 
       {visibleSongs.length > 0 ? (
         <section>
-          <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Songs</h2>
-          <div className="rounded-lg bg-[#181818] p-2">
+          <h2 className="mb-2 text-[17px] font-bold tracking-[-0.02em]">Songs</h2>
+          <div className="rounded-lg bg-card p-1.5">
             {visibleSongs.map((song) => (
               <TrackRow key={song.id} song={song} queue={visibleSongs} />
             ))}

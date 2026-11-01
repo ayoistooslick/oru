@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Scissors, X } from "lucide-react";
+import { Pause, Play, Scissors, X } from "./icons";
 import { decodeAudio, defaultEdit, renderEdit, toFile, waveformPeaks, type AudioEdit } from "../lib/audio";
 import { formatDuration } from "../lib/format";
 
@@ -65,7 +65,7 @@ export function AudioEditor({
 
     peaks.forEach((peak, index) => {
       const amplitude = Math.max(peak, 0.02) * (height / 2);
-      ctx.fillStyle = inSelection(index) ? "#1ed760" : "rgba(255,255,255,0.24)";
+      ctx.fillStyle = inSelection(index) ? "#e8552e" : "rgba(244,239,231,0.24)";
       ctx.fillRect(index * barWidth, height / 2 - amplitude, Math.max(barWidth - 1, 1), amplitude * 2);
     });
 
@@ -74,7 +74,7 @@ export function AudioEditor({
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.fillRect(0, 0, startX, height);
     ctx.fillRect(endX, 0, width - endX, height);
-    ctx.fillStyle = "#1ed760";
+    ctx.fillStyle = "#e8552e";
     ctx.fillRect(startX - 1, 0, 2, height);
     ctx.fillRect(endX - 1, 0, 2, height);
     if (edit.fadeIn > 0) {
@@ -129,8 +129,8 @@ export function AudioEditor({
   const span = edit ? Math.max(edit.end - edit.start, 0) : 0;
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-end bg-black/70 backdrop-blur-sm sm:place-items-center" role="dialog" aria-modal="true" aria-label="Edit audio">
-      <div className="w-full max-w-xl rounded-t-2xl bg-[#181818] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
+    <div className="fixed inset-0 z-[90] grid place-items-end bg-night/75 backdrop-blur-sm sm:place-items-center" role="dialog" aria-modal="true" aria-label="Edit audio">
+      <div className="w-full max-w-xl rounded-t-2xl bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-faint">Edit audio</p>
@@ -154,7 +154,7 @@ export function AudioEditor({
           </div>
         ) : (
           <>
-            <canvas ref={canvas} className="mt-4 h-28 w-full rounded-lg bg-black/40" aria-hidden="true" />
+            <canvas ref={canvas} className="mt-4 h-28 w-full rounded-lg bg-night/60" aria-hidden="true" />
             <audio ref={audio} src={url} preload="metadata" className="hidden" />
 
             <div className="mt-4 grid grid-cols-2 gap-3">
@@ -230,7 +230,7 @@ export function AudioEditor({
                   type="button"
                   onClick={apply}
                   disabled={saving || span < 3}
-                  className="h-10 rounded-full bg-[#1ed760] px-5 text-[14px] font-bold text-black transition press disabled:opacity-45"
+                  className="h-10 rounded-xl bg-flame px-5 text-[14px] font-semibold text-cream transition press disabled:opacity-45"
                 >
                   Use this clip
                 </button>
@@ -251,7 +251,7 @@ function Chip({ on, onClick, label }: { on: boolean; onClick: () => void; label:
       onClick={onClick}
       aria-pressed={on}
       className={`h-9 rounded-full px-3.5 text-[13.5px] font-bold transition press ${
-        on ? "bg-[#1ed760] text-black" : "bg-white/10 text-white hover:bg-white/20"
+        on ? "bg-flame text-cream" : "bg-ink/10 text-ink hover:bg-ink/18"
       }`}
     >
       {label}

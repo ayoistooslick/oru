@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { EyeOff, Undo2, XCircle } from "lucide-react";
+import { EyeOff, Undo2, XCircle } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
@@ -78,10 +78,10 @@ function Decision({ report, onDone }: { report: Report; onDone: () => void }) {
                 type="button"
                 onClick={() => setAction(option.value)}
                 className={`flex items-center gap-2 rounded-lg px-3.5 py-3 text-left text-[14px] font-bold transition ${
-                  active ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20"
+                  active ? "bg-flame text-cream" : "bg-ink/10 text-ink hover:bg-ink/20"
                 }`}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-black" : "text-ink-soft"}`} />
+                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-cream" : "text-ink-soft"}`} />
                 {option.label}
               </button>
             );
@@ -136,7 +136,7 @@ export function Moderation() {
           title="Only moderators can open this"
           message="You can still report anything you see from a song or an artist page."
           action={
-            <Link to="/listen" className="rounded-full bg-white px-5 py-2.5 text-[14.5px] font-bold text-black press">
+            <Link to="/listen" className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press">
               Go to Home
             </Link>
           }
@@ -173,7 +173,7 @@ export function Moderation() {
       ) : (
         <ul className="space-y-3">
           {items.map((report) => (
-            <li key={report.id} className="rounded-lg bg-[#181818] p-5">
+            <li key={report.id} className="rounded-xl bg-card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="label-caps">
@@ -198,7 +198,7 @@ export function Moderation() {
                   <button
                     type="button"
                     onClick={() => setExpanded(expanded === report.id ? null : report.id)}
-                    className="h-9 rounded-full bg-white px-4 text-[13.5px] font-bold text-black press"
+                    className="h-9 rounded-full bg-flame px-4 text-[13.5px] font-semibold text-cream press"
                   >
                     {expanded === report.id ? "Close" : "Review"}
                   </button>

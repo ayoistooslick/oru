@@ -1,4 +1,4 @@
-import { Share2 } from "lucide-react";
+import { Share2 } from "./icons";
 import { sharePage } from "../lib/pwa";
 import { useToasts } from "../state/ToastContext";
 

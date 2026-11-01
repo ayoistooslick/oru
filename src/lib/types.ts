@@ -9,6 +9,8 @@ export interface User {
   role: Role;
   created_at: string;
   avatar_url: string | null;
+  /** Artists only: the wide picture behind their name. */
+  banner_url: string | null;
 }
 
 export interface AuthResponse {

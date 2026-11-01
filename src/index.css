@@ -1,32 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Circular", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+  --font-sans: "Outfit", "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 
-  /* Near-black surfaces, white type, one green accent. */
-  --color-paper: #121212;
-  --color-paper-deep: #000000;
-  --color-card: #181818;
-  --color-ink: #ffffff;
-  --color-ink-soft: #b3b3b3;
-  --color-ink-faint: #7a7a7a;
-  --color-hair: #2a2a2a;
-  --color-flame: #1ed760;
-  --color-flame-ink: #1ed760;
-  --color-flame-soft: rgba(30, 215, 96, 0.14);
-  --color-night: #000000;
-  --color-night-soft: #121212;
-  --color-night-hair: #2a2a2a;
+  /* Warm, editorial identity. Deep clay surfaces, cream ink and an ember
+     accent drawn from the ORU mark. */
+  --color-paper: #17120e;
+  --color-paper-deep: #0d0a07;
+  --color-card: #211a14;
+  --color-card-hi: #2c231b;
+  --color-ink: #f4efe7;
+  --color-ink-soft: #cbc0b2;
+  --color-ink-faint: #8d8173;
+  --color-hair: #382c22;
+  --color-flame: #e8552e;
+  --color-flame-ink: #ff6a44;
+  --color-flame-soft: rgba(232, 85, 46, 0.16);
+  --color-cream: #f4efe7;
+  --color-night: #0d0a07;
+  --color-night-soft: #17120e;
+  --color-night-hair: #382c22;
 
+  --radius-card: 16px;
   --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.65);
+  --shadow-ember: 0 10px 30px rgba(232, 85, 46, 0.28);
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    scrollbar-color: #4d4d4d transparent;
+    scrollbar-color: var(--color-hair) transparent;
   }
 
   body {
@@ -43,13 +48,23 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* A field can never grow past its container: no form text box spills over
+     the width of the box that holds it. */
+  input,
+  textarea,
+  select {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   ::selection {
-    background: rgba(30, 215, 96, 0.35);
+    background: rgba(232, 85, 46, 0.4);
     color: #fff;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-flame);
+    outline: 2px solid var(--color-flame-ink);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -71,23 +86,27 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #4d4d4d;
+    background: var(--color-hair);
     border: 3px solid transparent;
     background-clip: content-box;
     border-radius: 999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #7a7a7a;
+    background: #5a4a3c;
     background-clip: content-box;
   }
 }
 
-/* Phones get the same layout at 92 percent: more of it fits on the screen,
-   text stays readable and the player stops covering half the page. */
+/* Denser layout: the whole app renders a touch smaller so more of it fits on
+   the screen with less scrolling, on desktop and on phones alike. */
+#root {
+  zoom: 0.93;
+}
+
 @media (max-width: 639px) {
   #root {
-    zoom: 0.92;
+    zoom: 0.85;
   }
 }
 
@@ -109,6 +128,13 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-ink-faint);
+}
+
+/* Display face for headings: one bold, soft sans. Weight and tight tracking do
+   the work instead of a second typeface. */
+@utility font-display {
+  font-family: "Fraunces", "Outfit", Georgia, serif;
+  font-optical-sizing: auto;
 }
 
 @layer components {
@@ -191,7 +217,7 @@
   width: 2px;
   height: 8px;
   border-radius: 2px;
-  background: #1ed760;
+  background: var(--color-flame-ink);
   transform-origin: bottom;
   animation: eq-rise 0.9s ease-in-out infinite;
 }

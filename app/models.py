@@ -154,6 +154,20 @@ class ArtistPost(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
+class ExternalShare(Base):
+    """A listener points at a song that lives somewhere else, because the artist
+    is not on ORU yet. There is no audio to upload, only the link and the credit."""
+    __tablename__ = "external_shares"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sharer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    artist_name: Mapped[str] = mapped_column(String(120))
+    url: Mapped[str] = mapped_column(String(500))
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+    sharer: Mapped[User] = relationship(foreign_keys=[sharer_id])
+
+
 class Report(Base):
     __tablename__ = "reports"
     id: Mapped[int] = mapped_column(primary_key=True)

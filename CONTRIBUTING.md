@@ -61,8 +61,8 @@ is the same shape as production. The app is then at `http://127.0.0.1:8000`.
 This part is strict, because ORU is meant to be usable by people with low literacy and cheap
 phones.
 
-- Black surfaces (`#121212`), white text, `#1ed760` as the accent. Use the existing Tailwind tokens
-  and CSS variables instead of new colors.
+- Warm clay surfaces (`#17120e` paper, `#211a14` cards), cream text (`#f4efe7`) and ember as the
+  accent (`#e8552e`). Use the existing Tailwind tokens and CSS variables instead of new colors.
 - No Spotify logos, wordmarks or artwork. The look is borrowed, the brand is not.
 - Copy is short and plain. Everyday words, one idea per sentence, no jargon, no marketing tone.
 - No em dashes, en dashes or curly quotes anywhere in `src/`. Straight quotes and periods only.

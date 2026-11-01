@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { mediaUrl } from "../lib/api";
 
-const PALETTE = ["#1ed760", "#509bf5", "#af2896", "#f59b23", "#e8115b", "#0d73ec", "#8d67ab", "#148a08"];
+const PALETTE = ["#e8552e", "#c96a3c", "#a8522f", "#d98c4a", "#b5563a", "#8a4a2c", "#e0a05a", "#c4703f"];
 
 function hash(value: string): number {
   let total = 0;

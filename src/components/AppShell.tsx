@@ -12,7 +12,7 @@ import {
   Search as SearchIcon,
   Share2,
   ShieldCheck,
-} from "lucide-react";
+} from "./icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Paginated, Playlist } from "../lib/types";
@@ -22,6 +22,7 @@ import { OruLogo } from "./OruMark";
 import { PlayerBar } from "./PlayerBar";
 import { NowPlaying } from "./NowPlaying";
 import { OnlineStatusBanner } from "./OnlineStatusBanner";
+import { Tutorial } from "./Tutorial";
 
 interface NavItem {
   to: string;
@@ -40,14 +41,14 @@ function NavItemRow({ to, label, icon: Icon }: NavItem) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-4 rounded-lg px-3 py-2.5 text-[15px] font-bold transition ${
-          isActive ? "bg-white/10 text-white" : "text-ink-soft hover:text-white"
+        `flex items-center gap-4 rounded-xl px-3 py-2.5 text-[14.5px] font-semibold transition ${
+          isActive ? "bg-flame-soft text-ink" : "text-ink-soft hover:text-ink"
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <Icon className={`h-6 w-6 ${isActive ? "text-white" : "text-ink-soft"}`} strokeWidth={2} />
+          <Icon className={`h-[22px] w-[22px] ${isActive ? "text-flame-ink" : "text-ink-soft"}`} strokeWidth={2} />
           {label}
         </>
       )}
@@ -69,7 +70,7 @@ function Sidebar() {
 
   return (
     <aside className="hidden w-[300px] shrink-0 flex-col gap-2 lg:flex">
-      <div className="rounded-lg bg-[#121212] px-4 pt-4 pb-3">
+      <div className="rounded-xl border border-hair bg-paper px-4 pt-4 pb-3">
         <Link to="/listen" aria-label="ORU home" className="mb-4 block">
           <OruLogo />
         </Link>
@@ -100,12 +101,12 @@ function Sidebar() {
         </nav>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-lg bg-[#121212] p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-hair bg-paper p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[14px] font-bold text-ink-soft">Your playlists</p>
+          <p className="text-[13px] font-bold uppercase tracking-wide text-ink-faint">Your playlists</p>
           <Link
             to="/library"
-            className="grid h-8 w-8 place-items-center rounded-full text-ink-soft transition hover:bg-white/10 hover:text-white"
+            className="grid h-8 w-8 place-items-center rounded-full text-ink-soft transition hover:bg-ink/10 hover:text-ink"
             aria-label="Create a playlist"
           >
             <Plus className="h-5 w-5" />
@@ -113,11 +114,11 @@ function Sidebar() {
         </div>
 
         {items.length === 0 ? (
-          <div className="rounded-lg bg-white/5 p-3">
-            <p className="text-[13.5px] leading-relaxed text-ink-soft">No playlists yet.</p>
+          <div className="rounded-xl bg-ink/5 p-3">
+            <p className="text-[13px] leading-relaxed text-ink-soft">No playlists yet.</p>
             <Link
               to="/library"
-              className="mt-2 inline-block text-[13.5px] font-bold text-white underline underline-offset-4"
+              className="mt-2 inline-block text-[13px] font-bold text-flame-ink underline underline-offset-4"
             >
               Make one
             </Link>
@@ -143,19 +144,19 @@ function Sidebar() {
         )}
       </div>
 
-      <div className="rounded-lg bg-[#121212] p-3">
+      <div className="rounded-xl border border-hair bg-paper p-3">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="flex min-w-0 flex-1 items-center gap-3 press">
             <Avatar name={user.display_name} src={user.avatar_url} />
             <span className="min-w-0">
-              <span className="block truncate text-[14px] font-bold">{user.display_name}</span>
+              <span className="block truncate text-[14px] font-semibold">{user.display_name}</span>
               <span className="block truncate text-[12.5px] text-ink-soft">@{user.handle}</span>
             </span>
           </Link>
           <button
             type="button"
             onClick={signOut}
-            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-white/10 hover:text-white"
+            className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-ink/10 hover:text-ink"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -171,12 +172,12 @@ function TopBar() {
   const { user } = useAuth();
 
   return (
-    <div className="sticky top-0 z-20 hidden items-center justify-between gap-3 bg-gradient-to-b from-black/70 to-transparent px-4 py-3 sm:px-6 lg:flex">
+    <div className="sticky top-0 z-20 hidden items-center justify-between gap-3 bg-gradient-to-b from-paper/85 to-transparent px-4 py-3 sm:px-6 lg:flex">
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white transition hover:bg-black"
+          className="grid h-8 w-8 place-items-center rounded-full bg-paper-deep/80 text-ink transition hover:bg-paper-deep"
           aria-label="Go back"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -184,13 +185,13 @@ function TopBar() {
         <button
           type="button"
           onClick={() => navigate(1)}
-          className="hidden h-8 w-8 place-items-center rounded-full bg-black/70 text-white transition hover:bg-black sm:grid"
+          className="hidden h-8 w-8 place-items-center rounded-full bg-paper-deep/80 text-ink transition hover:bg-paper-deep sm:grid"
           aria-label="Go forward"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
-      <Link to="/settings" className="rounded-full bg-black/70 p-1 transition hover:bg-black" aria-label="Your account">
+      <Link to="/settings" className="rounded-full bg-paper-deep/80 p-1 transition hover:bg-paper-deep" aria-label="Your account">
         <Avatar name="me" src={user?.avatar_url} size="h-7 w-7" />
       </Link>
     </div>
@@ -204,7 +205,7 @@ function MobileShell() {
 
   return (
     <>
-      <header className="flex shrink-0 items-center justify-between bg-black px-4 py-3 lg:hidden">
+      <header className="flex shrink-0 items-center justify-between border-b border-hair bg-paper px-4 py-3 lg:hidden">
         <Link to="/listen" aria-label="ORU home">
           <OruLogo />
         </Link>
@@ -216,28 +217,29 @@ function MobileShell() {
   );
 }
 
-const TABS: NavItem[] = [
-  { to: "/listen", label: "Home", icon: House },
-  { to: "/search", label: "Search", icon: SearchIcon },
-  { to: "/library", label: "Library", icon: Library },
+const TABS: (NavItem & { tour?: string })[] = [
+  { to: "/listen", label: "Home", icon: House, tour: "tab-home" },
+  { to: "/search", label: "Search", icon: SearchIcon, tour: "tab-search" },
+  { to: "/library", label: "Library", icon: Library, tour: "tab-library" },
   { to: "/shares", label: "Share", icon: Share2 },
-  { to: "/studio", label: "Studio", icon: Mic },
+  { to: "/studio", label: "Studio", icon: Mic, tour: "tab-studio" },
 ];
 
 function BottomTabs() {
   return (
     <nav
-      className="flex shrink-0 border-t border-white/10 bg-black pt-1.5 lg:hidden"
+      className="flex shrink-0 border-t border-hair bg-paper pt-1.5 lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="Main"
     >
-      {TABS.map(({ to, label, icon: Icon }) => (
+      {TABS.map(({ to, label, icon: Icon, tour }) => (
         <NavLink
           key={to}
           to={to}
+          data-tour={tour}
           className={({ isActive }) =>
             `flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition ${
-              isActive ? "text-white" : "text-ink-faint"
+              isActive ? "text-flame-ink" : "text-ink-faint"
             }`
           }
         >
@@ -258,7 +260,7 @@ export function AppShell() {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-black text-white max-sm:h-[108.7dvh]">
+    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-paper text-ink max-sm:h-[108.7dvh]">
       <MobileShell />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-2 lg:p-2">
@@ -266,7 +268,7 @@ export function AppShell() {
 
         <main
           ref={scrollRegion}
-          className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-black lg:rounded-lg lg:bg-[#121212]"
+          className="relative min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-paper lg:rounded-xl lg:border lg:border-hair"
         >
           <TopBar />
           <OnlineStatusBanner />
@@ -277,6 +279,7 @@ export function AppShell() {
       <PlayerBar />
       <BottomTabs />
       <NowPlaying />
+      <Tutorial />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, ImagePlus, Mic, Music4, Scissors, Send, Trash2, UploadCloud, Users, X } from "lucide-react";
+import { Check, ImagePlus, Mic, Music4, Scissors, Send, Trash2, UploadCloud, Users, X } from "../components/icons";
 import { ApiError, auth, request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
@@ -28,7 +28,7 @@ function Block({ label }: { label: string }) {
 
 function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="rounded-lg bg-[#181818] px-4 py-3.5">
+    <div className="rounded-xl bg-card px-4 py-3.5">
       <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em]">{value}</p>
       <p className="label-caps mt-2">{label}</p>
     </div>
@@ -68,7 +68,7 @@ function Opening({ onReady }: { onReady: () => void }) {
         This is the name listeners will see on every song you publish.
       </p>
 
-      <form onSubmit={submit} className="mt-7 rounded-lg bg-[#181818] p-6">
+      <form onSubmit={submit} className="mt-7 rounded-xl bg-card p-6">
         <Field
           label="Artist name"
           value={stageName}
@@ -361,7 +361,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
 
       <section className="mb-9">
         <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Upload a song</h2>
-        <form onSubmit={submitUpload} className="rounded-lg bg-[#181818] p-5 sm:p-6">
+        <form onSubmit={submitUpload} className="rounded-xl bg-card p-5 sm:p-6">
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="space-y-4">
               <Field
@@ -397,7 +397,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                       return (
                         <span
                           key={id}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#1ed760]/15 px-3 text-[13px] font-bold text-[#1ed760]"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-flame-soft px-3 text-[13px] font-semibold text-flame-ink"
                         >
                           {guest?.stage_name ?? `Artist ${id}`}
                           <button
@@ -422,7 +422,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                     aria-label="Search artists to feature"
                   />
                   {guestQuery.trim().length >= 2 && guestResults.length > 0 ? (
-                    <ul className="absolute left-0 right-0 top-11 z-20 max-h-56 overflow-y-auto rounded-lg border border-white/10 bg-[#282828] p-1.5 shadow-xl">
+                    <ul className="absolute left-0 right-0 top-11 z-20 max-h-56 overflow-y-auto rounded-lg border border-hair bg-card-hi p-1.5 shadow-xl">
                       {guestResults.map((artist) => {
                         const picked = featuredIds.includes(artist.user_id);
                         const full = !picked && featuredIds.length >= 5;
@@ -440,7 +440,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                             >
                               <Users className="h-3.5 w-3.5 text-ink-soft" />
                               <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{artist.stage_name}</span>
-                              {picked ? <Check className="h-3.5 w-3.5 text-[#1ed760]" /> : null}
+                              {picked ? <Check className="h-3.5 w-3.5 text-flame-ink" /> : null}
                             </button>
                           </li>
                         );
@@ -454,7 +454,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
 
             <div className="flex flex-col gap-3">
               <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white/5 px-4 py-4 transition hover:bg-white/10">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-[#1ed760] text-black">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-flame text-cream">
                   <Music4 className="h-5 w-5" />
                 </span>
                 <span className="min-w-0">
@@ -481,7 +481,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                   onClick={() => setRecording(true)}
                   className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-3 text-[13.5px] font-bold transition hover:bg-white/10"
                 >
-                  <Mic className="h-4 w-4 text-[#1ed760]" /> Record
+                  <Mic className="h-4 w-4 text-flame-ink" /> Record
                 </button>
                 <button
                   type="button"
@@ -489,7 +489,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                   disabled={!audioFile}
                   className="flex items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-3 text-[13.5px] font-bold transition hover:bg-white/10 disabled:opacity-40"
                 >
-                  <Scissors className="h-4 w-4 text-[#1ed760]" /> Trim and fade
+                  <Scissors className="h-4 w-4 text-flame-ink" /> Trim and fade
                 </button>
               </div>
               {audioFile ? (
@@ -499,8 +499,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
               ) : null}
 
               <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white/5 px-4 py-4 transition hover:bg-white/10">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/10 text-white">
-                  {coverName ? <Check className="h-5 w-5 text-[#1ed760]" /> : <ImagePlus className="h-5 w-5" />}
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-white/10 text-white">                    {coverName ? <Check className="h-5 w-5 text-flame-ink" /> : <ImagePlus className="h-5 w-5" />}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[14.5px] font-bold">Cover picture</span>
@@ -521,7 +520,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                 <div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
                     <div
-                      className="h-full rounded-full bg-[#1ed760] transition-[width] duration-200"
+                      className="h-full rounded-full bg-flame transition-[width] duration-200"
                       style={{ width: `${Math.max(4, Math.round(progress * 100))}%` }}
                     />
                   </div>
@@ -559,7 +558,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
         ) : catalogue.length === 0 ? (
           <EmptyState title="No songs yet" message="Upload your first song above. It stays private until you publish it." />
         ) : (
-          <div className="rounded-lg bg-[#181818] p-2">
+          <div className="rounded-xl bg-card p-2">
             {catalogue.map((song) => (
               <div key={song.id}>
                 <TrackRow
@@ -580,7 +579,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                         <button
                           type="button"
                           onClick={() => publish(song)}
-                          className="inline-flex h-9 items-center rounded-full bg-[#1ed760] px-3.5 text-[13px] font-bold text-black transition press"
+                          className="inline-flex h-9 items-center rounded-full bg-flame px-3.5 text-[13px] font-semibold text-cream transition press"
                         >
                           Publish
                         </button>
@@ -626,7 +625,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
       </section>
 
       {releasing ? (
-        <section className="mb-9 rounded-lg bg-[#181818] p-5 sm:p-6">
+        <section className="mb-9 rounded-xl bg-card p-5 sm:p-6">
           <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">New release</h2>
           <form onSubmit={submitRelease}>
             <div className="flex flex-wrap gap-2">
@@ -639,7 +638,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                     setPicked((current) => current.slice(0, option === "single" ? 1 : option === "ep" ? 6 : 40));
                   }}
                   className={`h-9 rounded-full px-4 text-[13.5px] font-bold uppercase tracking-wide transition press ${
-                    kind === option ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20"
+                    kind === option ? "bg-flame text-cream" : "bg-ink/10 text-ink hover:bg-ink/20"
                   }`}
                 >
                   {option}
@@ -676,7 +675,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                       >
                         <span
                           className={`grid h-5 w-5 shrink-0 place-items-center rounded border ${
-                            on ? "border-[#1ed760] bg-[#1ed760] text-black" : "border-white/40"
+                            on ? "border-flame bg-flame text-cream" : "border-ink/40"
                           }`}
                         >
                           {on ? <Check className="h-3.5 w-3.5" /> : null}
@@ -719,7 +718,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
               <button
                 type="button"
                 onClick={() => setReleasing(true)}
-                className="rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+                className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
               >
                 New release
               </button>
@@ -730,8 +729,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
             {releases.data?.items.map((release) => {
               const art = catalogue.find((song) => release.song_ids.includes(song.id));
               const live = release.status === "published";
-              return (
-                <li key={release.id} className="flex items-center gap-3.5 rounded-lg bg-[#181818] p-3.5">
+              return (                  <li key={release.id} className="flex items-center gap-3.5 rounded-xl bg-card p-3.5">
                   <Cover
                     src={art?.cover_url ?? null}
                     alt={release.title}
@@ -760,7 +758,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
                     <button
                       type="button"
                       onClick={() => publishRelease(release)}
-                      className="h-9 shrink-0 rounded-full bg-[#1ed760] px-4 text-[13px] font-bold text-black press"
+                      className="h-9 shrink-0 rounded-full bg-flame px-4 text-[13px] font-semibold text-cream press"
                     >
                       Publish
                     </button>
@@ -774,7 +772,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
 
       <section>
         <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">Post an update</h2>
-        <form onSubmit={submitPost} className="rounded-lg bg-[#181818] p-5">
+        <form onSubmit={submitPost} className="rounded-xl bg-card p-5">
           <TextArea
             label="Message"
             value={post}
@@ -795,7 +793,7 @@ function Desk({ onLeave }: { onLeave: () => void }) {
         {(posts.data?.items.length ?? 0) > 0 ? (
           <ul className="mt-4 space-y-3">
             {posts.data?.items.map((item) => (
-              <li key={item.id} className="rounded-lg bg-[#181818] p-5">
+              <li key={item.id} className="rounded-xl bg-card p-5">
                 <p className="whitespace-pre-wrap text-[15.5px] leading-relaxed">{item.body}</p>
                 <p className="mt-3 flex items-center gap-2 text-[13px] text-ink-faint">
                   {formatTimeAgo(item.created_at)}

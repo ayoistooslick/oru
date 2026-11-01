@@ -8,7 +8,7 @@ from app.api.uploads import AUDIO_TYPES, IMAGE_TYPES, guess_image_type, media_re
 from app.config import settings
 from app.database import get_db
 from app.dependencies import artist_user, current_user, optional_current_user
-from app.models import ArtistProfile, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongFeature, SongGenre, User
+from app.models import ArtistProfile, ExternalShare, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongFeature, SongGenre, User
 from app.schemas import ListeningCreate, ReleaseCreate, ShareDecision
 from app.services.discovery import discover_songs
 from app.storage import storage
@@ -233,6 +233,53 @@ def pending_shares(user: User = Depends(current_user), db: Session = Depends(get
         query = query.where(Song.artist_id == user.id)
     songs = db.scalars(query.limit(50)).all()
     return {"items": [song_data(song, db, user) for song in songs]}
+
+
+def external_share_data(share: ExternalShare) -> dict:
+    return {"id": share.id, "title": share.title, "artist_name": share.artist_name,
+            "url": share.url, "note": share.note, "created_at": share.created_at,
+            "sharer": {"handle": share.sharer.handle, "display_name": share.sharer.display_name}}
+
+
+@router.post("/shared/external", status_code=201)
+def share_external_song(title: str = Form(min_length=1, max_length=120),
+                        artist_name: str = Form(min_length=1, max_length=120),
+                        url: str = Form(min_length=4, max_length=500),
+                        note: str = Form(default="", max_length=1000),
+                        user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Share a song that lives somewhere else, for an artist who is not on ORU yet.
+    Only the link and the credit are kept; anyone can open it from the list."""
+    link = url.strip()
+    if not link.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail={"code": "invalid_source", "message": "Add a link that starts with http:// or https://"})
+    share = ExternalShare(sharer_id=user.id, title=title.strip(), artist_name=artist_name.strip(),
+                          url=link, note=note.strip())
+    db.add(share)
+    db.commit()
+    db.refresh(share)
+    return {"share": external_share_data(share)}
+
+
+@router.get("/shared/external")
+def list_external_shares(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
+    """The public list of songs shared from outside ORU, newest first."""
+    limit = min(max(limit, 1), 50)
+    shares = db.scalars(
+        select(ExternalShare).order_by(ExternalShare.created_at.desc(), ExternalShare.id.desc())
+        .offset(max(offset, 0)).limit(limit)
+    ).all()
+    return {"items": [external_share_data(share) for share in shares], "limit": limit, "offset": max(offset, 0)}
+
+
+@router.delete("/shared/external/{share_id}")
+def withdraw_external_share(share_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Take back something you shared from outside ORU."""
+    share = db.get(ExternalShare, share_id)
+    if share is None or share.sharer_id != user.id:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Share not found"})
+    db.delete(share)
+    db.commit()
+    return {"share_id": share_id, "deleted": True}
 
 
 @router.post("/songs/{song_id}/share-decision")

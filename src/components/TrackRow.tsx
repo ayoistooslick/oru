@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Heart, Pause, Play, X } from "lucide-react";
+import { Heart, Pause, Play, X } from "./icons";
 import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";
 import { useToasts } from "../state/ToastContext";
@@ -70,7 +70,7 @@ export function TrackRow({
         <span className="absolute inset-0 grid place-items-center">
           <Cover src={song.cover_url} alt={song.title} seed={song.id} className="h-10 w-10" />
         </span>
-        <span className="absolute inset-0 grid place-items-center rounded bg-black/60 opacity-0 transition group-hover:opacity-100">
+        <span className="absolute inset-0 grid place-items-center rounded bg-night/70 opacity-0 transition group-hover:opacity-100">
           {isActive && isPlaying ? (
             <Pause className="h-4 w-4 text-white" fill="currentColor" />
           ) : (
@@ -80,7 +80,7 @@ export function TrackRow({
       </button>
 
       <button type="button" onClick={handlePlay} className="min-w-0 text-left">
-        <p className={`truncate text-[15px] font-semibold ${isActive ? "text-[#1ed760]" : "text-white"}`}>
+        <p className={`truncate text-[15px] font-semibold ${isActive ? "text-flame-ink" : "text-ink"}`}>
           {position !== undefined ? (
             isActive && isPlaying ? (
               <span className="mr-3 inline-flex h-3 w-5 items-end gap-[2px]" aria-hidden="true">
@@ -137,7 +137,7 @@ export function TrackRow({
             aria-pressed={liked}
           >
             <Heart
-              className={`h-[17px] w-[17px] ${liked ? "text-[#1ed760]" : "text-ink-soft"}`}
+              className={`h-[17px] w-[17px] ${liked ? "text-flame-ink" : "text-ink-soft"}`}
               fill={liked ? "currentColor" : "none"}
             />
           </button>

@@ -7,8 +7,7 @@ export function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: st
   if (picture) {
     return <img src={picture} alt={name} className={`${size} shrink-0 rounded-full object-cover`} loading="lazy" />;
   }
-  return (
-    <span className={`${size} grid shrink-0 place-items-center rounded-full bg-[#3e3e3e] text-[12px] font-bold text-white`}>
+  return (     <span className={`${size} grid shrink-0 place-items-center rounded-full bg-card-hi text-[12px] font-bold text-ink`}>
       {initials(name)}
     </span>
   );

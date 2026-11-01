@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Play, Pause, Upload } from "lucide-react";
+import { Play, Pause, Upload } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Paginated, Song, WeeklyRanking } from "../lib/types";
@@ -34,7 +34,7 @@ function QuickTile({ song, queue }: { song: Song; queue: Song[] }) {
       <Cover src={song.cover_url} alt={song.title} seed={song.id} className="h-11 w-11 shrink-0" rounded="rounded-none" />
       <span className="min-w-0 flex-1 truncate text-[14px] font-bold">{song.title}</span>
       <span
-        className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1ed760] text-black shadow-lg transition ${
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-flame text-cream shadow-ember transition ${
           active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}
       >
@@ -58,8 +58,8 @@ export function Listen() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-      <header className="mb-6 rounded-lg bg-gradient-to-b from-[#1e5c3f]/80 via-[#173d2c]/35 to-transparent px-5 py-6 sm:px-7">
-        <p className="text-[12.5px] font-bold uppercase tracking-[0.12em] text-white/70">{greeting()}</p>
+      <header data-tour="home" className="mb-6 rounded-xl bg-gradient-to-b from-[#3a2a1e]/85 via-[#241a12]/40 to-transparent px-5 py-6 sm:px-7">
+        <p className="text-[12.5px] font-bold uppercase tracking-[0.12em] text-ink-soft">{greeting()}</p>
         <h1 className="mt-1 text-[30px] font-extrabold tracking-[-0.03em] sm:text-[36px]">Home</h1>
       </header>
 
@@ -76,7 +76,7 @@ export function Listen() {
             <button
               type="button"
               onClick={feed.reload}
-              className="rounded-full bg-white px-5 py-2.5 text-[14.5px] font-bold text-black press"
+              className="rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
             >
               Try again
             </button>
@@ -89,7 +89,7 @@ export function Listen() {
           action={
             <Link
               to="/studio"
-              className="inline-flex items-center gap-2 rounded-full bg-[#1ed760] px-5 py-2.5 text-[14.5px] font-bold text-black press"
+              className="inline-flex items-center gap-2 rounded-full bg-flame px-5 py-2.5 text-[14.5px] font-semibold text-cream press"
             >
               <Upload className="h-4 w-4" /> Open the studio
             </Link>
@@ -109,7 +109,7 @@ export function Listen() {
                 <h2 className="text-[22px] font-bold tracking-[-0.02em]">This week</h2>
                 <span className="text-[12px] font-bold uppercase tracking-wide text-ink-faint">Most played</span>
               </div>
-              <ol className="overflow-hidden rounded-lg bg-[#181818]">
+              <ol className="overflow-hidden rounded-xl bg-card">
                 {top.map((entry) => (
                   <li key={entry.song.id} className="border-b border-white/5 last:border-0">
                     <div className="flex items-center gap-3 pr-2">
@@ -146,7 +146,7 @@ export function Listen() {
           {fromFollows.length > 0 ? (
             <section className="mb-8">
               <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">From artists you follow</h2>
-              <div className="rounded-lg bg-[#181818] p-2">
+              <div className="rounded-xl bg-card p-2">
                 {fromFollows.map((song) => (
                   <TrackRow key={song.id} song={song} queue={fromFollows} />
                 ))}
@@ -156,7 +156,7 @@ export function Listen() {
 
           <section>
             <h2 className="mb-3 text-[22px] font-bold tracking-[-0.02em]">All songs</h2>
-            <div className="rounded-lg bg-[#181818] p-2">
+            <div className="rounded-xl bg-card p-2">
               {songs.map((song, index) => (
                 <TrackRow key={song.id} song={song} queue={songs} position={index + 1} />
               ))}

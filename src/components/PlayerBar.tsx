@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from "./icons";
 import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";
 import { formatDuration } from "../lib/format";
@@ -50,7 +50,7 @@ export function Scrubber({
         aria-label="Move through the song"
         className="scrub min-h-6 flex-1 py-2 disabled:opacity-60"
         style={{
-          background: `linear-gradient(to right, #1ed760 0%, #1ed760 ${percent}%, #4d4d4d ${percent}%, #4d4d4d 100%)`,
+          background: `linear-gradient(to right, var(--color-flame) 0%, var(--color-flame) ${percent}%, #4a3d33 ${percent}%, #4a3d33 100%)`,
         }}
       />
       {showTimes ? <span className="w-9 text-[11.5px] tabular-nums text-ink-soft">{formatDuration(duration)}</span> : null}
@@ -90,12 +90,12 @@ export function PlayerBar() {
       aria-label={liked ? "Remove from likes" : "Add to likes"}
       aria-pressed={liked}
     >
-      <Heart className={`h-[18px] w-[18px] ${liked ? "text-[#1ed760]" : ""}`} fill={liked ? "currentColor" : "none"} />
+      <Heart className={`h-[18px] w-[18px] ${liked ? "text-flame-ink" : ""}`} fill={liked ? "currentColor" : "none"} />
     </button>
   );
 
   return (
-    <div className="shrink-0 bg-black">
+    <div className="shrink-0 bg-paper-deep" data-tour="player">
       {/* Phone */}
       <div className="flex items-center gap-3 px-3 py-2 lg:hidden">
         <div className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function PlayerBar() {
         <button
           type="button"
           onClick={toggle}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-black press"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-flame text-cream shadow-ember press"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5 translate-x-[1px]" fill="currentColor" />}
@@ -146,7 +146,7 @@ export function PlayerBar() {
             <button
               type="button"
               onClick={toggleShuffle}
-              className={`grid h-8 w-8 place-items-center transition hover:text-white ${shuffle ? "text-[#1ed760]" : "text-ink-soft"}`}
+              className={`grid h-8 w-8 place-items-center rounded-full transition hover:text-white ${shuffle ? "text-flame-ink" : "text-ink-soft"}`}
               aria-label={shuffle ? "Turn shuffle off" : "Turn shuffle on"}
               aria-pressed={shuffle}
               title={shuffle ? "Shuffle on" : "Shuffle off"}
@@ -164,7 +164,7 @@ export function PlayerBar() {
             <button
               type="button"
               onClick={toggle}
-              className="grid h-8 w-8 place-items-center rounded-full bg-white text-black transition hover:scale-105 press"
+              className="grid h-8 w-8 place-items-center rounded-full bg-flame text-cream transition hover:scale-105 press"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
@@ -179,7 +179,7 @@ export function PlayerBar() {
             <button
               type="button"
               onClick={cycleRepeat}
-              className={`relative grid h-8 w-8 place-items-center transition hover:text-white ${repeatMode !== "off" ? "text-[#1ed760]" : "text-ink-soft"}`}
+              className={`relative grid h-8 w-8 place-items-center rounded-full transition hover:text-white ${repeatMode !== "off" ? "text-flame-ink" : "text-ink-soft"}`}
               aria-label={`Repeat ${repeatMode === "off" ? "off" : repeatMode === "all" ? "all songs" : "one song"}; change mode`}
               title={`Repeat ${repeatMode}`}
             >
@@ -202,7 +202,7 @@ export function PlayerBar() {
             aria-label="Volume"
             className="scrub h-1 w-24"
             style={{
-              background: `linear-gradient(to right, #1ed760 0%, #1ed760 ${volume * 100}%, #4d4d4d ${volume * 100}%, #4d4d4d 100%)`,
+              background: `linear-gradient(to right, var(--color-flame) 0%, var(--color-flame) ${volume * 100}%, #4a3d33 ${volume * 100}%, #4a3d33 100%)`,
             }}
           />
         </div>

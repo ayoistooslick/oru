@@ -5,9 +5,9 @@ import { OruMark } from "./OruMark";
 import { motionSafe } from "../lib/motion";
 
 const META: Record<ToastKind, { label: string; tint: string }> = {
-  saved: { label: "Saved", tint: "text-[#1ed760]" },
+  saved: { label: "Saved", tint: "text-flame-ink" },
   playing: { label: "Now playing", tint: "text-ink-soft" },
-  upload: { label: "Uploaded", tint: "text-[#1ed760]" },
+  upload: { label: "Uploaded", tint: "text-flame-ink" },
   error: { label: "Did not work", tint: "text-[#ff6b60]" },
   info: { label: "Note", tint: "text-ink-soft" },
 };
@@ -51,7 +51,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
       role="status"
       aria-live="polite"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-black">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-paper-deep">
         <OruMark className="h-5 w-5" />
       </span>
       <span className="min-w-0 pt-0.5">

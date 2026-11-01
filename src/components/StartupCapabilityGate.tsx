@@ -61,7 +61,7 @@ export function StartupCapabilityGate() {
           }
         }
       }}
-      className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 p-4 backdrop-blur-sm sm:grid sm:place-items-center"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-night/80 p-4 backdrop-blur-sm sm:grid sm:place-items-center"
     >
       <div className="my-6 w-full sm:my-0">
         <BrowserCapabilitySetupPrompt onDismiss={dismiss} />

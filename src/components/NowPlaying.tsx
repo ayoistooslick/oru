@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, Heart, Loader2, MoreHorizontal, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2, X } from "lucide-react";
+import { ChevronDown, Heart, Loader2, MoreHorizontal, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2, X } from "./icons";
 import gsap from "gsap";
 import { Link } from "react-router-dom";
 import { mediaUrl } from "../lib/api";
@@ -83,7 +83,7 @@ export function NowPlaying() {
   return (
     <div
       ref={panel}
-      className="fixed inset-0 z-[80] overflow-y-auto bg-black text-white"
+      className="fixed inset-0 z-[80] overflow-y-auto bg-paper text-ink"
       role="dialog"
       aria-modal="true"
       aria-label={`Now playing ${current.title}`}
@@ -133,7 +133,7 @@ export function NowPlaying() {
               {actionsOpen ? <X className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
             </button>
             {actionsOpen ? (
-              <div id="now-playing-actions" role="menu" className="absolute right-0 top-12 z-30 w-52 rounded-xl border border-white/10 bg-[#282828] p-2 shadow-xl">
+              <div id="now-playing-actions" role="menu" className="absolute right-0 top-12 z-30 w-52 rounded-xl border border-hair bg-card-hi p-2 shadow-xl">
                 <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-[14px] font-semibold">
                   <span>Share this song</span>
                   <ShareButton
@@ -194,7 +194,7 @@ export function NowPlaying() {
             <button
               type="button"
               onClick={toggleShuffle}
-              className={`grid h-10 w-10 place-items-center rounded-full transition hover:bg-white/10 ${shuffle ? "text-[#1ed760]" : "text-white/55"}`}
+              className={`grid h-10 w-10 place-items-center rounded-full transition hover:bg-ink/10 ${shuffle ? "text-flame-ink" : "text-ink-faint"}`}
               aria-label={shuffle ? "Turn shuffle off" : "Turn shuffle on"}
               aria-pressed={shuffle}
             >
@@ -211,7 +211,7 @@ export function NowPlaying() {
             <button
               type="button"
               onClick={toggle}
-              className="grid h-[74px] w-[74px] place-items-center rounded-full bg-white text-black transition press hover:scale-105"
+              className="grid h-[74px] w-[74px] place-items-center rounded-full bg-flame text-cream shadow-ember transition press hover:scale-105"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
@@ -231,7 +231,7 @@ export function NowPlaying() {
             <button
               type="button"
               onClick={cycleRepeat}
-              className={`relative grid h-10 w-10 place-items-center rounded-full transition hover:bg-white/10 ${repeatMode !== "off" ? "text-[#1ed760]" : "text-white/55"}`}
+              className={`relative grid h-10 w-10 place-items-center rounded-full transition hover:bg-ink/10 ${repeatMode !== "off" ? "text-flame-ink" : "text-ink-faint"}`}
               aria-label={`Repeat ${repeatMode}; change mode`}
             >
               <Repeat className="h-4 w-4" />
