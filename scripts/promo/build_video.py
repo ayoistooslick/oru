@@ -1,6 +1,6 @@
 """Build the ORU promo video.
 
-Renders every frame with Pillow at 1920x1080, pipes the frames straight into
+Renders every frame with Pillow at 1080x1920 (portrait), pipes the frames straight into
 ffmpeg, and writes the soundtrack with numpy. The product shots are real
 screen captures taken headlessly from the live site by
 scripts/promo/capture.cjs, so the film shows the actual app.
@@ -10,8 +10,10 @@ the display type, Outfit carries the interface copy.
 
 Chunks, because a whole film in one command outlives any single run:
 
-  .venv/bin/python scripts/promo/build_video.py 0 500
-  .venv/bin/python scripts/promo/build_video.py 500 1025
+  .venv/bin/python scripts/promo/build_video.py 0 230
+  .venv/bin/python scripts/promo/build_video.py 230 460
+  .venv/bin/python scripts/promo/build_video.py 460 690
+  .venv/bin/python scripts/promo/build_video.py 690 915
   .venv/bin/python scripts/promo/build_video.py --still 3.2   # single debug frame
 
 Then stitch with the concat command printed by --concat.
@@ -32,8 +34,8 @@ SHOTS = ROOT / ".promo" / "screens"
 OUT = ROOT / "public" / "promo"
 WORK = ROOT / ".promo"
 
-W, H, FPS = 1920, 1080, 25
-DURATION = 39.5
+W, H, FPS = 1080, 1920, 30
+DURATION = 30.5
 FRAMES = int(DURATION * FPS)
 
 # The identity, straight from src/index.css.
@@ -72,7 +74,9 @@ def progress(t, start, end):
 
 
 def ease_out(t):
-    return 1 - (1 - t) ** 3
+    # Quintic: leaves fast, lands soft. Every entrance in the film uses it,
+    # which is what keeps the shorter cuts feeling smooth instead of snatched.
+    return 1 - (1 - t) ** 5
 
 
 def ease_in(t):
@@ -148,7 +152,9 @@ def text(draw, xy, value, weight="semi", size=48, fill=INK, tracking=0.0, anchor
         draw.text((x, y), value, font=font, fill=fill, anchor=anchor)
         return font.getlength(value)
     width = sum(font.getlength(ch) for ch in value) + tracking * max(len(value) - 1, 0)
-    if anchor[0] == "c":
+    # Pillow spells the horizontal middle anchor "m" ("mm", "ma"); "c" is
+    # accepted too so either spelling centres the tracked line.
+    if anchor[0] in ("c", "m"):
         x -= width / 2
     elif anchor[0] == "r":
         x -= width
@@ -425,8 +431,8 @@ def scene_chat(t):
     canvas = base
     draw = ImageDraw.Draw(canvas)
 
-    panel_w, panel_h = 930, 780
-    px, py = (W - panel_w) / 2 - 40, (H - panel_h) / 2 + 10
+    panel_w, panel_h = 960, 820
+    px, py = (W - panel_w) / 2, (H - panel_h) / 2 - 20
     draw.rounded_rectangle((px - 24, py - 24, px + panel_w + 24, py + panel_h + 24), radius=40,
                            fill=(32, 25, 19, 244), outline=CARD_LINE, width=2)
 
@@ -441,10 +447,10 @@ def scene_chat(t):
     canvas.alpha_composite(head, (int(px), int(py)))
 
     messages = [
-        ("left", "found the smallest song i swear", 0.35, 4.95, "med"),
-        ("left", "and nobody has heard it yet", 1.15, 4.95, "med"),
-        ("right", "whats ORU again?", 2.05, 4.95, "med"),
-        ("link", "", 3.05, 99, ""),
+        ("left", "found the smallest song i swear", 0.26, 4.95, "med"),
+        ("left", "and nobody has heard it yet", 0.85, 4.95, "med"),
+        ("right", "whats ORU again?", 1.52, 4.95, "med"),
+        ("link", "", 2.26, 99, ""),
     ]
 
     y = py + 128
@@ -485,22 +491,22 @@ def scene_chat(t):
             layer.alpha_composite(preview, (36, 36))
             text(ldraw, (38, 206), "oru.freebuff.app", "semi", 28, INK)
             text(ldraw, (38, 244), "Discover music that nobody has heard yet", "reg", 19, FAINT)
-            phase = progress(t, 5.35, 6.05)
+            phase = progress(t, 3.96, 4.48)
             if 0 < phase < 1:
                 tap_ring(layer, 275, 150, 96, phase)
             slide = (1 - appear) * 40
             paste_center(canvas, layer, (px + 250 + (card_w / 2), y + 120 + slide), appear)
             y += card_h - 52
 
-    for start, end in ((0.0, 0.5), (2.75, 3.05), (4.05, 4.35)):
+    for start, end in ((0.0, 0.3), (1.9, 2.22), (3.0, 3.24)):
         typing_dots(canvas, left_x + 4, y + 8, t, start <= t < end)
 
     # Closing push: zoom on the link.
-    zoom = 1 + 0.24 * ease_in(progress(t, 5.7, 6.6))
+    zoom = 1 + 0.26 * ease_in(progress(t, 4.2, 4.9))
     out = canvas.convert("RGB")
     if zoom > 1.001:
         out = zoom_center(out, zoom)
-    fade = ease_out(progress(t, 0.0, 0.5)) * (1 - progress(t, 6.25, 6.6))
+    fade = ease_out(progress(t, 0.0, 0.5)) * (1 - progress(t, 4.6, 4.9))
     return blend_black(out, fade)
 
 
@@ -510,112 +516,114 @@ def scene_invite(t):
     canvas.alpha_composite(full_bleed((W, H)))
     draw = ImageDraw.Draw(canvas)
 
-    pop = ease_back(progress(t, 0.05, 0.85))
+    pop = ease_back(progress(t, 0.04, 0.6))
     logo = mark(int(286 * (0.6 + 0.4 * pop)), rotation=(1 - pop) * -14)
-    paste_center(canvas, logo, (W / 2, 428), clamp(pop))
+    paste_center(canvas, logo, (W / 2, 720), clamp(pop))
 
-    pulse = progress(t, 0.2, 1.7)
+    pulse = progress(t, 0.15, 1.3)
     if 0 < pulse < 1:
         ring = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         rdraw = ImageDraw.Draw(ring)
         radius = 150 + ease_out(pulse) * 460
-        rdraw.ellipse((W / 2 - radius, 428 - radius, W / 2 + radius, 428 + radius),
+        rdraw.ellipse((W / 2 - radius, 720 - radius, W / 2 + radius, 720 + radius),
                       outline=(*EMBER, int(120 * (1 - pulse))), width=6)
         canvas.alpha_composite(ring)
 
-    name_in = ease_out(progress(t, 0.45, 1.05))
-    text(draw, (W / 2, 612 + (1 - name_in) * 26), "ORU", "display", 158, INK, tracking=16, anchor="ma")
+    name_in = ease_out(progress(t, 0.3, 0.75))
+    text(draw, (W / 2, 900 + (1 - name_in) * 26), "ORU", "display", 158, INK, tracking=16, anchor="ma")
 
-    promise = ease_out(progress(t, 0.85, 1.45))
-    text(draw, (W / 2, 826), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "med", 24, SOFT, tracking=8,
+    text(draw, (W / 2, 1140), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "med", 24, SOFT, tracking=8,
          anchor="ma")
-    text(draw, (W / 2, 884 + (1 - ease_out(progress(t, 1.25, 1.85))) * 16), "oru.freebuff.app", "med", 22,
+    text(draw, (W / 2, 1210 + (1 - ease_out(progress(t, 0.9, 1.35))) * 16), "oru.freebuff.app", "med", 22,
          EMBER_NEW, tracking=1, anchor="ma")
     return canvas.convert("RGB")
 
 
 def scene_listener(t):
-    """The real player, played up close, with the listening story beside it."""
+    """The real player, played up close, with the listening story stacked above it."""
     canvas = radial_background((W, H), glow=(58, 27, 16), strength=1.15).convert("RGBA")
 
-    slide = ease_out(progress(t, 0.0, 1.05))
-    phone = device_phone(860 + int(30 * slide), tilt=-3 + 3 * slide, shot=SC_LISTEN_PHONE)
-    x = lerp(W * 0.74, W * 0.71, slide)
-    y = H / 2 + (1 - slide) * 230 - math.sin(t * 0.75) * 5
-    paste_center(canvas, halo_sprite(690), (x, y))
+    slide = ease_out(progress(t, 0.0, 0.8))
+    phone = device_phone(960 + int(40 * slide), tilt=-3 + 3 * slide, shot=SC_LISTEN_PHONE)
+    x = W / 2
+    y = 1350 + (1 - slide) * 190 - math.sin(t * 0.75) * 5
+    paste_center(canvas, halo_sprite(780), (x, y))
     paste_center(canvas, phone, (x, y), slide)
 
     draw = ImageDraw.Draw(canvas)
     left = W * 0.07
-    first = ease_out(progress(t, 0.25, 0.95))
-    second = ease_out(progress(t, 0.6, 1.35))
-    text(draw, (left, 350 - (1 - first) * 42), "Underground.", "display_x", 96, INK, tracking=-2)
-    text(draw, (left, 462 - (1 - second) * 42), "Found.", "display_x", 96, INK, tracking=-2)
+    first = ease_out(progress(t, 0.2, 0.8))
+    second = ease_out(progress(t, 0.5, 1.1))
+    text(draw, (left, 300 - (1 - first) * 42), "Underground.", "display_x", 96, INK, tracking=-2)
+    text(draw, (left, 412 - (1 - second) * 42), "Found.", "display_x", 96, INK, tracking=-2)
 
-    body = ease_out(progress(t, 1.1, 1.75))
-    lines = wrap("Small songs first, from artists posting their first ones. Play them, keep them,", "reg", 32, 620)
-    lines2 = wrap("follow the voices you keep hearing.", "reg", 32, 620)
+    body = ease_out(progress(t, 0.85, 1.4))
+    lines = wrap("Small songs first, from artists posting their first ones. Play them, keep them,", "reg", 32, 900)
+    lines2 = wrap("follow the voices you keep hearing.", "reg", 32, 900)
     for index, line in enumerate(lines):
-        text(draw, (left, 596 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
+        text(draw, (left, 530 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
     for index, line in enumerate(lines2):
-        text(draw, (left, 596 + len(lines) * 44 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
+        text(draw, (left, 530 + len(lines) * 44 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
 
-    pill = ease_out(progress(t, 1.5, 2.1)) if slide > 0.9 else 0
+    pill = ease_out(progress(t, 1.2, 1.75)) if slide > 0.9 else 0
     if pill > 0:
         width = 300
-        draw.rounded_rectangle((left, 780, left + width, 846), radius=33, fill=(*EMBER, int(255 * pill)))
-        text(draw, (left + width / 2, 813), "Keep listening", "bold", 24, (10, 6, 3), anchor="mm")
+        draw.rounded_rectangle((left, 700, left + width, 766), radius=33, fill=(*EMBER, int(255 * pill)))
+        text(draw, (left + width / 2, 733), "Keep listening", "bold", 24, (10, 6, 3), anchor="mm")
 
     # A heart floats off the phone late in the scene, real feedback or nothing.
-    like = ease_back(progress(t, 3.4, 4.0)) * (1 - ease_out(progress(t, 4.9, 5.9)))
+    like = ease_back(progress(t, 2.8, 3.4)) * (1 - ease_out(progress(t, 4.2, 5.1)))
     if like > 0:
-        paste_center(canvas, heart(int(104 * clamp(like))), (x - 200 + 140 * ease_out(clamp(like)),
-                      430 - 70 * ease_out(clamp(like))), clamp(like))
+        paste_center(canvas, heart(int(104 * clamp(like))), (x - 250 + 150 * ease_out(clamp(like)),
+                      1180 - 200 * ease_out(clamp(like))), clamp(like))
     return canvas.convert("RGB")
 
 
 def scene_social(t):
-    """Two real screens: the send form and the artist's inbox."""
+    """Two real screens: the send form and the artist's inbox, stacked."""
     canvas = radial_background((W, H), glow=(50, 24, 14), strength=0.9).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    slideA = ease_out(progress(t, 0.05, 1.05))
-    slideB = ease_out(progress(t, 0.55, 1.6))
-    winA = device_desktop(1030, shot=SC_SHARE)
-    winB = device_desktop(830, shot=SC_SHARES_INBOX)
-    centerA = (W * 0.33 - (1 - slideA) * 420, 560 + (1 - slideA) * 120)
-    centerB = (W * 0.79 + (1 - slideB) * 420, 470 - 20 * (1 - slideB))
+    slideA = ease_out(progress(t, 0.05, 0.8))
+    slideB = ease_out(progress(t, 0.45, 1.25))
+    winA = device_desktop(980, shot=SC_SHARE)
+    winB = device_desktop(840, shot=SC_SHARES_INBOX)
+    centerA = (W / 2 - 30 + (1 - slideA) * 300, 940 + (1 - slideA) * 140)
+    centerB = (W / 2 + 40 - (1 - slideB) * 300, 1580 - 30 * (1 - slideB))
     paste_center(canvas, winA, centerA, slideA)
     paste_center(canvas, winB, centerB, slideB)
 
-    # Copy hops across the gap.
-    fromA = (centerA[0] + winA.width / 2 - 30, centerA[1] - winA.height * 0.12)
-    toB = (centerB[0] - winB.width / 2 + 40, centerB[1] + winB.height * 0.06)
-    fly = ease_in_out(progress(t, 1.15, 2.05))
+    # Copy hops down the gap.
+    fromA = (centerA[0] + winA.width * 0.18, centerA[1] + winA.height * 0.28)
+    toB = (centerB[0] - winB.width * 0.16, centerB[1] - winB.height * 0.3)
+    fly = ease_in_out(progress(t, 0.95, 1.7))
     if 0 < fly < 1:
         cx = lerp(fromA[0], toB[0], fly)
-        cy = lerp(fromA[1], toB[1], fly) - math.sin(fly * math.pi) * 90
+        cy = lerp(fromA[1], toB[1], fly) + math.sin(fly * math.pi) * 70
         note = Image.new("RGBA", (300, 96), (0, 0, 0, 0))
         ndraw = ImageDraw.Draw(note)
         ndraw.rounded_rectangle((0, 10, 299, 85), radius=22, fill=(*EMBER, 255))
         text(ndraw, (150, 47), "shared with a note", "semi", 20, (250, 244, 238), anchor="mm")
         paste_center(canvas, note, (cx, cy), clamp(fly))
 
-    heading = ease_out(progress(t, 1.35, 2.0))
-    sub = ease_out(progress(t, 1.75, 2.4))
-    text(draw, (W / 2, 148 + (1 - heading) * 24), "send a song across the room.", "display_hard",
-         78, INK, tracking=-1, anchor="ma")
-    text(draw, (W / 2, 250 + (1 - sub) * 18), "The artist reviews it, keeps the USG, credits stay honest.",
+    heading = ease_out(progress(t, 1.1, 1.65))
+    heading2 = ease_out(progress(t, 1.25, 1.8))
+    sub = ease_out(progress(t, 1.45, 1.95))
+    text(draw, (W / 2, 250 + (1 - heading) * 24), "send a song", "display_hard",
+         72, INK, tracking=-1, anchor="ma")
+    text(draw, (W / 2, 345 + (1 - heading2) * 24), "across the room.", "display_hard",
+         72, INK, tracking=-1, anchor="ma")
+    text(draw, (W / 2, 470 + (1 - sub) * 18), "The artist reviews it, keeps the USG, credits stay honest.",
          "reg", 26, SOFT, anchor="ma")
 
-    cta = ease_out(progress(t, 2.5, 3.0))
+    cta = ease_out(progress(t, 2.0, 2.5))
     if cta > 0:
         width = 470
-        draw.rounded_rectangle((W / 2 - width / 2, 330, W / 2 + width / 2, 388), radius=29,
+        draw.rounded_rectangle((W / 2 - width / 2, 530, W / 2 + width / 2, 588), radius=29,
                                fill=(23, 17, 13, int(236 * cta)), outline=CARD_LINE)
         pill = EMBER
         x_1 = W / 2 - width / 2 + 46
-        y_1 = 359
+        y_1 = 559
         draw.ellipse((x_1 - 16, y_1 - 16, x_1 + 16, y_1 + 16), fill=(*pill, int(255 * cta)))
         text(draw, (x_1 - 2, y_1), "shares", "semi", 18, (250, 244, 238), anchor="mm")
         text(draw, (x_1 + 36, y_1), "Live feed of real tracks, not stock radio.", "reg", 21, INK,
@@ -628,38 +636,41 @@ def scene_artist(t):
     canvas = radial_background((W, H), glow=(52, 25, 15), strength=1.0).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    slide = ease_out(progress(t, 0.0, 1.05))
-    window = device_desktop(1560, shot=SC_STUDIO)
-    center = (W / 2, 470 + (1 - slide) * 170)
+    slide = ease_out(progress(t, 0.0, 0.8))
+    window = device_desktop(1000, shot=SC_STUDIO)
+    center = (W / 2 + math.sin(t * 0.55) * 8, 850 + (1 - slide) * 170 + math.cos(t * 0.45) * 5)
     paste_center(canvas, window, center, slide)
 
-    sheen = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    sdraw = ImageDraw.Draw(sheen)
-    sx = lerp(-640, W + 640, ease_in_out(progress(t, 0.25, 1.7)))
-    sdraw.polygon([(sx, 0), (sx + 280, 0), (sx - 130, H), (sx - 410, H)], fill=(255, 250, 244, 14))
-    canvas.alpha_composite(sheen)
+    for sheen_start, sheen_end in ((0.25, 1.7), (2.4, 3.7)):
+        if not (sheen_start <= t <= sheen_end):
+            continue
+        sheen = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        sdraw = ImageDraw.Draw(sheen)
+        sx = lerp(-640, W + 640, ease_in_out(progress(t, sheen_start, sheen_end)))
+        sdraw.polygon([(sx, 0), (sx + 280, 0), (sx - 130, H), (sx - 410, H)], fill=(255, 250, 244, 14))
+        canvas.alpha_composite(sheen)
 
-    heading = ease_out(progress(t, 0.35, 1.0))
-    text(draw, (W / 2, 120 + (1 - heading) * 22), "the studio is a page.", "display_hard", 72, INK,
+    heading = ease_out(progress(t, 0.3, 0.85))
+    text(draw, (W / 2, 220 + (1 - heading) * 22), "the studio is a page.", "display_hard", 72, INK,
          tracking=-1, anchor="ma")
 
-    bar = ease_out(progress(t, 0.6, 1.25))
+    bar = ease_out(progress(t, 0.55, 1.1))
     if bar > 0:
-        strip = Image.new("RGBA", (1560, 116), (0, 0, 0, 0))
+        strip = Image.new("RGBA", (1000, 250), (0, 0, 0, 0))
         sdraw = ImageDraw.Draw(strip)
-        sdraw.rounded_rectangle((0, 0, 1559, 115), radius=28, fill=(24, 19, 15, 240), outline=CARD_LINE, width=2)
-        steps = [(470, "Record or upload"), (1040, "Credit your guests"), (1490, "Publish when it is ready")]
-        starts = [0.75, 1.05, 1.35]
-        for (cx, label), start in zip(steps, starts):
+        sdraw.rounded_rectangle((0, 0, 999, 249), radius=28, fill=(24, 19, 15, 240), outline=CARD_LINE, width=2)
+        steps = [(66, "Record or upload"), (66, "Credit your guests"), (66, "Publish when it is ready")]
+        rows = [62, 125, 188]
+        starts = [0.7, 0.95, 1.2]
+        for (cx, label), y_1, start in zip(steps, rows, starts):
             appear = ease_out(progress(t, start, start + 0.45))
             if appear <= 0:
                 continue
-            y_1 = 58
             sdraw.ellipse((cx - 30, y_1 - 22, cx + 10, y_1 + 18), fill=(*EMBER, int(255 * appear)))
             sdraw.line([(cx - 20, y_1 - 1), (cx - 12, y_1 + 7), (cx + 0, y_1 - 9)], fill=(10, 7, 4), width=5,
                        joint="curve")
-            text(sdraw, (cx + 26, y_1), label, "semi", 26, INK, anchor="lm")
-        paste_center(canvas, strip, (W / 2, 984), bar)
+            text(sdraw, (cx + 46, y_1), label, "semi", 28, INK, anchor="lm")
+        paste_center(canvas, strip, (W / 2, 1330), bar)
     return canvas.convert("RGB")
 
 
@@ -668,16 +679,19 @@ def scene_landing(t):
     canvas = radial_background((W, H), glow=(46, 22, 13), strength=0.8).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    slide = ease_out(progress(t, 0.0, 1.0))
-    window = device_desktop(1700, shot=SC_LANDING_DESK)
-    center = (W / 2 + (1 - slide) * 60, 430 + (1 - slide) * 150)
+    slide = ease_out(progress(t, 0.0, 0.75))
+    window = device_desktop(1020, shot=SC_LANDING_DESK)
+    center = (W / 2 + (1 - slide) * 60 + math.sin(t * 0.6) * 7,
+              760 + (1 - slide) * 150 + math.cos(t * 0.5) * 5)
     paste_center(canvas, window, center, slide)
 
-    heading = ease_out(progress(t, 0.35, 1.0))
-    sub = ease_out(progress(t, 0.7, 1.35))
-    text(draw, (W / 2, 934 + (1 - heading) * 18), "Everything you hear was someone's first try.", "display_hard",
-         62, INK, tracking=-1, anchor="ma")
-    text(draw, (W / 2, 1020 + (1 - sub) * 12), "Discover where new sounds start, or start them yourself.",
+    heading = ease_out(progress(t, 0.3, 0.9))
+    sub = ease_out(progress(t, 0.65, 1.2))
+    lines = wrap("Everything you hear was someone's first try.", "display_hard", 62, 940)
+    for index, line in enumerate(lines):
+        text(draw, (W / 2, 1190 + index * 74 + (1 - heading) * 18), line, "display_hard",
+             62, INK, tracking=-1, anchor="ma")
+    text(draw, (W / 2, 1360 + (1 - sub) * 12), "Discover where new sounds start, or start them yourself.",
          "reg", 26, SOFT, anchor="ma")
     return canvas.convert("RGB")
 
@@ -688,41 +702,43 @@ def scene_end(t):
     canvas.alpha_composite(full_bleed((W, H)))
     draw = ImageDraw.Draw(canvas)
 
-    pop = ease_back(progress(t, 0.05, 0.8))
-    logo = mark(int(210 * (0.82 + 0.18 * pop)))
-    paste_center(canvas, logo, (W / 2, 330), clamp(pop))
+    pop = ease_back(progress(t, 0.05, 0.7))
+    logo = mark(int(240 * (0.82 + 0.18 * pop)))
+    paste_center(canvas, logo, (W / 2, 660), clamp(pop))
 
-    text(draw, (W / 2, 444 + (1 - ease_out(progress(t, 0.25, 0.9))) * 20), "ORU", "display", 150, INK,
+    text(draw, (W / 2, 800 + (1 - ease_out(progress(t, 0.25, 0.8))) * 20), "ORU", "display", 150, INK,
          tracking=14, anchor="ma")
 
-    line = ease_out(progress(t, 0.5, 1.15))
-    text(draw, (W / 2, 632 + (1 - line) * 16), "Discover the small sound. Send it on.", "med", 40, SOFT,
+    line = ease_out(progress(t, 0.5, 1.05))
+    text(draw, (W / 2, 1040 + (1 - line) * 16), "Discover the small sound. Send it on.", "med", 40, SOFT,
          anchor="ma")
 
-    cta = ease_out(progress(t, 0.95, 1.6))
+    cta = ease_out(progress(t, 0.9, 1.5))
     if cta > 0:
         width, height = 560, 100
-        box = (W / 2 - width / 2, 740, W / 2 + width / 2, 740 + height)
+        box = (W / 2 - width / 2, 1150, W / 2 + width / 2, 1150 + height)
         draw.rounded_rectangle(box, radius=50, fill=(*EMBER, int(255 * cta)))
-        text(draw, (W / 2, 790), "oru.freebuff.app", "bold", 36, (12, 7, 3), anchor="mm")
+        text(draw, (W / 2, 1200), "oru.freebuff.app", "bold", 36, (12, 7, 3), anchor="mm")
 
-    tagline = ease_out(progress(t, 1.35, 2.0))
-    text(draw, (W / 2, 890), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "semi", 20, FAINT,
+    tagline = ease_out(progress(t, 1.3, 1.9))
+    text(draw, (W / 2, 1330), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "semi", 20, FAINT,
          tracking=6, anchor="ma")
-    return blend_black(canvas.convert("RGB"), 1 - 0.65 * ease_in(progress(t, 3.4, 3.9)))
+    # Hold the reveal, then one clean fade to black under the tail of the music.
+    # blend_black takes the share of the real image, so it runs 1 -> 0.
+    return blend_black(canvas.convert("RGB"), 1 - ease_in(progress(t, 5.7, 6.55)))
 
 
 # --------------------------------------------------------------- timeline ----
 SCENES = [
-    (0.0, 6.6, scene_chat),
-    (6.6, 8.6, scene_invite),
-    (8.6, 15.4, scene_listener),
-    (15.4, 21.6, scene_social),
-    (21.6, 27.6, scene_artist),
-    (27.6, 31.6, scene_landing),
-    (31.6, 39.5, scene_end),
+    (0.0, 4.9, scene_chat),
+    (4.9, 6.5, scene_invite),
+    (6.5, 11.6, scene_listener),
+    (11.6, 16.3, scene_social),
+    (16.3, 20.8, scene_artist),
+    (20.8, 23.9, scene_landing),
+    (23.9, 30.5, scene_end),
 ]
-XFADE = 0.45
+XFADE = 0.35
 
 
 def scene_at(time):
@@ -814,7 +830,7 @@ def synth_audio(path):
         add(tone(root / 2, bar * 1.1, attack=0.14, decay=1.8, harmonics=(1.0, 0.2)), at, gain=0.1)
 
     # Pulse from the listener section until the reveal.
-    pulse_start, pulse_end = 8.6, 31.6
+    pulse_start, pulse_end = 6.5, 23.9
     step = beat / 2
     index = 0
     while pulse_start + index * step < pulse_end:
@@ -839,25 +855,25 @@ def synth_audio(path):
         index += 1
 
     # Typing clicks in the chat.
-    for at in (0.42, 0.66, 0.9, 1.22, 1.46, 1.7, 2.1, 2.36, 2.6):
+    for at in (0.3, 0.54, 0.78, 1.02, 1.26, 1.5, 1.72, 1.9):
         add(noise(0.02, 0.01), at, gain=0.045, pan=0.12)
-    add(tone(740, 0.5, attack=0.005, decay=0.22, harmonics=(1.0, 0.5, 0.22)), 3.05, gain=0.15)
-    add(tone(1110, 0.45, attack=0.005, decay=0.2, harmonics=(1.0, 0.3)), 3.12, gain=0.07)
-    add(sweep(340, 1900, 0.35, 0.32), 5.35, gain=0.11)
+    add(tone(740, 0.5, attack=0.005, decay=0.22, harmonics=(1.0, 0.5, 0.22)), 2.26, gain=0.15)
+    add(tone(1110, 0.45, attack=0.005, decay=0.2, harmonics=(1.0, 0.3)), 2.33, gain=0.07)
+    add(sweep(340, 1900, 0.35, 0.32), 3.96, gain=0.11)
 
     # Scene whooshes on the beat - every transition lands audibly.
-    for at in (6.6, 8.6, 15.4, 21.6, 27.6, 31.6):
+    for at in (4.9, 6.5, 11.6, 16.3, 20.8, 23.9):
         add(sweep(200, 2600, 0.55, 0.4), at - 0.2, gain=0.09)
-    add(tone(116, 0.6, attack=0.005, decay=0.2, harmonics=(1.0, 0.5)), 6.6, gain=0.3)
+    add(tone(116, 0.6, attack=0.005, decay=0.2, harmonics=(1.0, 0.5)), 4.9, gain=0.3)
 
     # Heart pop in the listener scene.
-    add(tone(932.33, 0.4, attack=0.004, decay=0.18, harmonics=(1.0, 0.5)), 12.0, gain=0.13)
+    add(tone(932.33, 0.4, attack=0.004, decay=0.18, harmonics=(1.0, 0.5)), 9.3, gain=0.13)
 
     # Closing hit with a long shimmer.
-    add(tone(87.31, 2.6, attack=0.01, decay=1.3, harmonics=(1.0, 0.5, 0.25)), 31.6, gain=0.5)
-    add(tone(349.23, 3.4, attack=0.02, decay=1.7, harmonics=(0.6, 0.25, 0.1)), 31.6, gain=0.15)
-    add(tone(523.25, 3.6, attack=0.03, decay=2.1, harmonics=(0.5, 0.2, 0.1)), 31.65, gain=0.09)
-    add(noise(1.3, 0.4), 31.6, gain=0.09)
+    add(tone(87.31, 2.6, attack=0.01, decay=1.3, harmonics=(1.0, 0.5, 0.25)), 23.9, gain=0.5)
+    add(tone(349.23, 3.4, attack=0.02, decay=1.7, harmonics=(0.6, 0.25, 0.1)), 23.9, gain=0.15)
+    add(tone(523.25, 3.6, attack=0.03, decay=2.1, harmonics=(0.5, 0.2, 0.1)), 23.95, gain=0.09)
+    add(noise(1.3, 0.4), 23.9, gain=0.09)
 
     # Gentle room tail.
     delay = int(0.16 * rate)
