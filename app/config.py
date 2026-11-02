@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import Field, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,6 +50,17 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=60 * 24, validation_alias="JWT_EXPIRE_MINUTES")
     max_audio_bytes: int = Field(default=100 * 1024 * 1024, validation_alias="MAX_AUDIO_BYTES")
     max_cover_bytes: int = Field(default=5 * 1024 * 1024, validation_alias="MAX_COVER_BYTES")
+
+    @property
+    def sqlite_path(self) -> Path | None:
+        """Filesystem path behind a file-backed SQLite URL, else None (Postgres, memory)."""
+        if not self.database_url.startswith("sqlite"):
+            return None
+        database = make_url(self.database_url).database
+        if not database or database == ":memory:":
+            return None
+        path = Path(database)
+        return path if path.is_absolute() else Path.cwd() / path
 
     @property
     def is_admin_email(self) -> callable:
