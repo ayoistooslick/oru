@@ -1,17 +1,11 @@
-# Every push runs the test suite, then builds a signed Android package of ORU
-# and publishes a GitHub release with the APK attached.
+# Every push runs the test suite, then builds the native Android app (the
+# Gradle project under android/) and publishes a GitHub release with the
+# sideloadable APK attached.
 #
-# The Android step reads https://oru.freebuff.app, so the site has to be up for
-# it to succeed. The test step does not need the site.
+# The app talks to https://oru.freebuff.app at runtime, so neither job needs
+# the site to be up. (This workflow used to Bubblewrap-build a TWA from
+# twa-manifest.json; that APK is no longer produced, only the native one.)
 #
-# Signing secrets (optional, see CONTRIBUTING.md):
-#   ANDROID_KEYSTORE_BASE64    base64 of the release keystore
-#   ANDROID_KEYSTORE_PASSWORD  keystore password
-#   ANDROID_KEY_PASSWORD       key password
-#   ANDROID_KEY_ALIAS          key alias
-# Without them CI generates a throwaway key. That is fine for sideloading a
-# test build, but not for Google Play or for upgrades over an installed app.
-
 name: Tests and Android build
 
 on:
@@ -66,11 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -78,89 +67,24 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      # Bubblewrap checks that the SDK folder contains bin/ or tools/ and then
-      # runs bin/sdkmanager itself, while modern SDKs keep the tools under
-      # cmdline-tools/latest/bin. bin is linked to whichever one is installed.
-      - name: Install the Android packages the build needs
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36"
-          sdkmanager "build-tools;36.1.0" || echo "build-tools 36.1.0 unavailable, Bubblewrap will install it"
-          if [ ! -d "$ANDROID_HOME/bin" ]; then
-            sudo ln -s "$(dirname "$(command -v sdkmanager)")" "$ANDROID_HOME/bin"
-          fi
-          ls -la "$ANDROID_HOME"
+      # Plain Gradle project: compileSdk 34, minSdk 24, Java 17. The wrapper
+      # downloads its own Gradle 8.7, so no Gradle setup step is needed.
+      - name: Build the native APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
 
-      # Bubblewrap's own setup wizard asks questions on stdin, which does not
-      # exist on a runner, so the config file is written by hand instead.
-      - name: Tell Bubblewrap where the JDK and the Android SDK are
+      # Debug build: signed with the runner's auto-generated debug key, which
+      # is fine for sideloading but does not upgrade cleanly over an earlier
+      # Oru install signed with a different key.
+      - name: Stage the APK
         run: |
-          mkdir -p "$HOME/.bubblewrap"
-          printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > "$HOME/.bubblewrap/config.json"
-          cat "$HOME/.bubblewrap/config.json"
-          test -d "$JAVA_HOME"
-          test -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-
-      - name: Check the live PWA against the quality criteria
-        continue-on-error: true
-        run: npx --yes @bubblewrap/cli validate --url=https://oru.freebuff.app
-
-      - name: Prepare the signing key
-        id: keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: |
-          KEYSTORE="$RUNNER_TEMP/oru.keystore"
-          ALIAS="${ANDROID_KEY_ALIAS:-oru}"
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
-            echo "Using the keystore stored in the repository secrets."
-          else
-            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret found, generating a throwaway key for this run."
-            keytool -genkeypair -keystore "$KEYSTORE" -alias "$ALIAS" \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "${ANDROID_KEYSTORE_PASSWORD:-oru-local}" \
-              -keypass "${ANDROID_KEY_PASSWORD:-oru-local}" \
-              -dname "CN=ORU, OU=Build, O=ORU, L=Unknown, ST=Unknown, C=NG"
-          fi
-          echo "path=$KEYSTORE" >> "$GITHUB_OUTPUT"
-          echo "alias=$ALIAS" >> "$GITHUB_OUTPUT"
-
-      # Bubblewrap writes a Gradle project (app/, gradlew, build.gradle) and
-      # overwrites anything already there, so it runs in a scratch directory
-      # instead of the repository root.
-      - name: Generate the Android project from twa-manifest.json
-        run: |
-          mkdir -p "$RUNNER_TEMP/twa"
-          cp twa-manifest.json "$RUNNER_TEMP/twa/"
-          cd "$RUNNER_TEMP/twa"
-          npx --yes @bubblewrap/cli update --skipVersionUpgrade
-          ls -la
-
-      - name: Build the APK and the app bundle
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'oru-local' }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'oru-local' }}
-          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
-          KEYSTORE_ALIAS: ${{ steps.keystore.outputs.alias }}
-        run: |
-          cd "$RUNNER_TEMP/twa"
-          yes | npx --yes @bubblewrap/cli build \
-            --skipPwaValidation \
-            --signingKeyPath="$KEYSTORE_PATH" \
-            --signingKeyAlias="$KEYSTORE_ALIAS"
-          cp app-release-signed.apk "$GITHUB_WORKSPACE/oru.apk"
-          cp app-release-bundle.aab "$GITHUB_WORKSPACE/oru.aab"
-          ls -lh "$GITHUB_WORKSPACE/oru.apk" "$GITHUB_WORKSPACE/oru.aab"
+          cp android/app/build/outputs/apk/debug/app-debug.apk oru.apk
+          ls -lh oru.apk
 
       - name: Upload the APK as a run artifact
         uses: actions/upload-artifact@v4
         with:
           name: oru-android
-          path: |
-            oru.apk
-            oru.aab
+          path: oru.apk
           if-no-files-found: error
 
       - name: Publish a release with the APK attached
@@ -168,10 +92,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
           name: ${{ github.ref_type == 'tag' && github.ref_name || format('Build {0}', github.run_number) }}
-          body: Built from commit ${{ github.sha }}. The APK is attached; install it on a phone to try the build.
+          body: Native Android APK built from commit ${{ github.sha }}. Download the APK and install it on a phone to try the build. Uninstall any previously installed Oru build first — debug signing keys differ between runs.
           files: |
             oru.apk
-            oru.aab
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

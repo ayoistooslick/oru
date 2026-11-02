@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/itemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/track_row_height"
+    android:background="?attr/selectableItemBackground"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="8dp">
+
+    <ImageView
+        android:id="@+id/artworkImage"
+        android:layout_width="@dimen/artwork_sm"
+        android:layout_height="@dimen/artwork_sm"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/typeIcon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:src="@drawable/ic_music"
+        android:contentDescription="@null"
+        android:tint="@color/ink_faint"
+        app:layout_constraintStart_toEndOf="@id/artworkImage"
+        app:layout_constraintTop_toTopOf="@id/artworkImage"
+        android:layout_marginStart="12dp" />
+
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.Oru.Body"
+        android:textColor="@color/ink"
+        app:layout_constraintStart_toEndOf="@id/typeIcon"
+        app:layout_constraintTop_toTopOf="@id/artworkImage"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="4dp" />
+
+    <TextView
+        android:id="@+id/subtitleText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.Oru.Label"
+        android:textColor="@color/ink_faint"
+        app:layout_constraintStart_toStartOf="@id/titleText"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        android:layout_marginTop="2dp" />
+
+    <TextView
+        android:id="@+id/metaText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Oru.Label"
+        android:textColor="@color/ink_faint"
+        app:layout_constraintStart_toStartOf="@id/subtitleText"
+        app:layout_constraintTop_toBottomOf="@id/subtitleText"
+        android:layout_marginTop="1dp" />
+
+    <TextView
+        android:id="@+id/typeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Oru.Label"
+        android:textColor="@color/ember"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
