@@ -13,6 +13,12 @@ tsconfig.tsbuildinfo
 *.keystore
 *.jks
 
+# Android Gradle build outputs and machine-local SDK config.
+android/.gradle/
+android/app/build/
+android/local.properties
+oru-debug.apk
+
 __pycache__/
 *.py[cod]
 .pytest_cache/

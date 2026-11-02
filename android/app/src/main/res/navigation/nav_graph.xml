@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.oru.app.ui.home.HomeFragment"
+        android:label="@string/nav_home"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.oru.app.ui.search.SearchFragment"
+        android:label="@string/nav_search"
+        tools:layout="@layout/fragment_search" />
+
+    <fragment
+        android:id="@+id/libraryFragment"
+        android:name="com.oru.app.ui.library.LibraryFragment"
+        android:label="@string/nav_library"
+        tools:layout="@layout/fragment_library" />
+
+    <fragment
+        android:id="@+id/sharesFragment"
+        android:name="com.oru.app.ui.shares.SharesFragment"
+        android:label="@string/nav_share"
+        tools:layout="@layout/fragment_shares" />
+
+    <fragment
+        android:id="@+id/studioFragment"
+        android:name="com.oru.app.ui.studio.StudioFragment"
+        android:label="@string/nav_studio"
+        tools:layout="@layout/fragment_studio" />
+
+</navigation>

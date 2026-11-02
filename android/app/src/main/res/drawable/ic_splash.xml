@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Ember circle -->
+    <path
+        android:fillColor="#E8552E"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+    <!-- Music note body (dark) -->
+    <path
+        android:fillColor="#0D0A07"
+        android:pathData="M54,30 C54,30 70,30 70,46 C70,62 54,72 54,72 C54,72 38,62 38,46 C38,30 54,30 54,30z" />
+    <!-- Note stem -->
+    <path
+        android:fillColor="#0D0A07"
+        android:pathData="M50,38 L50,66 L52,66 L52,38 Z" />
+    <!-- Note flag -->
+    <path
+        android:fillColor="#0D0A07"
+        android:strokeWidth="2"
+        android:strokeColor="@color/flame"
+        android:pathData="M50,42 Q56,38 62,42 Q68,46 66,52 Q62,50 58,48 Q52,44 50,42 Z" />
+</vector>
