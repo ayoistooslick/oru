@@ -1,43 +1,63 @@
 """Build the ORU promo video.
 
 Renders every frame with Pillow at 1920x1080, pipes the frames straight into
-ffmpeg, and writes the soundtrack with numpy. The product shots are the real
-screenshots from public/screenshots, so the film shows the actual app.
+ffmpeg, and writes the soundtrack with numpy. The product shots are real
+screen captures taken headlessly from the live site by
+scripts/promo/capture.cjs, so the film shows the actual app.
 
-Run with:  .venv/bin/python scripts/promo/build_video.py
+Brand: warm paper surfaces, cream ink and one ember accent. Fraunces carries
+the display type, Outfit carries the interface copy.
+
+Chunks, because a whole film in one command outlives any single run:
+
+  .venv/bin/python scripts/promo/build_video.py 0 500
+  .venv/bin/python scripts/promo/build_video.py 500 1025
+  .venv/bin/python scripts/promo/build_video.py --still 3.2   # single debug frame
+
+Then stitch with the concat command printed by --concat.
 """
 
 import math
-import os
 import subprocess
 import sys
 import wave
 from pathlib import Path
-from urllib.request import urlopen
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 FONTS = ROOT / ".promo" / "fonts"
-SHOTS = ROOT / "public" / "screenshots"
+SHOTS = ROOT / ".promo" / "screens"
 OUT = ROOT / "public" / "promo"
 WORK = ROOT / ".promo"
 
-W, H, FPS = 1920, 1080, 30
-DURATION = 34.0
+W, H, FPS = 1920, 1080, 25
+DURATION = 39.5
 FRAMES = int(DURATION * FPS)
 
-INK = (255, 255, 255)
-SOFT = (179, 179, 179)
-FAINT = (122, 122, 122)
-GREEN = (30, 215, 96)
-BLACK = (8, 8, 8)
-CARD = (24, 24, 24)
+# The identity, straight from src/index.css.
+PAPER = (23, 18, 14)
+PAPER_DEEP = (13, 10, 7)
+CARD = (30, 24, 19)
+CARD_LINE = (64, 53, 43)
+INK = (242, 238, 231)
+SOFT = (199, 191, 179)
+FAINT = (138, 128, 116)
+EMBER = (232, 85, 46)
+EMBER_NEW = (246, 120, 82)
 CREAM = (244, 241, 236)
-BRAND_RED = (210, 59, 24)
 
-FFMPEG = ROOT / "node_modules" / "ffmpeg-static" / "ffmpeg"
+FFMPEG = None
+
+
+def ffmpeg_path():
+    global FFMPEG
+    if FFMPEG is None:
+        import imageio_ffmpeg
+
+        FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+    return FFMPEG
 
 
 # ---------------------------------------------------------------- easing ----
@@ -73,39 +93,49 @@ def lerp(a, b, t):
 
 
 # ---------------------------------------------------------------- assets ----
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/figtree/Figtree%5Bwght%5D.ttf"
-
-
-def ensure_font() -> Path:
-    """Figtree is the app's typeface; fetch it once if it is not there yet."""
-    target = FONTS / "Figtree-var.ttf"
-    if not target.exists():
-        FONTS.mkdir(parents=True, exist_ok=True)
-        print("downloading Figtree")
-        with urlopen(FONT_URL) as response, target.open("wb") as handle:
-            handle.write(response.read())
-    return target
+FRAUNCES = FONTS / "Fraunces[SOFT,WONK,opsz,wght].ttf"
+OUTFIT = FONTS / "Outfit[wght].ttf"
 
 
 class Fonts:
-    """One variable Figtree file, switched to the weight each line needs."""
+    """Variable fonts, set to the axis values each line needs.
 
-    AXES = {"black": 800, "bold": 700, "semi": 600, "med": 500, "reg": 400}
+    Fraunces axes arrive ordered [opsz, weight, soft, wonk]; Outfit is [weight].
+    """
+
+    FRA = {"display": (72, 700, 0, 0), "display_x": (110, 800, 0, 0), "display_hard": (100, 880, 0, 0)}
+    OUT = {"boldest": 780, "bold": 700, "semi": 600, "med": 480, "reg": 400}
 
     def __init__(self):
         self.cache = {}
-        self.path = ensure_font()
 
-    def get(self, weight, size):
-        key = (weight, size)
+    def fraunces(self, style, size):
+        key = ("fra", style, size)
         if key not in self.cache:
-            font = ImageFont.truetype(str(self.path), size)
+            font = ImageFont.truetype(str(FRAUNCES), size)
             try:
-                font.set_variation_by_axes([self.AXES[weight]])
+                font.set_variation_by_axes(list(self.FRA[style]))
             except Exception:
                 pass
             self.cache[key] = font
         return self.cache[key]
+
+    def outfit(self, weight, size, tracking=True):
+        key = ("out", weight, size)
+        if key not in self.cache:
+            font = ImageFont.truetype(str(OUTFIT), size)
+            try:
+                font.set_variation_by_axes([self.OUT[weight]])
+            except Exception:
+                pass
+            self.cache[key] = font
+        return self.cache[key]
+
+    def get(self, name, size):
+        """Two-name convenience: serif styles, else Outfit weights."""
+        if name in self.FRA:
+            return self.fraunces(name, size)
+        return self.outfit(name, size)
 
 
 FON = Fonts()
@@ -129,6 +159,13 @@ def text(draw, xy, value, weight="semi", size=48, fill=INK, tracking=0.0, anchor
     return width
 
 
+def measure(value, weight="semi", size=48, tracking=0.0):
+    font = FON.get(weight, size)
+    if tracking:
+        return sum(font.getlength(ch) for ch in value) + tracking * max(len(value) - 1, 0)
+    return font.getlength(value)
+
+
 def wrap(value, weight, size, width):
     font = FON.get(weight, size)
     lines, line = [], ""
@@ -144,42 +181,46 @@ def wrap(value, weight, size, width):
     return lines
 
 
+# --------------------------------------------------------------- surfaces ---
 _BACKGROUNDS = {}
-_GLOWS = {}
 
 
-def radial_background(size, glow=(20, 90, 60), strength=1.0):
+def radial_background(size, glow=(72, 34, 20), strength=1.0):
+    """Warm paper with one soft ember-lit pocket behind the composition."""
     key = (size, glow, strength)
     if key in _BACKGROUNDS:
         return _BACKGROUNDS[key].copy()
     w, h = size
-    small = Image.new("RGB", (w // 8, h // 8), BLACK)
+    small = Image.new("RGB", (w // 8, h // 8), (30, 24, 18))
     draw = ImageDraw.Draw(small)
-    for radius in range(min(small.size), 0, -6):
+    for radius in range(int(min(small.size) * 0.9), 0, -6):
         ratio = radius / min(small.size)
-        colour = tuple(int(lerp(BLACK[i], glow[i] * strength, (1 - ratio) ** 2.2)) for i in range(3))
-        draw.ellipse((-radius, -radius, radius, radius), fill=colour)
+        colour = tuple(int(lerp((30, 24, 18)[i], glow[i] * strength, (1 - ratio) ** 2.4)) for i in range(3))
+        draw.ellipse((-radius, -radius, 2 * radius, 2 * radius), fill=colour)
     image = small.resize(size, Image.LANCZOS)
     _BACKGROUNDS[key] = image
     return image.copy()
 
 
-def glow_layer(size):
-    if size not in _GLOWS:
-        layer = Image.new("RGBA", size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(layer)
-        draw.ellipse((size[0] / 2 - 420, size[1] / 2 - 420, size[0] / 2 + 420, size[1] / 2 + 420), fill=(30, 215, 96, 70))
-        _GLOWS[size] = layer.filter(ImageFilter.GaussianBlur(160))
-    return _GLOWS[size].copy()
-
-
-def halo_sprite(diameter=900):
-    key = ("halo", diameter)
+def halo_sprite(diameter, colour=EMBER, alpha=52):
+    key = ("halo", diameter, colour, alpha)
     if key not in _GLOWS:
         layer = Image.new("RGBA", (diameter, diameter), (0, 0, 0, 0))
-        ImageDraw.Draw(layer).ellipse((0, 0, diameter - 1, diameter - 1), fill=(30, 215, 96, 40))
-        _GLOWS[key] = layer.filter(ImageFilter.GaussianBlur(90))
+        ImageDraw.Draw(layer).ellipse((0, 0, diameter - 1, diameter - 1), fill=(*colour, alpha))
+        _GLOWS[key] = layer.filter(ImageFilter.GaussianBlur(95))
     return _GLOWS[key]
+
+
+_GLOWS = {}
+
+
+def full_bleed(size):
+    """A blurred ember bloom large enough to sit behind the whole frame."""
+    if "bloom" not in _GLOWS:
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(layer).ellipse((W / 2 - 470, H / 2 - 470, W / 2 + 470, H / 2 + 470), fill=(*EMBER, 56))
+        _GLOWS["bloom"] = layer.filter(ImageFilter.GaussianBlur(165))
+    return _GLOWS["bloom"].copy()
 
 
 def rounded_mask(size, radius):
@@ -205,29 +246,44 @@ class Shot:
         return self.original.crop(box)
 
 
-PHONE = Shot(SHOTS / "home-phone.png")
-DESKTOP = Shot(SHOTS / "home-desktop.png")
+def shot(name):
+    return Shot(SHOTS / f"{name}.png")
 
 
+SC_LISTEN_PHONE = shot("listen_phone")
+SC_LANDING_PHONE = shot("landing_phone")
+SC_LANDING_DESK = shot("landing_desk")
+SC_ARTIST = shot("artist_desk")
+SC_RELEASE = shot("release_desk") if (SHOTS / "release_desk.png").exists() else SC_ARTIST
+SC_STUDIO = shot("studio_desk")
+SC_SHARE = shot("share_desk")
+SC_SHARES_INBOX = shot("shares_inbox_desk")
+SC_LIBRARY = shot("library_phone")
+SC_SEARCH = shot("search_phone")
+
+
+# ----------------------------------------------------------------- device ---
 _DEVICES = {}
 
 
-def device_phone(image_height=880, tilt=0.0, screen_radius=52):
-    key = (int(image_height / 4), round(tilt / 0.5))
+def device_phone(image_height=900, tilt=0.0, screen_radius=46, shot=None):
+    """A shot bezelled like a device, cached per rounded scale key."""
+    shot = shot or SC_LANDING_PHONE
+    key = ("phone", int(image_height / 4), round(tilt / 0.5), shot.original.size)
     if key in _DEVICES:
         return _DEVICES[key]
-    image_height = key[0] * 4
-    tilt = key[1] * 0.5
-    shot = PHONE.sized(image_height)
-    bezel = 16
-    frame = Image.new("RGBA", (shot.width + bezel * 2, shot.height + bezel * 2), (0, 0, 0, 0))
+    image_height = key[1] * 4
+    tilt = key[2] * 0.5
+    stage = shot.sized(image_height)
+    bezel = 14
+    frame = Image.new("RGBA", (stage.width + bezel * 2, stage.height + bezel * 2), (0, 0, 0, 0))
     draw = ImageDraw.Draw(frame)
-    draw.rounded_rectangle((0, 0, frame.width - 1, frame.height - 1), radius=screen_radius + bezel, fill=(12, 12, 12, 255),
-                           outline=(60, 60, 60, 255), width=3)
-    mask = rounded_mask(shot.size, screen_radius)
-    frame.paste(shot, (bezel, bezel), mask)
-    # Status pill so the shot reads as a phone rather than a flat crop.
-    draw.rounded_rectangle((frame.width / 2 - 46, bezel + 12, frame.width / 2 + 46, bezel + 34), radius=11, fill=(6, 6, 6, 255))
+    draw.rounded_rectangle((0, 0, frame.width - 1, frame.height - 1), radius=screen_radius + bezel,
+                           fill=(21, 16, 12, 255), outline=(82, 68, 55, 255), width=3)
+    mask = rounded_mask(stage.size, screen_radius)
+    frame.paste(stage, (bezel, bezel), mask)
+    draw.rounded_rectangle((frame.width / 2 - 44, bezel + 10, frame.width / 2 + 44, bezel + 30),
+                           radius=10, fill=(6, 5, 4, 255))
     if tilt:
         frame = frame.rotate(tilt, resample=Image.BICUBIC, expand=True)
     _DEVICES[key] = frame
@@ -237,23 +293,27 @@ def device_phone(image_height=880, tilt=0.0, screen_radius=52):
 _DESKTOPS = {}
 
 
-def device_desktop(width=1500, radius=22):
+def device_desktop(width=1500, radius=18, shot=None, url="oru.freebuff.app"):
+    """A shot framed as a browser window with the live address in the bar."""
+    shot = shot or SC_LANDING_DESK
     width = int(width / 20) * 20
-    if width in _DESKTOPS:
-        return _DESKTOPS[width]
-    shot = DESKTOP.sized(int(width * DESKTOP.original.height / DESKTOP.original.width))
-    chrome = 34
-    frame = Image.new("RGBA", (shot.width, shot.height + chrome), (0, 0, 0, 0))
+    key = ("desk", width, radius, url, shot.original.size)
+    if key in _DESKTOPS:
+        return _DESKTOPS[key]
+    stage = shot.original.resize((width, int(width * shot.original.height / shot.original.width)), Image.LANCZOS)
+    chrome = 36
+    frame = Image.new("RGBA", (stage.width, stage.height + chrome), (0, 0, 0, 0))
     draw = ImageDraw.Draw(frame)
-    draw.rounded_rectangle((0, 0, frame.width - 1, frame.height - 1), radius=radius, fill=(18, 18, 18, 255),
-                           outline=(70, 70, 70, 255), width=2)
-    for index, colour in enumerate([(240, 70, 60), (245, 190, 70), (60, 200, 95)]):
-        draw.ellipse((22 + index * 26, 12, 32 + index * 26, 22), fill=colour)
-    draw.rounded_rectangle((140, 8, 420, 26), radius=9, fill=(40, 40, 40))
-    text(draw, (158, 10), "oru.freebuff.app", "med", 12, (150, 150, 150))
-    mask = rounded_mask(shot.size, 12)
-    frame.paste(shot, (0, chrome), mask)
-    _DESKTOPS[width] = frame
+    draw.rounded_rectangle((0, 0, frame.width - 1, frame.height - 1), radius=radius,
+                           fill=(21, 16, 12, 255), outline=(92, 76, 62, 255), width=2)
+    draw.rectangle((0, 0, frame.width - 1, chrome), fill=(28, 22, 17, 255))
+    for index, colour in enumerate([(240, 90, 66), (243, 172, 84), (126, 200, 106)]):
+        draw.ellipse((16 + index * 24, 13, 26 + index * 24, 23), fill=colour)
+    draw.rounded_rectangle((118, 7, 360, 29), radius=11, fill=(41, 32, 25, 255))
+    text(draw, (136, 18), url, "med", 13, SOFT, anchor="lm")
+    mask = rounded_mask(stage.size, 10)
+    frame.paste(stage, (0, chrome), mask)
+    _DESKTOPS[key] = frame
     return frame
 
 
@@ -271,21 +331,21 @@ def paste_center(canvas, layer, center, alpha=1.0):
 
 
 def mark(size=150, rotation=0.0):
-    """The ORU mark, drawn from public/mark.svg geometry."""
+    """The ORU mark: an ember disc with a cream play wedge."""
     scale = 4
     canvas = Image.new("RGBA", (size * scale, size * scale), (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
     unit = size * scale / 64
-    draw.ellipse((1 * unit, 1 * unit, 63 * unit, 63 * unit), fill=BRAND_RED)
-    draw.ellipse((1 * unit, 1 * unit, 63 * unit, 63 * unit), outline=(23, 19, 15), width=int(4 * unit))
+    draw.ellipse((1 * unit, 1 * unit, 63 * unit, 63 * unit), fill=EMBER)
+    draw.ellipse((1 * unit, 1 * unit, 63 * unit, 63 * unit), outline=PAPER_DEEP, width=int(4 * unit))
     draw.polygon([(27 * unit, 23 * unit), (45 * unit, 32 * unit), (27 * unit, 41 * unit)], fill=CREAM,
                  outline=CREAM, width=int(5 * unit))
     canvas = canvas.resize((size, size), Image.LANCZOS)
     return canvas.rotate(rotation, resample=Image.BICUBIC, expand=True) if rotation else canvas
 
 
-def bubble(canvas, box, radius, fill, tail="left"):
-    draw = ImageDraw.Draw(canvas)
+def bubble(layer, box, radius, fill, tail="left"):
+    draw = ImageDraw.Draw(layer)
     draw.rounded_rectangle(box, radius=radius, fill=fill)
     if tail == "left":
         x, y = box[0] + 6, box[3] - 18
@@ -295,7 +355,7 @@ def bubble(canvas, box, radius, fill, tail="left"):
         draw.polygon([(x, y), (x - 26, y + 20), (x - 4, y + 24)], fill=fill)
 
 
-def heart(size, colour=GREEN, filled=True):
+def heart(size, colour=EMBER, filled=True):
     layer = Image.new("RGBA", (size * 4, size * 4), (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
     s = size * 4
@@ -305,140 +365,6 @@ def heart(size, colour=GREEN, filled=True):
         (s * 0.88, s * 0.27), (s * 0.88, s * 0.46),
     ], fill=colour if filled else None, outline=colour, width=int(size * 0.16) if not filled else 0)
     return layer.resize((size, size), Image.LANCZOS)
-
-
-def play_triangle(draw, cx, cy, size, colour=(0, 0, 0)):
-    draw.polygon([(cx - size * 0.32, cy - size * 0.46), (cx + size * 0.46, cy), (cx - size * 0.32, cy + size * 0.46)],
-                 fill=colour)
-
-
-# ----------------------------------------------------------------- grain ----
-RNG = np.random.default_rng(7)
-GRAIN = [RNG.normal(0, 1.7, (H, W, 1)).astype(np.float32) for _ in range(6)]
-_YY, _XX = np.mgrid[0:H, 0:W]
-_NX = (_XX - W / 2) / (W / 2)
-_NY = (_YY - H / 2) / (H / 2)
-VIGNETTE = (1 - 0.55 * np.clip((_NX * _NX + _NY * _NY) * 0.42, 0, 1))[..., None].astype(np.float32)
-
-
-def finish(frame, timecode, grain=1.0):
-    array = np.asarray(frame.convert("RGB")).astype(np.float32)
-    array += GRAIN[int(timecode * 30) % len(GRAIN)] * grain
-    array *= VIGNETTE
-    return Image.fromarray(np.clip(array, 0, 255).astype(np.uint8), "RGB")
-
-
-# ---------------------------------------------------------------- scenes ----
-def scene_chat(t):
-    """Treasure tells Success about ORU. iMessage rhythm, ORU colours."""
-    base = radial_background((W, H), glow=(16, 70, 50), strength=0.9)
-    veil = Image.new("RGBA", (W, H), (6, 8, 7, 235))
-    base = Image.alpha_composite(base.convert("RGBA"), veil).convert("RGB")
-    canvas = base.convert("RGBA")
-    draw = ImageDraw.Draw(canvas)
-
-    panel_w, panel_h = 980, 800
-    px, py = (W - panel_w) / 2, (H - panel_h) / 2 + 20
-
-    # The conversation sits on its own sheet, so it reads as a chat and not as
-    # loose text floating on the background.
-    draw.rounded_rectangle((px - 26, py - 26, px + panel_w + 26, py + panel_h + 26), radius=42,
-                           fill=(17, 18, 18, 240), outline=(44, 45, 46, 255), width=2)
-
-    # Header
-    head = Image.new("RGBA", (panel_w, 96), (0, 0, 0, 0))
-    hdraw = ImageDraw.Draw(head)
-    hdraw.rounded_rectangle((0, 0, panel_w - 1, 96), radius=28, fill=(26, 26, 28, 255))
-    hdraw.ellipse((26, 24, 74, 72), fill=(58, 58, 62, 255))
-    text(hdraw, (50, 48), "T", "bold", 24, (255, 255, 255), anchor="mm")
-    text(hdraw, (92, 32), "Treasure", "semi", 26, (245, 245, 245))
-    text(hdraw, (92, 60), "iMessage", "reg", 17, (130, 130, 135))
-    canvas.paste(head, (int(px), int(py)), head)
-
-    messages = [
-        ("left", "guy you don hear of that", 0.35, 1.55),
-        ("left", "underground musician for oru?", 1.55, 2.75),
-        ("right", "No, which one be oru again?", 3.05, 4.05),
-        ("link", "", 4.35, 6.3),
-    ]
-
-    y = py + 150
-    left_x, right_x = px + 20, px + panel_w - 20
-    for kind, label, start, end in messages:
-        if t < start:
-            break
-        appear = ease_out(progress(t, start, start + 0.35))
-        if kind == "left":
-            font_size = 30
-            width = FON.get("med", font_size).getlength(label)
-            box = (left_x, y, left_x + width + 52, y + 68)
-            layer = Image.new("RGBA", (int(box[2] - box[0]) + 40, 110), (0, 0, 0, 0))
-            bubble(layer, (30, 8, 30 + (box[2] - box[0]), 70), 26, (44, 44, 46, 255), "left")
-            draw_layer = ImageDraw.Draw(layer)
-            text(draw_layer, (56, 26), label, "med", font_size, (245, 245, 245))
-            paste_center(canvas, layer, ((box[0] + box[2]) / 2 + 6, (box[1] + box[3]) / 2), appear)
-            y += 96
-        elif kind == "right":
-            font_size = 30
-            width = FON.get("med", font_size).getlength(label)
-            box_right = right_x
-            box_left = box_right - (width + 52)
-            layer = Image.new("RGBA", (int(width) + 90, 110), (0, 0, 0, 0))
-            bubble(layer, (20, 8, 20 + (width + 52), 70), 26, (52, 199, 89, 255), "right")
-            text(ImageDraw.Draw(layer), (46, 26), label, "med", font_size, (250, 255, 250))
-            paste_center(canvas, layer, ((box_left + box_right) / 2, y + 39), appear)
-            y += 96
-        else:
-            # Link bubble with the real ORU address
-            card_w, card_h = 560, 300
-            layer = Image.new("RGBA", (card_w + 40, card_h + 40), (0, 0, 0, 0))
-            ldraw = ImageDraw.Draw(layer)
-            ldraw.rounded_rectangle((20, 20, 20 + card_w, 20 + card_h), radius=26, fill=(38, 38, 42, 255))
-            preview = Image.new("RGBA", (card_w - 32, 170), (0, 0, 0, 0))
-            pdraw = ImageDraw.Draw(preview)
-            pdraw.rounded_rectangle((0, 0, card_w - 33, 169), radius=18, fill=(14, 22, 17, 255))
-            for radius, alpha in ((150, 26), (100, 34), (60, 44)):
-                pdraw.ellipse((card_w / 2 - radius, 84 - radius, card_w / 2 + radius - 32, 84 + radius),
-                              fill=(30, 215, 96, alpha))
-            logo = mark(86)
-            preview.alpha_composite(logo, (int((card_w - 32) / 2 - 43), 40))
-            layer.alpha_composite(preview, (36, 36))
-            text(ldraw, (36, 218), "oru.freebuff.app", "semi", 30, (90, 170, 255))
-            text(ldraw, (36, 258), "ORU, music from new artists", "reg", 22, (150, 150, 155))
-            # The tap: a ring that grows where the finger lands.
-            tap = progress(t, 5.55, 6.3)
-            if 0 < tap < 1:
-                ring = Image.new("RGBA", (card_w + 40, card_h + 40), (0, 0, 0, 0))
-                rdraw = ImageDraw.Draw(ring)
-                radius = 20 + ease_out(tap) * 90
-                rdraw.ellipse((300 - radius, 300 - radius, 300 + radius, 300 + radius),
-                              outline=(30, 215, 96, int(200 * (1 - tap))), width=5)
-                layer.alpha_composite(ring)
-            slide = (1 - appear) * 40
-            paste_center(canvas, layer, (px + 220 + (card_w / 2), y + 130 + slide), appear)
-            y += card_h - 40
-
-    # Typing dots while the other person is about to write.
-    for start, end in ((0.0, 0.4), (2.75, 3.05), (4.05, 4.35)):
-        if start <= t < end:
-            dots = Image.new("RGBA", (110, 60), (0, 0, 0, 0))
-            ddraw = ImageDraw.Draw(dots)
-            ddraw.rounded_rectangle((0, 0, 109, 59), radius=26, fill=(44, 44, 46, 255))
-            for index in range(3):
-                bob = math.sin((t * 6) - index * 0.7) * 4
-                ddraw.ellipse((20 + index * 26, 22 + bob, 36 + index * 26, 38 + bob), fill=(150, 150, 155, 255))
-            canvas.paste(dots, (int(left_x), int(y)), dots)
-
-    # Time stamp fades out before the zoom transition.
-    text(draw, (W / 2, py + panel_h - 6), "Today  21:42", "reg", 22, (90, 90, 95), anchor="mm")
-
-    out = canvas.convert("RGB")
-    # Push in on the link as the scene ends.
-    zoom = 1 + 0.22 * ease_in(progress(t, 5.6, 6.6))
-    if zoom > 1.001:
-        out = zoom_center(out, zoom)
-    fade = ease_out(progress(t, 0.0, 0.5)) * (1 - progress(t, 6.2, 6.6))
-    return blend_black(out, fade)
 
 
 def zoom_center(image, factor):
@@ -454,250 +380,383 @@ def blend_black(image, amount):
     return Image.blend(Image.new("RGB", image.size, (0, 0, 0)), image, clamp(amount))
 
 
-def scene_logo(t):
-    """The app arrives: mark, name, promise."""
-    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 255))
-    canvas.alpha_composite(glow_layer((W, H)))
+# ----------------------------------------------------------------- grain ----
+RNG = np.random.default_rng(9)
+GRAIN = [RNG.normal(0, 1.5, (H, W, 1)).astype(np.float32) for _ in range(6)]
+_YY, _XX = np.mgrid[0:H, 0:W]
+_NX = (_XX - W / 2) / (W / 2)
+_NY = (_YY - H / 2) / (H / 2)
+VIGNETTE = (1 - 0.5 * np.clip((_NX * _NX + _NY * _NY) * 0.4, 0, 1))[..., None].astype(np.float32)
+
+
+def finish(frame, timecode, grain=1.0):
+    array = np.asarray(frame.convert("RGB")).astype(np.float32)
+    array += GRAIN[int(timecode * FPS) % len(GRAIN)] * grain
+    array *= VIGNETTE
+    return Image.fromarray(np.clip(array, 0, 255).astype(np.uint8), "RGB")
+
+
+# ----------------------------------------------------------------- scenes ---
+def tap_ring(layer, cx, cy, radius_max, ring_phase):
+    draw = ImageDraw.Draw(layer)
+    radius = 16 + ease_out(ring_phase) * radius_max
+    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius),
+                 outline=(*EMBER, int(210 * (1 - ring_phase))), width=5)
+
+
+def typing_dots(canvas, x, y, t, visible):
+    if not visible:
+        return
+    dots = Image.new("RGBA", (112, 62), (0, 0, 0, 0))
+    ddraw = ImageDraw.Draw(dots)
+    ddraw.rounded_rectangle((0, 0, 111, 61), radius=26, fill=(44, 36, 29, 255))
+    for index in range(3):
+        bob = math.sin((t * 7) - index * 0.8) * 4
+        ddraw.ellipse((22 + index * 27, 23 + bob, 38 + index * 27, 39 + bob), fill=(*EMBER, 255)
+                      if index == int(t * 3) % 3 else (*SOFT, 210))
+    canvas.alpha_composite(dots, (int(x), int(y)))
+
+
+def scene_chat(t):
+    """One friend finds a song on ORU and sends the link across."""
+    base = radial_background((W, H), glow=(58, 27, 16), strength=1.4).convert("RGBA")
+    veil = Image.new("RGBA", (W, H), (8, 6, 4, 168))
+    base = Image.alpha_composite(base, veil)
+    canvas = base
+    draw = ImageDraw.Draw(canvas)
+
+    panel_w, panel_h = 930, 780
+    px, py = (W - panel_w) / 2 - 40, (H - panel_h) / 2 + 10
+    draw.rounded_rectangle((px - 24, py - 24, px + panel_w + 24, py + panel_h + 24), radius=40,
+                           fill=(32, 25, 19, 244), outline=CARD_LINE, width=2)
+
+    # Header
+    head = Image.new("RGBA", (panel_w, 92), (0, 0, 0, 0))
+    hdraw = ImageDraw.Draw(head)
+    hdraw.rounded_rectangle((0, 0, panel_w - 1, 92), radius=24, fill=(42, 33, 26, 255))
+    hdraw.ellipse((24, 22, 70, 68), fill=(58, 45, 35, 255))
+    text(hdraw, (47, 45), "M", "bold", 22, INK, anchor="mm")
+    text(hdraw, (88, 30), "Moyin", "semi", 25, INK)
+    text(hdraw, (88, 58), "direct message", "reg", 16, FAINT)
+    canvas.alpha_composite(head, (int(px), int(py)))
+
+    messages = [
+        ("left", "found the smallest song i swear", 0.35, 4.95, "med"),
+        ("left", "and nobody has heard it yet", 1.15, 4.95, "med"),
+        ("right", "whats ORU again?", 2.05, 4.95, "med"),
+        ("link", "", 3.05, 99, ""),
+    ]
+
+    y = py + 128
+    left_x, right_x = px + 22, px + panel_w - 22
+    for kind, label, start, blink_until, weight in messages:
+        if t < start:
+            break
+        appear = ease_out(progress(t, start, start + 0.3))
+        if kind in ("left", "right"):
+            size = 29
+            width = measure(label, "med", size)
+            box_w = width + 54
+            layer = Image.new("RGBA", (int(box_w) + 60, 116), (0, 0, 0, 0))
+            if kind == "left":
+                bubble(layer, (24, 8, 24 + int(box_w), 72), 24, (58, 47, 37, 255), "left")
+                text(ImageDraw.Draw(layer), (46, 40), label, "med", size, INK, anchor="lm")
+                paste_center(canvas, layer, (left_x + box_w / 2 - 8, y + 40), appear)
+            else:
+                bubble(layer, (24, 8, 24 + int(box_w), 72), 24, (*EMBER, 255), "right")
+                text(ImageDraw.Draw(layer), (46, 40), label, "med", size, (250, 245, 240), anchor="lm")
+                paste_center(canvas, layer, (right_x - box_w / 2 + 8, y + 40), appear)
+            y += 88
+        else:
+            card_w, card_h = 500, 292
+            dust = (88, 52, 34)
+            layer = Image.new("RGBA", (card_w + 44, card_h + 44), (0, 0, 0, 0))
+            ldraw = ImageDraw.Draw(layer)
+            ldraw.rounded_rectangle((22, 22, 22 + card_w, 22 + card_h), radius=24, fill=(38, 30, 24, 255),
+                                    outline=(96, 66, 48, 255), width=2)
+            preview = Image.new("RGBA", (card_w - 32, 156), (0, 0, 0, 0))
+            pdraw = ImageDraw.Draw(preview)
+            pdraw.rounded_rectangle((0, 0, card_w - 33, 155), radius=16, fill=(56, 27, 16, 255))
+            for radius, alpha in ((150, 30), (100, 42), (60, 58)):
+                pdraw.ellipse((card_w / 2 - radius - 16, 78 - radius, card_w / 2 + radius - 16, 78 + radius),
+                              fill=(*EMBER, alpha))
+            logo = mark(76)
+            preview.alpha_composite(logo, (int((card_w - 32) / 2 - 38), 40))
+            layer.alpha_composite(preview, (36, 36))
+            text(ldraw, (38, 206), "oru.freebuff.app", "semi", 28, INK)
+            text(ldraw, (38, 244), "Discover music that nobody has heard yet", "reg", 19, FAINT)
+            phase = progress(t, 5.35, 6.05)
+            if 0 < phase < 1:
+                tap_ring(layer, 275, 150, 96, phase)
+            slide = (1 - appear) * 40
+            paste_center(canvas, layer, (px + 250 + (card_w / 2), y + 120 + slide), appear)
+            y += card_h - 52
+
+    for start, end in ((0.0, 0.5), (2.75, 3.05), (4.05, 4.35)):
+        typing_dots(canvas, left_x + 4, y + 8, t, start <= t < end)
+
+    # Closing push: zoom on the link.
+    zoom = 1 + 0.24 * ease_in(progress(t, 5.7, 6.6))
+    out = canvas.convert("RGB")
+    if zoom > 1.001:
+        out = zoom_center(out, zoom)
+    fade = ease_out(progress(t, 0.0, 0.5)) * (1 - progress(t, 6.25, 6.6))
+    return blend_black(out, fade)
+
+
+def scene_invite(t):
+    """The mark arrives on paper: ORU, with one line of promise."""
+    canvas = Image.new("RGBA", (W, H), (19, 15, 11))
+    canvas.alpha_composite(full_bleed((W, H)))
     draw = ImageDraw.Draw(canvas)
 
     pop = ease_back(progress(t, 0.05, 0.85))
-    logo = mark(int(300 * (0.6 + 0.4 * pop)), rotation=(1 - pop) * -12)
-    paste_center(canvas, logo, (W / 2, 430), clamp(pop))
+    logo = mark(int(286 * (0.6 + 0.4 * pop)), rotation=(1 - pop) * -14)
+    paste_center(canvas, logo, (W / 2, 428), clamp(pop))
 
-    # Ring pulse behind the mark
-    pulse = progress(t, 0.2, 1.6)
+    pulse = progress(t, 0.2, 1.7)
     if 0 < pulse < 1:
         ring = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         rdraw = ImageDraw.Draw(ring)
-        radius = 150 + ease_out(pulse) * 420
-        rdraw.ellipse((W / 2 - radius, 430 - radius, W / 2 + radius, 430 + radius),
-                      outline=(30, 215, 96, int(120 * (1 - pulse))), width=6)
+        radius = 150 + ease_out(pulse) * 460
+        rdraw.ellipse((W / 2 - radius, 428 - radius, W / 2 + radius, 428 + radius),
+                      outline=(*EMBER, int(120 * (1 - pulse))), width=6)
         canvas.alpha_composite(ring)
 
-    name_in = ease_out(progress(t, 0.5, 1.1))
-    text(draw, (W / 2, 620 + (1 - name_in) * 26), "ORU", "black", 156, INK, tracking=14, anchor="ma")
-    promise = "MUSIC FROM ARTISTS WHO ARE JUST STARTING"
-    text(draw, (W / 2, 800), promise, "semi", 26, (150, 150, 155), tracking=6, anchor="ma")
-    text(draw, (W / 2, 852 + (1 - ease_out(progress(t, 1.0, 1.6))) * 18), "oru.freebuff.app", "med", 24,
-         (90, 170, 255), tracking=1, anchor="ma")
+    name_in = ease_out(progress(t, 0.45, 1.05))
+    text(draw, (W / 2, 612 + (1 - name_in) * 26), "ORU", "display", 158, INK, tracking=16, anchor="ma")
+
+    promise = ease_out(progress(t, 0.85, 1.45))
+    text(draw, (W / 2, 826), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "med", 24, SOFT, tracking=8,
+         anchor="ma")
+    text(draw, (W / 2, 884 + (1 - ease_out(progress(t, 1.25, 1.85))) * 16), "oru.freebuff.app", "med", 22,
+         EMBER_NEW, tracking=1, anchor="ma")
     return canvas.convert("RGB")
 
 
-def scene_phone(t):
-    """Real home screen in a phone, with kinetic type beside it."""
-    canvas = radial_background((W, H), glow=(22, 96, 62), strength=1.2).convert("RGBA")
-    draw = ImageDraw.Draw(canvas)
+def scene_listener(t):
+    """The real player, played up close, with the listening story beside it."""
+    canvas = radial_background((W, H), glow=(58, 27, 16), strength=1.15).convert("RGBA")
 
-    slide = ease_out(progress(t, 0.0, 1.0))
-    phone = device_phone(880, tilt=-3 + 3 * slide)
-    x = lerp(W * 0.72, W * 0.68, slide)
-    y = H / 2 + (1 - slide) * 220
-    # Slow drift so the shot feels alive without inventing new screens.
-    y -= math.sin(t * 0.8) * 4
+    slide = ease_out(progress(t, 0.0, 1.05))
+    phone = device_phone(860 + int(30 * slide), tilt=-3 + 3 * slide, shot=SC_LISTEN_PHONE)
+    x = lerp(W * 0.74, W * 0.71, slide)
+    y = H / 2 + (1 - slide) * 230 - math.sin(t * 0.75) * 5
+    paste_center(canvas, halo_sprite(690), (x, y))
     paste_center(canvas, phone, (x, y), slide)
 
-    # Glow behind the device
-    halo = halo_sprite(760)
-    paste_center(canvas, halo, (x, y), 1.0)
-
-    left = W * 0.085
-    top = 330
+    draw = ImageDraw.Draw(canvas)
+    left = W * 0.07
     first = ease_out(progress(t, 0.25, 0.95))
     second = ease_out(progress(t, 0.6, 1.35))
-    text(draw, (left, top - (1 - first) * 40), "Underground.", "black", 96, INK, tracking=-2)
-    text(draw, (left, top + 110 - (1 - second) * 40), "Found.", "black", 96, GREEN, tracking=-2)
+    text(draw, (left, 350 - (1 - first) * 42), "Underground.", "display_x", 96, INK, tracking=-2)
+    text(draw, (left, 462 - (1 - second) * 42), "Found.", "display_x", 96, INK, tracking=-2)
 
-    body = ease_out(progress(t, 1.1, 1.7))
-    lines = wrap("New artists put a song up in minutes. You hear it first.", "reg", 34, 560)
+    body = ease_out(progress(t, 1.1, 1.75))
+    lines = wrap("Small songs first, from artists posting their first ones. Play them, keep them,", "reg", 32, 620)
+    lines2 = wrap("follow the voices you keep hearing.", "reg", 32, 620)
     for index, line in enumerate(lines):
-        text(draw, (left, top + 260 + index * 44 + (1 - body) * 24), line, "reg", 34, (200, 200, 200))
+        text(draw, (left, 596 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
+    for index, line in enumerate(lines2):
+        text(draw, (left, 596 + len(lines) * 44 + index * 44 + (1 - body) * 22), line, "reg", 32, SOFT)
 
-    pill = ease_out(progress(t, 1.5, 2.1))
+    pill = ease_out(progress(t, 1.5, 2.1)) if slide > 0.9 else 0
     if pill > 0:
-        width = 330
-        draw.rounded_rectangle((left, top + 400, left + width, top + 468), radius=34,
-                               fill=(30, 215, 96, int(255 * pill)))
-        text(draw, (left + width / 2, top + 434), "Listen free", "bold", 26, (0, 0, 0), anchor="mm")
+        width = 300
+        draw.rounded_rectangle((left, 780, left + width, 846), radius=33, fill=(*EMBER, int(255 * pill)))
+        text(draw, (left + width / 2, 813), "Keep listening", "bold", 24, (10, 6, 3), anchor="mm")
+
+    # A heart floats off the phone late in the scene, real feedback or nothing.
+    like = ease_back(progress(t, 3.4, 4.0)) * (1 - ease_out(progress(t, 4.9, 5.9)))
+    if like > 0:
+        paste_center(canvas, heart(int(104 * clamp(like))), (x - 200 + 140 * ease_out(clamp(like)),
+                      430 - 70 * ease_out(clamp(like))), clamp(like))
     return canvas.convert("RGB")
 
 
-def scene_studio(t):
-    """Desktop app, with the three steps that matter."""
-    canvas = radial_background((W, H), glow=(18, 70, 55), strength=0.9).convert("RGBA")
+def scene_social(t):
+    """Two real screens: the send form and the artist's inbox."""
+    canvas = radial_background((W, H), glow=(50, 24, 14), strength=0.9).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    slide = ease_out(progress(t, 0.0, 1.0))
-    window = device_desktop(1400)
-    center = (W / 2, 470 + (1 - slide) * 160)
+    slideA = ease_out(progress(t, 0.05, 1.05))
+    slideB = ease_out(progress(t, 0.55, 1.6))
+    winA = device_desktop(1030, shot=SC_SHARE)
+    winB = device_desktop(830, shot=SC_SHARES_INBOX)
+    centerA = (W * 0.33 - (1 - slideA) * 420, 560 + (1 - slideA) * 120)
+    centerB = (W * 0.79 + (1 - slideB) * 420, 470 - 20 * (1 - slideB))
+    paste_center(canvas, winA, centerA, slideA)
+    paste_center(canvas, winB, centerB, slideB)
+
+    # Copy hops across the gap.
+    fromA = (centerA[0] + winA.width / 2 - 30, centerA[1] - winA.height * 0.12)
+    toB = (centerB[0] - winB.width / 2 + 40, centerB[1] + winB.height * 0.06)
+    fly = ease_in_out(progress(t, 1.15, 2.05))
+    if 0 < fly < 1:
+        cx = lerp(fromA[0], toB[0], fly)
+        cy = lerp(fromA[1], toB[1], fly) - math.sin(fly * math.pi) * 90
+        note = Image.new("RGBA", (300, 96), (0, 0, 0, 0))
+        ndraw = ImageDraw.Draw(note)
+        ndraw.rounded_rectangle((0, 10, 299, 85), radius=22, fill=(*EMBER, 255))
+        text(ndraw, (150, 47), "shared with a note", "semi", 20, (250, 244, 238), anchor="mm")
+        paste_center(canvas, note, (cx, cy), clamp(fly))
+
+    heading = ease_out(progress(t, 1.35, 2.0))
+    sub = ease_out(progress(t, 1.75, 2.4))
+    text(draw, (W / 2, 148 + (1 - heading) * 24), "send a song across the room.", "display_hard",
+         78, INK, tracking=-1, anchor="ma")
+    text(draw, (W / 2, 250 + (1 - sub) * 18), "The artist reviews it, keeps the USG, credits stay honest.",
+         "reg", 26, SOFT, anchor="ma")
+
+    cta = ease_out(progress(t, 2.5, 3.0))
+    if cta > 0:
+        width = 470
+        draw.rounded_rectangle((W / 2 - width / 2, 330, W / 2 + width / 2, 388), radius=29,
+                               fill=(23, 17, 13, int(236 * cta)), outline=CARD_LINE)
+        pill = EMBER
+        x_1 = W / 2 - width / 2 + 46
+        y_1 = 359
+        draw.ellipse((x_1 - 16, y_1 - 16, x_1 + 16, y_1 + 16), fill=(*pill, int(255 * cta)))
+        text(draw, (x_1 - 2, y_1), "shares", "semi", 18, (250, 244, 238), anchor="mm")
+        text(draw, (x_1 + 36, y_1), "Live feed of real tracks, not stock radio.", "reg", 21, INK,
+             anchor="lm")
+    return canvas.convert("RGB")
+
+
+def scene_artist(t):
+    """The real studio desk with the three beats that matter."""
+    canvas = radial_background((W, H), glow=(52, 25, 15), strength=1.0).convert("RGBA")
+    draw = ImageDraw.Draw(canvas)
+
+    slide = ease_out(progress(t, 0.0, 1.05))
+    window = device_desktop(1560, shot=SC_STUDIO)
+    center = (W / 2, 470 + (1 - slide) * 170)
     paste_center(canvas, window, center, slide)
 
-    # Two bars of light sweeping across the window as it settles.
     sheen = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sdraw = ImageDraw.Draw(sheen)
-    sx = lerp(-600, W + 600, ease_in_out(progress(t, 0.2, 1.6)))
-    sdraw.polygon([(sx, 0), (sx + 260, 0), (sx - 120, H), (sx - 380, H)], fill=(255, 255, 255, 16))
+    sx = lerp(-640, W + 640, ease_in_out(progress(t, 0.25, 1.7)))
+    sdraw.polygon([(sx, 0), (sx + 280, 0), (sx - 130, H), (sx - 410, H)], fill=(255, 250, 244, 14))
     canvas.alpha_composite(sheen)
 
-    # One strip under the window carries the three steps, so nothing covers the
-    # product itself.
-    bar = ease_out(progress(t, 0.55, 1.15))
+    heading = ease_out(progress(t, 0.35, 1.0))
+    text(draw, (W / 2, 120 + (1 - heading) * 22), "the studio is a page.", "display_hard", 72, INK,
+         tracking=-1, anchor="ma")
+
+    bar = ease_out(progress(t, 0.6, 1.25))
     if bar > 0:
-        strip = Image.new("RGBA", (1640, 104), (0, 0, 0, 0))
+        strip = Image.new("RGBA", (1560, 116), (0, 0, 0, 0))
         sdraw = ImageDraw.Draw(strip)
-        sdraw.rounded_rectangle((0, 0, 1639, 103), radius=28, fill=(16, 16, 16, 236), outline=(56, 56, 56, 255), width=2)
-        steps = [("Record or upload", 0.75), ("Trim and fade it", 1.05), ("Publish when ready", 1.35)]
-        slots = [410, 1030, 1500]
-        for index, (label, start) in enumerate(steps):
+        sdraw.rounded_rectangle((0, 0, 1559, 115), radius=28, fill=(24, 19, 15, 240), outline=CARD_LINE, width=2)
+        steps = [(470, "Record or upload"), (1040, "Credit your guests"), (1490, "Publish when it is ready")]
+        starts = [0.75, 1.05, 1.35]
+        for (cx, label), start in zip(steps, starts):
             appear = ease_out(progress(t, start, start + 0.45))
             if appear <= 0:
                 continue
-            cx = slots[index]
-            sdraw.ellipse((cx - 300, 32, cx - 260, 72), fill=(30, 215, 96, int(255 * appear)))
-            sdraw.line([(cx - 290, 52), (cx - 282, 61), (cx - 270, 43)], fill=(0, 0, 0), width=5, joint="curve")
-            text(sdraw, (cx - 246, 52), label, "semi", 28, (240, 240, 240), anchor="lm")
-        paste_center(canvas, strip, (W / 2, 990), bar)
-
+            y_1 = 58
+            sdraw.ellipse((cx - 30, y_1 - 22, cx + 10, y_1 + 18), fill=(*EMBER, int(255 * appear)))
+            sdraw.line([(cx - 20, y_1 - 1), (cx - 12, y_1 + 7), (cx + 0, y_1 - 9)], fill=(10, 7, 4), width=5,
+                       joint="curve")
+            text(sdraw, (cx + 26, y_1), label, "semi", 26, INK, anchor="lm")
+        paste_center(canvas, strip, (W / 2, 984), bar)
     return canvas.convert("RGB")
 
 
-def scene_listen(t):
-    """Zoom on the real player, then like the track."""
-    canvas = Image.new("RGBA", (W, H), (9, 9, 9, 255))
-    # Big blurred version of the artwork colour field behind.
-    if "listen-backdrop" not in _GLOWS:
-        blurred = PHONE.sized(700).filter(ImageFilter.GaussianBlur(38)).resize((W, H), Image.LANCZOS)
-        _GLOWS["listen-backdrop"] = blurred
-    canvas.paste(_GLOWS["listen-backdrop"], (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (W, H), (8, 8, 8, 200)))
-
-    draw = ImageDraw.Draw(canvas)
-    zoom = ease_in_out(progress(t, 0.0, 1.4))
-    phone = device_phone(700 + int(180 * zoom))
-    paste_center(canvas, phone, (W * 0.32, H * 0.52), 1.0)
-
-    left = W * 0.58
-    text(draw, (left, 330), "Press play.", "black", 84, INK, tracking=-2)
-    text(draw, (left, 434), "Stay a while.", "black", 84, (140, 140, 145), tracking=-2)
-
-    # One real player bar, drawn to the app's spec.
-    bar_y = 610
-    draw.rounded_rectangle((left, bar_y, left + 660, bar_y + 150), radius=22, fill=(20, 20, 20))
-    art = PHONE.sized(600).crop((40, 210, 340, 510)).resize((110, 110), Image.LANCZOS)
-    canvas.paste(art, (int(left + 20), int(bar_y + 20)))
-    text(draw, (left + 148, bar_y + 32), "Now playing", "semi", 24, (240, 240, 240))
-    text(draw, (left + 148, bar_y + 64), "ORU", "reg", 20, (150, 150, 155))
-    draw.ellipse((left + 570, bar_y + 44, left + 640, bar_y + 114), fill=(255, 255, 255))
-    play_triangle(draw, left + 600, bar_y + 79, 42, (0, 0, 0))
-
-    # Progress fills up in real time.
-    fill = ease_in_out(progress(t, 0.6, 3.4))
-    draw.rounded_rectangle((left + 20, bar_y + 132, left + 640, bar_y + 138), radius=3, fill=(77, 77, 77))
-    draw.rounded_rectangle((left + 20, bar_y + 132, left + 20 + max(10, 620 * fill), bar_y + 138), radius=3, fill=GREEN)
-
-    like = ease_back(progress(t, 3.2, 3.7))
-    if like > 0:
-        paste_center(canvas, heart(96), (left + 690, 690), clamp(like))
-        text(draw, (left + 746, 690), "Liked", "semi", 26, GREEN, anchor="lm")
-    return canvas.convert("RGB")
-
-
-def scene_share(t):
-    """Two real surfaces, side by side, with the community story."""
-    canvas = radial_background((W, H), glow=(24, 84, 60), strength=1.0).convert("RGBA")
+def scene_landing(t):
+    """The front page, full size, with one honest line under it."""
+    canvas = radial_background((W, H), glow=(46, 22, 13), strength=0.8).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
 
-    soon = ease_in_out(progress(t, 0.0, 4.2))
-    phone = device_phone(560 + int(60 * soon))
-    desk = device_desktop(900)
+    slide = ease_out(progress(t, 0.0, 1.0))
+    window = device_desktop(1700, shot=SC_LANDING_DESK)
+    center = (W / 2 + (1 - slide) * 60, 430 + (1 - slide) * 150)
+    paste_center(canvas, window, center, slide)
 
-    paste_center(canvas, phone, (W * 0.2, H * 0.55 - 16 * math.sin(t)), 1.0)
-    paste_center(canvas, desk, (W * 0.68, H * 0.5 + 18 * math.sin(t * 0.9)), 1.0)
-
-    words = [("Like it.", GREEN), ("Save it.", INK), ("Send it on.", INK)]
-    for index, (word, colour) in enumerate(words):
-        appear = ease_out(progress(t, 0.25 + index * 0.28, 0.75 + index * 0.28))
-        size = 74
-        x = W * 0.5
-        y = 880 + index * 0
-        # three words, stacked tight under each other is too tall; place as a row
-        offsets = [(-330, 0), (0, 0), (330, 0)]
-        tx = W / 2 + offsets[index][0]
-        if appear > 0:
-            text(draw, (tx, 940 + (1 - appear) * 26), word, "black", size, colour, tracking=-1, anchor="ma")
+    heading = ease_out(progress(t, 0.35, 1.0))
+    sub = ease_out(progress(t, 0.7, 1.35))
+    text(draw, (W / 2, 934 + (1 - heading) * 18), "Everything you hear was someone's first try.", "display_hard",
+         62, INK, tracking=-1, anchor="ma")
+    text(draw, (W / 2, 1020 + (1 - sub) * 12), "Discover where new sounds start, or start them yourself.",
+         "reg", 26, SOFT, anchor="ma")
     return canvas.convert("RGB")
 
 
 def scene_end(t):
-    """Brand close and call to action."""
-    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 255))
-    canvas.alpha_composite(glow_layer((W, H)))
+    """The reveal stays put. Big mark, one line, one place to go."""
+    canvas = Image.new("RGBA", (W, H), (19, 15, 11))
+    canvas.alpha_composite(full_bleed((W, H)))
     draw = ImageDraw.Draw(canvas)
 
-    appear = ease_back(progress(t, 0.05, 0.8))
-    logo = mark(int(190 * (0.8 + 0.2 * appear)))
-    paste_center(canvas, logo, (W / 2, 330), clamp(appear))
+    pop = ease_back(progress(t, 0.05, 0.8))
+    logo = mark(int(210 * (0.82 + 0.18 * pop)))
+    paste_center(canvas, logo, (W / 2, 330), clamp(pop))
 
-    text(draw, (W / 2, 440 + (1 - ease_out(progress(t, 0.25, 0.9))) * 20), "ORU", "black", 132, INK, tracking=12, anchor="ma")
+    text(draw, (W / 2, 444 + (1 - ease_out(progress(t, 0.25, 0.9))) * 20), "ORU", "display", 150, INK,
+         tracking=14, anchor="ma")
 
-    line = ease_out(progress(t, 0.5, 1.1))
-    text(draw, (W / 2, 608 + (1 - line) * 16), "Put your first song up tonight.", "med", 40, (215, 215, 215), anchor="ma")
-    text(draw, (W / 2, 668), "Listen free. Upload in one take.", "reg", 28, (140, 140, 145), anchor="ma")
+    line = ease_out(progress(t, 0.5, 1.15))
+    text(draw, (W / 2, 632 + (1 - line) * 16), "Discover the small sound. Send it on.", "med", 40, SOFT,
+         anchor="ma")
 
-    cta = ease_out(progress(t, 0.9, 1.5))
+    cta = ease_out(progress(t, 0.95, 1.6))
     if cta > 0:
-        width, height = 520, 96
-        box = (W / 2 - width / 2, 760, W / 2 + width / 2, 760 + height)
-        draw.rounded_rectangle(box, radius=48, fill=(30, 215, 96, int(255 * cta)))
-        text(draw, (W / 2, 808), "oru.freebuff.app", "bold", 34, (0, 0, 0), anchor="mm")
+        width, height = 560, 100
+        box = (W / 2 - width / 2, 740, W / 2 + width / 2, 740 + height)
+        draw.rounded_rectangle(box, radius=50, fill=(*EMBER, int(255 * cta)))
+        text(draw, (W / 2, 790), "oru.freebuff.app", "bold", 36, (12, 7, 3), anchor="mm")
 
-    credits = ease_out(progress(t, 1.3, 1.9))
-    text(draw, (W / 2, 906), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "semi", 20, (110, 110, 115),
-         tracking=5, anchor="ma")
-    text(draw, (W / 2, 986), "by Ayodele Ayokunle David", "reg", 18, (80, 80, 85), anchor="ma")
-    return canvas.convert("RGB")
-
-
-def blur_transition(image, amount):
-    if amount <= 0:
-        return image
-    return image.filter(ImageFilter.GaussianBlur(amount))
+    tagline = ease_out(progress(t, 1.35, 2.0))
+    text(draw, (W / 2, 890), "MUSIC FROM ARTISTS WHO ARE JUST STARTING", "semi", 20, FAINT,
+         tracking=6, anchor="ma")
+    return blend_black(canvas.convert("RGB"), 1 - 0.65 * ease_in(progress(t, 3.4, 3.9)))
 
 
 # --------------------------------------------------------------- timeline ----
 SCENES = [
     (0.0, 6.6, scene_chat),
-    (6.6, 8.9, scene_logo),
-    (8.9, 14.4, scene_phone),
-    (14.4, 20.4, scene_studio),
-    (20.4, 24.8, scene_listen),
-    (24.8, 29.4, scene_share),
-    (29.4, 34.0, scene_end),
+    (6.6, 8.6, scene_invite),
+    (8.6, 15.4, scene_listener),
+    (15.4, 21.6, scene_social),
+    (21.6, 27.6, scene_artist),
+    (27.6, 31.6, scene_landing),
+    (31.6, 39.5, scene_end),
 ]
 XFADE = 0.45
 
 
-def render_frame(time):
-    current = None
-    for start, end, fn in SCENES:
+def scene_at(time):
+    for index, (start, end, fn) in enumerate(SCENES):
         if start <= time < end:
-            current = (start, end, fn)
-            break
-    if current is None:
-        start, end, fn = SCENES[-1]
-        return finish(fn(end - start), time)
-    start, end, fn = current
-    frame = finish(fn(time), time)
+            return index, start, end, fn
+    return len(SCENES) - 1, *SCENES[-1][:2], SCENES[-1][2]
 
-    # Crossfade into the next scene near the boundary.
-    if end - time < XFADE and end < DURATION:
-        index = SCENES.index(current)
-        nxt_start, nxt_end, nxt_fn = SCENES[index + 1]
+
+def render_frame(time):
+    index, start, end, fn = scene_at(time)
+    local = time if not index == len(SCENES) - 1 or start <= time < end else time - start
+    if start <= time < end:
+        local = time - start
+    else:
+        local = end - start - 0.0001
+    frame = finish(fn(local if start <= time < end else end - start - 0.0001), time)
+
+    next_index = index + 1
+    if next_index < len(SCENES) and end - time < XFADE:
+        next_start, next_end, next_fn = SCENES[next_index]
         mix = ease_in_out(1 - (end - time) / XFADE)
-        upcoming = finish(nxt_fn(0.0001), time)
-        frame = Image.blend(frame, upcoming, mix * 0.7)
-    return frame
+        upcoming = finish(next_fn(0.0001), time)
+        blended = Image.blend(frame, upcoming, mix * 0.72)
+        if mix > 0:
+            amount = 6.5 * mix
+            blended = blended if amount <= 0.01 else blended.filter(ImageFilter.GaussianBlur(amount))
+        frame = blended
+    if time < 0.5:
+        frame = blend_black(frame, ease_out(time / 0.5))
+    return finish(frame, time)
 
 
+# ---------------------------------------------------------------- audio -----
 def synth_audio(path):
     rate = 44100
     total = int(DURATION * rate)
@@ -738,68 +797,69 @@ def synth_audio(path):
         t = np.arange(n) / rate
         freq = np.linspace(start_freq, end_freq, n)
         phase = np.cumsum(2 * math.pi * freq / rate)
-        return (np.sin(phase) * env(length, 0.02, length * 0.5, 1.6) * gain).astype(np.float32)
+        return (np.sin(phase) * env(length, 0.02, length * 0.55, 1.6) * gain).astype(np.float32)
 
-    bpm = 96
+    bpm = 92
     beat = 60 / bpm
 
-    # Pad bed
-    chords = [(146.83, [1.0, 1.26, 1.5, 2.0]), (130.81, [1.0, 1.19, 1.5, 1.78]),
-              (164.81, [1.0, 1.25, 1.5, 2.0]), (110.0, [1.0, 1.2, 1.5, 1.8])]
-    for index in range(0, int(DURATION / (beat * 4)) + 1):
-        at = index * beat * 4
+    # Warm pad bed, whole film long.
+    chords = [(87.31, [1.0, 1.21, 1.5, 2.0]), (110.0, [1.0, 1.19, 1.5, 1.78]),
+              (73.42, [1.0, 1.25, 1.5, 2.0]), (98.0, [1.0, 1.2, 1.5, 1.8])]
+    bar = beat * 4
+    for index in range(0, int(DURATION / bar) + 1):
+        at = index * bar
         root, ratios = chords[index % len(chords)]
         for ratio in ratios:
-            add(tone(root * ratio, beat * 4.4, attack=0.5, decay=2.6, harmonics=(0.7, 0.2, 0.08)), at, gain=0.06)
-        add(tone(root / 2, beat * 4.2, attack=0.12, decay=1.6, harmonics=(1.0, 0.2)), at, gain=0.1)
+            add(tone(root * ratio, bar * 1.2, attack=0.55, decay=2.8, harmonics=(0.65, 0.2, 0.08)), at, gain=0.055)
+        add(tone(root / 2, bar * 1.1, attack=0.14, decay=1.8, harmonics=(1.0, 0.2)), at, gain=0.1)
 
-    # Beat from 8.9s until the close
-    beat_start, beat_end = 8.9, 29.4
+    # Pulse from the listener section until the reveal.
+    pulse_start, pulse_end = 8.6, 31.6
     step = beat / 2
     index = 0
-    while beat_start + index * step < beat_end:
-        at = beat_start + index * step
+    while pulse_start + index * step < pulse_end:
+        at = pulse_start + index * step
         if index % 2 == 0:
-            add(tone(58, 0.36, attack=0.002, decay=0.13, harmonics=(1.0, 0.3)), at, gain=0.5)
-            add(noise(0.03, 0.015), at, gain=0.16)
+            add(tone(56, 0.34, attack=0.002, decay=0.12, harmonics=(1.0, 0.3)), at, gain=0.45)
+            add(noise(0.03, 0.015), at, gain=0.14)
         else:
-            add(noise(0.06, 0.035), at, gain=0.1, pan=0.25)
+            add(noise(0.055, 0.03), at, gain=0.085, pan=0.25)
         if index % 4 == 2:
-            add(noise(0.16, 0.09), at, gain=0.09, pan=-0.2)
+            add(noise(0.14, 0.09), at, gain=0.08, pan=-0.2)
         index += 1
 
-    # Arpeggio sparkle
-    arp_notes = [440.0, 523.25, 659.25, 783.99, 659.25, 523.25]
+    # Arpeggio sparkles against the pulse.
+    arp_notes = [261.63, 311.13, 392.0, 466.16, 392.0, 311.13]
     index = 0
-    while beat_start + index * beat < beat_end - 1:
-        at = beat_start + index * beat
+    while pulse_start + index * beat < pulse_end - 1:
+        at = pulse_start + index * beat
         note = arp_notes[index % len(arp_notes)]
-        add(tone(note, 0.5, attack=0.004, decay=0.16, harmonics=(0.8, 0.3, 0.12)), at, gain=0.055,
+        add(tone(note, 0.5, attack=0.004, decay=0.15, harmonics=(0.75, 0.3, 0.12)), at, gain=0.05,
             pan=math.sin(index) * 0.4)
         index += 1
 
-    # Typing clicks, message chime, tap and whooshes
-    for start in (0.35, 0.75, 1.15, 1.55, 3.05, 3.35, 3.65, 4.35):
-        add(noise(0.02, 0.01), start, gain=0.05, pan=0.1)
-    add(tone(880, 0.5, attack=0.005, decay=0.22, harmonics=(1.0, 0.5, 0.25)), 4.35, gain=0.16)
-    add(tone(1320, 0.45, attack=0.005, decay=0.2, harmonics=(1.0, 0.3)), 4.42, gain=0.08)
-    add(sweep(300, 1800, 0.35, 0.35), 5.55, gain=0.12)
-    add(tone(120, 0.6, attack=0.005, decay=0.2, harmonics=(1.0, 0.5)), 6.6, gain=0.35)
-    add(sweep(1600, 200, 0.9, 0.5), 6.6, gain=0.14)
+    # Typing clicks in the chat.
+    for at in (0.42, 0.66, 0.9, 1.22, 1.46, 1.7, 2.1, 2.36, 2.6):
+        add(noise(0.02, 0.01), at, gain=0.045, pan=0.12)
+    add(tone(740, 0.5, attack=0.005, decay=0.22, harmonics=(1.0, 0.5, 0.22)), 3.05, gain=0.15)
+    add(tone(1110, 0.45, attack=0.005, decay=0.2, harmonics=(1.0, 0.3)), 3.12, gain=0.07)
+    add(sweep(340, 1900, 0.35, 0.32), 5.35, gain=0.11)
 
-    for at in (8.9, 14.4, 20.4, 24.8):
-        add(sweep(220, 2600, 0.5, 0.4), at - 0.18, gain=0.1)
+    # Scene whooshes on the beat - every transition lands audibly.
+    for at in (6.6, 8.6, 15.4, 21.6, 27.6, 31.6):
+        add(sweep(200, 2600, 0.55, 0.4), at - 0.2, gain=0.09)
+    add(tone(116, 0.6, attack=0.005, decay=0.2, harmonics=(1.0, 0.5)), 6.6, gain=0.3)
 
-    # Like pop
-    add(tone(1046.5, 0.4, attack=0.004, decay=0.18, harmonics=(1.0, 0.5)), 20.4 + 3.25, gain=0.14)
+    # Heart pop in the listener scene.
+    add(tone(932.33, 0.4, attack=0.004, decay=0.18, harmonics=(1.0, 0.5)), 12.0, gain=0.13)
 
-    # Closing hit with a long shimmer
-    add(tone(87.31, 2.4, attack=0.01, decay=1.2, harmonics=(1.0, 0.5, 0.25)), 29.4, gain=0.5)
-    add(tone(349.23, 3.2, attack=0.02, decay=1.6, harmonics=(0.6, 0.25, 0.1)), 29.4, gain=0.16)
-    add(tone(523.25, 3.4, attack=0.03, decay=2.0, harmonics=(0.5, 0.2, 0.1)), 29.45, gain=0.1)
-    add(noise(1.2, 0.4), 29.4, gain=0.1)
+    # Closing hit with a long shimmer.
+    add(tone(87.31, 2.6, attack=0.01, decay=1.3, harmonics=(1.0, 0.5, 0.25)), 31.6, gain=0.5)
+    add(tone(349.23, 3.4, attack=0.02, decay=1.7, harmonics=(0.6, 0.25, 0.1)), 31.6, gain=0.15)
+    add(tone(523.25, 3.6, attack=0.03, decay=2.1, harmonics=(0.5, 0.2, 0.1)), 31.65, gain=0.09)
+    add(noise(1.3, 0.4), 31.6, gain=0.09)
 
-    # Gentle room tail
+    # Gentle room tail.
     delay = int(0.16 * rate)
     echo = mix.copy()
     for _ in range(3):
@@ -819,24 +879,20 @@ def synth_audio(path):
         handle.writeframes(pcm.tobytes())
 
 
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
+# ---------------------------------------------------------------- runner ----
+def chunk(first, last):
     WORK.mkdir(parents=True, exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     audio_path = WORK / "soundtrack.wav"
-
-    # Rendering is slow, so the film is built in chunks and stitched after.
-    first = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    last = int(sys.argv[2]) if len(sys.argv) > 2 else FRAMES
-    chunk = WORK / f"chunk-{first:04d}.mp4"
     if not audio_path.exists():
         print("writing soundtrack")
         synth_audio(audio_path)
 
-    video_path = chunk
+    target = WORK / f"chunk-{first:04d}.mp4"
     command = [
-        str(FFMPEG), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart", str(video_path),
+        ffmpeg_path(), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", str(target),
     ]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
@@ -844,8 +900,8 @@ def main():
             time = index / FPS
             frame = render_frame(time)
             process.stdin.write(frame.tobytes())
-            if index % 60 == 0:
-                print(f"frame {index}/{FRAMES}", flush=True)
+            if index % 100 == 0:
+                print(f"frame {index}/{get_last()}", flush=True)
         process.stdin.close()
     except BrokenPipeError:
         pass
@@ -854,9 +910,51 @@ def main():
     if code != 0:
         print(error[-3000:], file=sys.stderr)
         raise SystemExit(f"ffmpeg failed with {code}")
-    print("wrote", video_path, round(video_path.stat().st_size / (1024 * 1024), 1), "MB")
+    print("wrote", target, round(target.stat().st_size / (1024 * 1024), 1), "MB")
 
 
-if __name__ == "__main__" and os.environ.get("ORU_PROMO_NO_MAIN") != "1":
+def get_last():
+    return FRAMES
+
+
+def concat():
+    parts = sorted(WORK.glob("chunk-*.mp4"))
+    if not parts:
+        raise SystemExit("no chunks to concat")
+    entries = "\n".join(f"file '{part.absolute()}'" for part in parts)
+    listfile = WORK / "list.txt"
+    listfile.write_text(entries)
+    audio = WORK / "soundtrack.wav"
+    output = OUT / "oru-promo.mp4"
+    command = [
+        ffmpeg_path(), "-y", "-f", "concat", "-safe", "0", "-i", str(listfile),
+        "-i", str(audio), "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+        "-shortest", "-movflags", "+faststart", str(output),
+    ]
+    process = subprocess.run(command, capture_output=True, text=True)
+    if process.returncode != 0:
+        print(process.stderr[-3000:], file=sys.stderr)
+        raise SystemExit(process.returncode)
+    for part in parts:
+        part.unlink()
+    print("wrote", output, round(output.stat().st_size / (1024 * 1024), 1), "MB")
+
+
+def main():
+    if "--still" in sys.argv:
+        index = int(sys.argv[sys.argv.index("--still") + 1])
+        WORK.mkdir(parents=True, exist_ok=True)
+        still = WORK / f"still-{index:05d}.png"
+        render_frame(index / FPS).save(still)
+        print("wrote", still)
+        return
+    if "--concat" in sys.argv:
+        concat()
+        return
+    first = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    last = int(sys.argv[2]) if len(sys.argv) > 2 else FRAMES
+    chunk(first, last)
+
+
+if __name__ == "__main__":
     main()
-

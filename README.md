@@ -5,6 +5,7 @@ their own, and the front page is scored so that small artists can still show up 
 
 Live at [oru.freebuff.app](https://oru.freebuff.app).
 
+Tags: `independent-artist-platform` · `music-discovery` · `stream-your-own-songs` · `fastapi` · `react` · `vite` · `gsap-motion` · `android` · `media3` · `self-hosted-s3`
 ## What the app does
 
 - **Listeners** can sign up, browse, search, like songs, build playlists, follow artists and play
@@ -23,6 +24,35 @@ Live at [oru.freebuff.app](https://oru.freebuff.app).
   `DATABASE_URL`.
 - React 19, TypeScript, Vite and Tailwind CSS 4 for the web app. GSAP for animation, lucide-react
   for icons.
+
+## Motion: one system, three places
+
+Movement in ORU is GSAP, and it is gated by the visitor's own motion settings (`motionSafe()` in
+`src/lib/motion.ts` short-circuits everything when `prefers-reduced-motion: reduce` is on). The
+three places it happens:
+
+1. **Page entrances** — `usePageEnter` in `src/hooks/usePageEnter.ts` staggers everything marked
+   `data-enter` into place on route change, then clears its inline styles so CSS transitions take
+   over again.
+2. **The player chrome** — `NowPlaying.tsx` runs a typed timeline when a track opens, in the exact
+   order the ear goes: artwork, then title, then controls.
+3. **Toasts** — `ToastViewport.tsx` animates a toast in from the same side as the action that
+   triggered it.
+
+The player timeline is the one worth reading in full; it shows the stagger approach in its
+plainest form:
+
+```tsx
+const timeline = gsap.timeline();
+timeline
+  .from("[data-np-art]", { scale: 0.9, y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 0)
+  .from("[data-np-line]", { y: 16, opacity: 0, duration: 0.45, stagger: 0.06, ease: "power3.out" }, 0.12)
+  .from("[data-np-controls]", { y: 18, opacity: 0, duration: 0.45, stagger: 0.05, ease: "power3.out" }, 0.2);
+```
+
+The promo film in `public/promo` is built from real screen captures with the pipeline in
+`scripts/promo/capture.cjs` (headless Chrome over the live site) and `scripts/promo/build_video.py`
+(Pillow frames piped into ffmpeg, synthesized soundtrack).
 - SQLite and local files for media in development. Production runs on PostgreSQL and
   S3-compatible object storage. Uploads are streamed as-is: there is no transcoding and no CDN.
 
@@ -39,8 +69,10 @@ docs/DECISIONS.md     why discovery and ranking work the way they do
 tests/                pytest suite
 scripts/preview.sh    runs API and built frontend on one port
 scripts/generate_images.py   regenerates icons and share images
-twa-manifest.json     Android app config, read by CI
-.github/workflows/    CI: tests, then the Android build and release
+scripts/promo/        headless screen capture and the promo film builder
+android/              the native Android client (Java, Media3 playback, Retrofit)
+twa-manifest.json     the retired TWA config, kept only for reference
+.github/workflows/    CI: tests, then the native Android build and release
 ```
 
 ## Run it locally
