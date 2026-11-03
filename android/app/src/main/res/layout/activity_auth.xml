@@ -96,7 +96,7 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/handleLayout"
                     style="@style/Widget.Oru.TextInputLayout"
                     android:layout_width="match_parent"
@@ -104,8 +104,7 @@
                     android:layout_marginTop="12dp"
                     android:hint="@string/handle"
                     android:visibility="gone"
-                    app:errorEnabled="true"
-                    xmlns:android="http://schemas.android.com/apk/res/android">
+                    app:errorEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/handleEditText"
@@ -114,9 +113,9 @@
                         android:inputType="text"
                         android:maxLines="1" />
 
-                </TextView>
+                </com.google.android.material.textfield.TextInputLayout>
 
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/displayNameLayout"
                     style="@style/Widget.Oru.TextInputLayout"
                     android:layout_width="match_parent"
@@ -124,8 +123,7 @@
                     android:layout_marginTop="12dp"
                     android:hint="@string/display_name"
                     android:visibility="gone"
-                    app:errorEnabled="true"
-                    xmlns:android="http://schemas.android.com/apk/res/android">
+                    app:errorEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/displayNameEditText"
@@ -134,7 +132,7 @@
                         android:inputType="text"
                         android:maxLines="1" />
 
-                </TextView>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
                     android:id="@+id/errorText"

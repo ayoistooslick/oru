@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
 
+import com.oru.app.data.session.SessionManager;
 import com.oru.app.media.PlayerService;
+import com.oru.app.util.LazySession;
 
 /**
  * Application entry point. Creates the media playback notification channel and
@@ -19,6 +21,12 @@ public class OruApplication extends Application {
     public void onCreate() {
         super.onCreate();
         createNotificationChannels();
+
+        // The data layer builds Retrofit from the saved session, and every
+        // screen asks LazySession for a service while it is being created. That
+        // call throws unless something has initialised the client first, so do
+        // it here, before any activity can ask for one.
+        LazySession.init(this, new SessionManager(this));
     }
 
     private void createNotificationChannels() {
