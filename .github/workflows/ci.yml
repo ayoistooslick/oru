@@ -98,3 +98,21 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # GitHub always hands run artifacts over as a zip, which is why the APK had
+      # to be extracted before installing. The release carries the raw .apk, so
+      # send testers there instead; the /latest/download/ form keeps working as
+      # later builds publish new releases.
+      - name: Point testers at the raw APK
+        run: |
+          {
+            echo "### Install on a phone"
+            echo ""
+            echo "Download the APK directly (no unzipping) and open it on the device:"
+            echo ""
+            echo "https://github.com/${{ github.repository }}/releases/latest/download/oru.apk"
+            echo ""
+            echo "The *oru-android* artifact above is a zip because GitHub wraps every"
+            echo "artifact; use the link instead. Uninstall an earlier Oru build first,"
+            echo "since each run signs with a fresh debug key."
+          } >> "$GITHUB_STEP_SUMMARY"
