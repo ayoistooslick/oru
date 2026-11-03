@@ -14,7 +14,7 @@ Chunks, because a whole film in one command outlives any single run:
   .venv/bin/python scripts/promo/build_video.py 230 460
   .venv/bin/python scripts/promo/build_video.py 460 690
   .venv/bin/python scripts/promo/build_video.py 690 915
-  .venv/bin/python scripts/promo/build_video.py --still 3.2   # single debug frame
+  .venv/bin/python scripts/promo/build_video.py --still 96    # single debug frame
 
 Then stitch with the concat command printed by --concat.
 """
@@ -208,12 +208,33 @@ def radial_background(size, glow=(72, 34, 20), strength=1.0):
     return image.copy()
 
 
+def ember_glow(size, centre, radius, colour=EMBER, alpha=52, power=2.4):
+    """An ember pool with a clean radial falloff.
+
+    This is computed rather than blurred on purpose: a Gaussian blur this wide
+    starts to veil the whole frame, so the light is drawn with a falloff curve
+    instead and every edge in the film stays crisp.
+    """
+    key = ("glow", size, centre, radius, colour, alpha, power)
+    if key in _GLOWS:
+        return _GLOWS[key]
+    w, h = size
+    dx = (np.arange(w, dtype=np.float32) - centre[0])[None, :]
+    dy = (np.arange(h, dtype=np.float32) - centre[1])[:, None]
+    falloff = np.clip(1 - np.hypot(dx, dy) / radius, 0, 1) ** power
+    layer = np.zeros((h, w, 4), dtype=np.uint8)
+    layer[..., 0], layer[..., 1], layer[..., 2] = colour
+    layer[..., 3] = (falloff * alpha).astype(np.uint8)
+    image = Image.fromarray(layer, "RGBA")
+    _GLOWS[key] = image
+    return image
+
+
 def halo_sprite(diameter, colour=EMBER, alpha=52):
     key = ("halo", diameter, colour, alpha)
     if key not in _GLOWS:
-        layer = Image.new("RGBA", (diameter, diameter), (0, 0, 0, 0))
-        ImageDraw.Draw(layer).ellipse((0, 0, diameter - 1, diameter - 1), fill=(*colour, alpha))
-        _GLOWS[key] = layer.filter(ImageFilter.GaussianBlur(95))
+        _GLOWS[key] = ember_glow((diameter, diameter), (diameter / 2, diameter / 2),
+                                 diameter * 0.55, colour, alpha)
     return _GLOWS[key]
 
 
@@ -221,12 +242,10 @@ _GLOWS = {}
 
 
 def full_bleed(size):
-    """A blurred ember bloom large enough to sit behind the whole frame."""
+    """An ember bloom large enough to light the whole frame."""
     if "bloom" not in _GLOWS:
-        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        ImageDraw.Draw(layer).ellipse((W / 2 - 470, H / 2 - 470, W / 2 + 470, H / 2 + 470), fill=(*EMBER, 56))
-        _GLOWS["bloom"] = layer.filter(ImageFilter.GaussianBlur(165))
-    return _GLOWS["bloom"].copy()
+        _GLOWS["bloom"] = ember_glow((W, H), (W / 2, H / 2), 700.0, EMBER, 56)
+    return _GLOWS["bloom"]
 
 
 def rounded_mask(size, radius):
@@ -245,7 +264,11 @@ class Shot:
     def sized(self, height):
         if height not in self.cache:
             width = int(self.original.width * height / self.original.height)
-            self.cache[height] = self.original.resize((width, height), Image.LANCZOS)
+            shot = self.original.resize((width, height), Image.LANCZOS)
+            # Sharpened at the size it is finally drawn at, so the real interface
+            # text stays legible instead of being softened by the downscale.
+            self.cache[height] = shot.filter(
+                ImageFilter.UnsharpMask(radius=1.1, percent=52, threshold=2))
         return self.cache[height]
 
     def crop(self, box):
@@ -377,7 +400,8 @@ def zoom_center(image, factor):
     w, h = image.size
     nw, nh = int(w / factor), int(h / factor)
     box = ((w - nw) // 2, (h - nh) // 2, (w + nw) // 2, (h + nh) // 2)
-    return image.crop(box).resize((w, h), Image.LANCZOS)
+    return image.crop(box).resize((w, h), Image.LANCZOS).filter(
+        ImageFilter.UnsharpMask(radius=1.0, percent=45, threshold=2))
 
 
 def blend_black(image, amount):
@@ -388,16 +412,37 @@ def blend_black(image, amount):
 
 # ----------------------------------------------------------------- grain ----
 RNG = np.random.default_rng(9)
-GRAIN = [RNG.normal(0, 1.5, (H, W, 1)).astype(np.float32) for _ in range(6)]
+# Trimmed from sigma 1.5: at full strength the grain was the whole bitrate, so the
+# encoder spent its budget on noise and smeared the type. This keeps the texture
+# and hands the bits back to actual detail.
+GRAIN = [RNG.normal(0, 0.82, (H, W, 1)).astype(np.float32) for _ in range(6)]
 _YY, _XX = np.mgrid[0:H, 0:W]
 _NX = (_XX - W / 2) / (W / 2)
 _NY = (_YY - H / 2) / (H / 2)
 VIGNETTE = (1 - 0.5 * np.clip((_NX * _NX + _NY * _NY) * 0.4, 0, 1))[..., None].astype(np.float32)
 
 
-def finish(frame, timecode, grain=1.0):
+BRIGHTNESS = 1.10
+KNEE = 200.0
+
+
+def brighten(image, gain=BRIGHTNESS):
+    """Ten percent more light, applied once to the composed frame.
+
+    Multiplicative, so black stays black and the fades keep their true black.
+    Above the knee the gain rolls off instead of clamping: the cream ink
+    (242,238,231) lands near 247 rather than clipping to flat white.
+    """
+    array = np.asarray(image.convert("RGB"), dtype=np.float32) * gain
+    knee, top = KNEE * gain, 255.0 * gain
+    slope = (255.0 - knee) / (top - knee)
+    array = np.where(array > knee, knee + (array - knee) * slope, array)
+    return Image.fromarray(np.clip(array, 0, 255).astype(np.uint8), "RGB")
+
+
+def finish(frame, timecode):
     array = np.asarray(frame.convert("RGB")).astype(np.float32)
-    array += GRAIN[int(timecode * FPS) % len(GRAIN)] * grain
+    array += GRAIN[int(timecode * FPS) % len(GRAIN)]
     array *= VIGNETTE
     return Image.fromarray(np.clip(array, 0, 255).astype(np.uint8), "RGB")
 
@@ -762,14 +807,12 @@ def render_frame(time):
         next_start, next_end, next_fn = SCENES[next_index]
         mix = ease_in_out(1 - (end - time) / XFADE)
         upcoming = finish(next_fn(0.0001), time)
-        blended = Image.blend(frame, upcoming, mix * 0.72)
-        if mix > 0:
-            amount = 6.5 * mix
-            blended = blended if amount <= 0.01 else blended.filter(ImageFilter.GaussianBlur(amount))
-        frame = blended
+        # A straight cross-fade now that nothing is blurred over the seam: the
+        # old version softened the whole frame by up to 6.5px to hide it.
+        frame = Image.blend(frame, upcoming, mix)
     if time < 0.5:
         frame = blend_black(frame, ease_out(time / 0.5))
-    return finish(frame, time)
+    return brighten(finish(frame, time))
 
 
 # ---------------------------------------------------------------- audio -----
@@ -907,7 +950,7 @@ def chunk(first, last):
     target = WORK / f"chunk-{first:04d}.mp4"
     command = [
         ffmpeg_path(), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-pix_fmt", "yuv420p",
         "-movflags", "+faststart", str(target),
     ]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
