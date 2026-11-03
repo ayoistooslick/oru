@@ -1,6 +1,6 @@
 # ORU
 
-ORU is a music app for artists who are just starting out. Listeners find new songs, artists upload
+ORU, a music app for artists who are just starting out. Listeners find new songs, artists upload
 their own, and the front page is scored so that small artists can still show up there.
 
 Live at [oru.freebuff.app](https://oru.freebuff.app).
