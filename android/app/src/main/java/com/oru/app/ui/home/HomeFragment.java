@@ -86,7 +86,9 @@ public class HomeFragment extends Fragment {
                 binding.swipeRefresh.setRefreshing(false);
                 binding.progressBar.setVisibility(View.GONE);
                 if (items == null || items.isEmpty()) {
-                    binding.emptyView.getRoot().setVisibility(View.VISIBLE);
+                    // Following nobody leaves the feed empty; show what the API
+                    // picks for this listener instead of a dead page.
+                    loadDiscoverInstead();
                 } else {
                     feedAdapter.submitList(items);
                     binding.feedRecyclerView.setVisibility(View.VISIBLE);
@@ -102,6 +104,33 @@ public class HomeFragment extends Fragment {
                         describe(error));
             }
         });
+    }
+
+    private void loadDiscoverInstead() {
+        musicRepo.getDiscover(
+                new com.oru.app.data.repository.Callback<
+                        com.oru.app.data.model.DiscoverResult>() {
+                    @Override
+                    public void onSuccess(
+                            com.oru.app.data.model.DiscoverResult result) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        if (result != null && result.songs != null
+                                && !result.songs.isEmpty()) {
+                            feedAdapter.submitList(result.songs);
+                            binding.feedRecyclerView
+                                    .setVisibility(View.VISIBLE);
+                        } else {
+                            binding.emptyView.getRoot()
+                                    .setVisibility(View.VISIBLE);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        binding.emptyView.getRoot().setVisibility(View.VISIBLE);
+                    }
+                });
     }
 
     private String describe(Throwable error) {
