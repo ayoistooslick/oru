@@ -82,7 +82,10 @@ public class PlaylistActivity extends AppCompatActivity {
             public void onSuccess(Playlist p) {
                 playlist = p;
                 populateHeader(p);
-                loadCover(p.coverUrl);
+                // Playlists carry no artwork; the first track stands in for it.
+                loadCover(p.songs != null && !p.songs.isEmpty()
+                        ? com.oru.app.util.MediaUrl.of(p.songs.get(0).coverUrl)
+                        : null);
                 // Then load tracks if the playlist includes songs.
                 if (p.songs != null && !p.songs.isEmpty()) {
                     populateTracks(p.songs);
