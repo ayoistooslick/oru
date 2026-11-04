@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/action_settings"
-        android:title="Settings & account"
+        android:title="Settings &amp; account"
         app:showAsAction="never" />
 
 </menu>
