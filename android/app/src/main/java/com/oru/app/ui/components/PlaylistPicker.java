@@ -75,10 +75,12 @@ public final class PlaylistPicker {
         playlists.addSongToPlaylist(playlist.id, song.id, added(context, playlist));
     }
 
-    private static Callback<Void> added(Context context, Playlist playlist) {
-        return new Callback<Void>() {
+    private static Callback<com.oru.app.data.model.PlaylistSong> added(
+            Context context, Playlist playlist) {
+        return new Callback<com.oru.app.data.model.PlaylistSong>() {
             @Override
-            public void onSuccess(Void ignored) {
+            public void onSuccess(
+                    com.oru.app.data.model.PlaylistSong ignored) {
                 Toast.makeText(context,
                         "Added to " + playlist.title, Toast.LENGTH_SHORT).show();
             }
