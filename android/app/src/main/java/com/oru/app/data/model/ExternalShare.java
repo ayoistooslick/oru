@@ -2,22 +2,35 @@ package com.oru.app.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/** A song someone shared from outside ORU, credited to its artist. */
 public class ExternalShare {
+
     @SerializedName("id")
     public int id;
 
-    @SerializedName("song_id")
-    public int songId;
+    @SerializedName("title")
+    public String title;
 
-    @SerializedName("platform")
-    public String platform;
+    @SerializedName("artist_name")
+    public String artistName;
 
-    @SerializedName("external_url")
-    public String externalUrl;
+    @SerializedName("url")
+    public String url;
+
+    @SerializedName("note")
+    public String note;
 
     @SerializedName("created_at")
     public String createdAt;
 
-    @SerializedName("song")
-    public Song song;
+    @SerializedName("sharer")
+    public Sharer sharer;
+
+    public static class Sharer {
+        @SerializedName("handle")
+        public String handle;
+
+        @SerializedName("display_name")
+        public String displayName;
+    }
 }

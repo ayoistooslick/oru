@@ -32,6 +32,7 @@ public class ArtistActivity extends AppCompatActivity {
     private MusicRepository musicRepo;
     private CommunityRepository communityRepo;
     private Artist artist;
+    private boolean following;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,7 +91,8 @@ public class ArtistActivity extends AppCompatActivity {
             public void onSuccess(Artist a) {
                 artist = a;
                 populateHeader(a);
-                loadContent(a.id);
+                loadContent(a.artistId());
+                loadFollowState(a.artistId());
             }
 
             @Override
@@ -103,23 +105,19 @@ public class ArtistActivity extends AppCompatActivity {
     private void populateHeader(Artist a) {
         binding.collapsingToolbar.setTitle(a.stageName);
         binding.stageNameText.setText(a.stageName);
-        binding.listenersText.setText(String.valueOf(a.followersCount));
+        binding.listenersText.setText(String.valueOf(a.followerCount));
         binding.bioText.setText(a.bio != null ? a.bio : "");
-        binding.songCountText.setText(String.valueOf(a.songCount));
-        binding.playsCountText.setText(String.valueOf(a.likesCount));
-        binding.followersCountText.setText(formatFollows(a.followersCount));
-        binding.followButton.setText(a.isFollowed ? "Following" : "Follow");
-        binding.followButton.setBackgroundColor(
-                getColor(a.isFollowed ? R.color.ink_faint : R.color.flame));
-        binding.followButton.setTextColor(
-                getColor(a.isFollowed ? R.color.ink : R.color.night));
+        binding.songCountText.setText(String.valueOf(a.publishedSongCount));
+        binding.playsCountText.setText("");
+        binding.followersCountText.setText(formatFollows(a.followerCount));
+        updateFollowButton(following);
 
         loadImage(binding.bannerImage, a.bannerUrl);
         loadImage(binding.avatarImage, a.avatarUrl);
     }
 
     private void loadContent(int artistId) {
-        musicRepo.getArtistSongs(artistId, new Callback<List<Song>>() {
+        musicRepo.getSongsByArtist(artistId, 50, 0, new Callback<List<Song>>() {
             @Override
             public void onSuccess(List<Song> songs) {
                 if (songs != null && !songs.isEmpty()) {
@@ -136,7 +134,8 @@ public class ArtistActivity extends AppCompatActivity {
             }
         });
 
-        musicRepo.getArtistReleases(artistId, new Callback<List<Release>>() {
+        musicRepo.getReleasesByArtist(artistId, 50, 0,
+                new Callback<List<Release>>() {
             @Override
             public void onSuccess(List<Release> releases) {
                 if (releases != null && !releases.isEmpty()) {
@@ -158,33 +157,31 @@ public class ArtistActivity extends AppCompatActivity {
 
     private void toggleFollow() {
         if (artist == null) return;
-        int artistId = artist.id;
-        if (artist.isFollowed) {
+        int artistId = artist.artistId();
+        if (following) {
             communityRepo.unfollowArtist(artistId, new Callback<com.oru.app.data.model.FollowResult>() {
                 @Override
                 public void onSuccess(com.oru.app.data.model.FollowResult r) {
-                    artist.isFollowed = false;
-                    updateFollowButton(false);
+                    following = r != null && r.following;
+                    updateFollowButton(following);
                 }
 
                 @Override
                 public void onFailure(Throwable error) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network,
-                            Snackbar.LENGTH_SHORT).show();
+                    showFailure(error);
                 }
             });
         } else {
             communityRepo.followArtist(artistId, new Callback<com.oru.app.data.model.FollowResult>() {
                 @Override
                 public void onSuccess(com.oru.app.data.model.FollowResult r) {
-                    artist.isFollowed = true;
-                    updateFollowButton(true);
+                    following = r == null || r.following;
+                    updateFollowButton(following);
                 }
 
                 @Override
                 public void onFailure(Throwable error) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network,
-                            Snackbar.LENGTH_SHORT).show();
+                    showFailure(error);
                 }
             });
         }
@@ -204,11 +201,38 @@ public class ArtistActivity extends AppCompatActivity {
         binding.errorView.errorMessage.setText(describe(error));
     }
 
+    /** The artist page does not carry the viewer's follow state, so ask. */
+    private void loadFollowState(int artistId) {
+        communityRepo.getFollowing(new Callback<List<Artist>>() {
+            @Override
+            public void onSuccess(List<Artist> artists) {
+                boolean follows = false;
+                if (artists != null) {
+                    for (Artist a : artists) {
+                        if (a.artistId() == artistId) {
+                            follows = true;
+                            break;
+                        }
+                    }
+                }
+                following = follows;
+                updateFollowButton(following);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                // Leave the button as it is; following still works.
+            }
+        });
+    }
+
+    private void showFailure(Throwable error) {
+        Snackbar.make(binding.getRoot(), describe(error),
+                Snackbar.LENGTH_SHORT).show();
+    }
+
     private String describe(Throwable error) {
-        if (error instanceof java.io.IOException) {
-            return getString(R.string.error_network);
-        }
-        return getString(R.string.error_unknown);
+        return com.oru.app.ui.components.UiErrors.message(this, error);
     }
 
     private void loadImage(android.widget.ImageView view,

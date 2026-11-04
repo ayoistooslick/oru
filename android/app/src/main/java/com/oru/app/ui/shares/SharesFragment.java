@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
-import com.oru.app.data.model.SharedSong;
+import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.SharingRepository;
 import com.oru.app.databinding.FragmentSharesBinding;
@@ -65,9 +65,9 @@ public class SharesFragment extends Fragment {
         binding.emptyView.getRoot().setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
 
-        sharingRepo.listSharedSongs(new Callback<List<SharedSong>>() {
+        sharingRepo.listSharedSongs(new Callback<List<Song>>() {
             @Override
-            public void onSuccess(List<SharedSong> shares) {
+            public void onSuccess(List<Song> shares) {
                 binding.swipeRefresh.setRefreshing(false);
                 binding.progressBar.setVisibility(View.GONE);
                 if (shares == null || shares.isEmpty()) {
@@ -84,7 +84,8 @@ public class SharesFragment extends Fragment {
                 binding.progressBar.setVisibility(View.GONE);
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
-                        getString(R.string.error_network));
+                        com.oru.app.ui.components.UiErrors
+                                .message(requireContext(), error));
             }
         });
     }

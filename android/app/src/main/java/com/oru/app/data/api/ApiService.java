@@ -70,14 +70,19 @@ public interface ApiService {
 
     @GET("api/v1/artists/{artistId}/songs")
     Call<ApiResponse<List<Song>>> getArtistSongs(
-            @Path("artistId") int artistId);
+            @Path("artistId") int artistId,
+            @Query("limit") int limit,
+            @Query("offset") int offset);
 
     @GET("api/v1/artists/{artistId}/releases")
     Call<ApiResponse<List<Release>>> getArtistReleases(
-            @Path("artistId") int artistId);
+            @Path("artistId") int artistId,
+            @Query("limit") int limit,
+            @Query("offset") int offset);
 
+    // A feature credit is reported as the song it appears on.
     @GET("api/v1/artists/{artistId}/appears-on")
-    Call<ApiResponse<List<ArtistAppear>>> getArtistAppearsOn(
+    Call<ApiResponse<List<Song>>> getArtistAppearsOn(
             @Path("artistId") int artistId);
 
     @GET("api/v1/artists/me/stats")
@@ -94,8 +99,9 @@ public interface ApiService {
 
     @GET("api/v1/songs")
     Call<ApiResponse<List<Song>>> listSongs(
-            @Query("page") int page,
-            @Query("limit") int limit);
+            @Query("q") String q,
+            @Query("limit") int limit,
+            @Query("offset") int offset);
 
     @GET("api/v1/songs/{songId}")
     Call<ApiResponse<Song>> getSong(@Path("songId") int songId);
@@ -192,8 +198,9 @@ public interface ApiService {
             @Path("playlistId") int playlistId,
             @Path("songId") int songId);
 
+    // The following feed is made of songs.
     @GET("api/v1/feed/following")
-    Call<ApiResponse<List<FeedItem>>> feedFollowing();
+    Call<ApiResponse<List<Song>>> feedFollowing();
 
     // ---- Sharing ----
 
@@ -201,13 +208,13 @@ public interface ApiService {
     Call<ApiResponse<ShareLink>> createShareLink(@Body ShareCreate body);
 
     @GET("api/v1/shared/songs")
-    Call<ApiResponse<List<SharedSong>>> listSharedSongs();
+    Call<ApiResponse<List<Song>>> listSharedSongs();
 
     @DELETE("api/v1/shared/songs/{songId}")
     Call<ApiResponse<Void>> revokeShare(@Path("songId") int songId);
 
     @GET("api/v1/songs/pending-shares")
-    Call<ApiResponse<List<PendingShare>>> listPendingShares();
+    Call<ApiResponse<List<Song>>> listPendingShares();
 
     @POST("api/v1/shared/external")
     Call<ApiResponse<ExternalShare>> createExternalShare(@Body ExternalShareCreate body);

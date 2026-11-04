@@ -2,15 +2,11 @@ package com.oru.app.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/** A genre and how many published songs carry it. */
 public class Genre {
-    @SerializedName("id")
-    public int id;
 
     @SerializedName("name")
     public String name;
-
-    @SerializedName("slug")
-    public String slug;
 
     @SerializedName("song_count")
     public int songCount;

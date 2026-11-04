@@ -50,6 +50,9 @@ public class LazySession {
     }
 
     public static Gson getGson() {
-        return new GsonBuilder().setLenient().create();
+        return new GsonBuilder().setLenient()
+                .registerTypeAdapterFactory(
+                        new com.oru.app.data.api.ApiResponseAdapterFactory())
+                .create();
     }
 }

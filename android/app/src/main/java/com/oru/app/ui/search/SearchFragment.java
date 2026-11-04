@@ -106,14 +106,14 @@ public class SearchFragment extends Fragment {
         binding.searchRecyclerView.setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
 
-        // Placeholder: load songs list and filter locally.
-        musicRepo.listSongs(1, 50, new Callback<List<Song>>() {
+        // The API searches titles, artists and stage names itself.
+        musicRepo.listSongs(query, 50, 0, new Callback<List<Song>>() {
             @Override
             public void onSuccess(List<Song> songs) {
                 binding.progressBar.setVisibility(View.GONE);
                 List<SearchResult> results = new ArrayList<>();
-                for (Song s : songs) {
-                    if (s.title.toLowerCase().contains(query.toLowerCase())) {
+                if (songs != null) {
+                    for (Song s : songs) {
                         results.add(new SearchResult(s, SearchResult.Type.SONG));
                     }
                 }
@@ -132,7 +132,8 @@ public class SearchFragment extends Fragment {
                 binding.progressBar.setVisibility(View.GONE);
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
-                        getString(R.string.error_network));
+                        com.oru.app.ui.components.UiErrors
+                                .message(requireContext(), error));
             }
         });
     }
@@ -148,22 +149,10 @@ public class SearchFragment extends Fragment {
                     com.oru.app.data.model.DiscoverResult result) {
                 binding.progressBar.setVisibility(View.GONE);
                 List<SearchResult> results = new ArrayList<>();
-                if (result.songs != null) {
+                if (result != null && result.songs != null) {
                     for (Song s : result.songs) {
                         results.add(
                                 new SearchResult(s, SearchResult.Type.SONG));
-                    }
-                }
-                if (result.artists != null) {
-                    for (Artist a : result.artists) {
-                        results.add(
-                                new SearchResult(a, SearchResult.Type.ARTIST));
-                    }
-                }
-                if (result.playlists != null) {
-                    for (Playlist p : result.playlists) {
-                        results.add(new SearchResult(p,
-                                SearchResult.Type.PLAYLIST));
                     }
                 }
                 adapter.submitList(results);
@@ -175,7 +164,8 @@ public class SearchFragment extends Fragment {
                 binding.progressBar.setVisibility(View.GONE);
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
-                        getString(R.string.error_network));
+                        com.oru.app.ui.components.UiErrors
+                                .message(requireContext(), error));
             }
         });
     }

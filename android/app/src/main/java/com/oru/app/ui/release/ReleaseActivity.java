@@ -74,7 +74,7 @@ public class ReleaseActivity extends AppCompatActivity {
             public void onSuccess(Release r) {
                 release = r;
                 populate(r);
-                loadCover(r.coverUrl);
+                loadCover(firstCover(r));
             }
 
             @Override
@@ -88,8 +88,11 @@ public class ReleaseActivity extends AppCompatActivity {
         binding.collapsingToolbar.setTitle(r.title);
         binding.titleText.setText(r.title);
         binding.artistText.setText(
-                r.artist != null ? r.artist.stageName : "Unknown artist");
-        binding.playsCountText.setText(formatPlays(r.playCount));
+                r.songs != null && !r.songs.isEmpty()
+                        ? r.songs.get(0).artistLabel()
+                        : "");
+        binding.playsCountText.setText(
+                (r.songs != null ? r.songs.size() : 0) + " tracks");
         binding.descriptionText.setText(
                 r.songs != null && r.songs.size() > 0
                         ? "A " + r.kind + " with " + r.songs.size() + " tracks"
@@ -129,9 +132,9 @@ public class ReleaseActivity extends AppCompatActivity {
         binding.playerBar.setVisibility(View.VISIBLE);
         binding.playerTitle.setText(release.title);
         binding.playerArtist.setText(
-                release.artist != null ? release.artist.stageName : "");
+                release.songs.get(0).artistLabel());
         com.bumptech.glide.Glide.with(this)
-                .load(release.coverUrl != null ? release.coverUrl : null)
+                .load(firstCover(release))
                 .placeholder(R.drawable.ic_library)
                 .into(binding.playerArtwork);
         binding.playerPlayButton.setImageResource(R.drawable.ic_pause);
@@ -143,11 +146,16 @@ public class ReleaseActivity extends AppCompatActivity {
         binding.errorView.errorMessage.setText(describe(error));
     }
 
-    private String describe(Throwable error) {
-        if (error instanceof java.io.IOException) {
-            return getString(R.string.error_network);
+    /** Releases have no artwork of their own; use the first track's. */
+    private String firstCover(Release r) {
+        if (r == null || r.songs == null || r.songs.isEmpty()) {
+            return null;
         }
-        return getString(R.string.error_unknown);
+        return com.oru.app.util.MediaUrl.of(r.songs.get(0).coverUrl);
+    }
+
+    private String describe(Throwable error) {
+        return com.oru.app.ui.components.UiErrors.message(this, error);
     }
 
     private String formatPlays(int count) {

@@ -102,10 +102,8 @@ public class PlaylistActivity extends AppCompatActivity {
     private void populateHeader(Playlist p) {
         binding.collapsingToolbar.setTitle(p.title);
         binding.titleText.setText(p.title);
-        binding.songCountText.setText(p.songCount + " songs");
-        binding.ownerText.setText(p.owner != null
-                ? "by " + p.owner.displayName
-                : "by " + p.ownerId);
+        binding.songCountText.setText(p.songCount() + " songs");
+        binding.ownerText.setText(p.isPublic ? "Public" : "Private");
     }
 
     private void loadCover(String coverUrl) {
@@ -138,10 +136,9 @@ public class PlaylistActivity extends AppCompatActivity {
         startService(intent);
         binding.playerBar.setVisibility(View.VISIBLE);
         binding.playerTitle.setText(first.title);
-        binding.playerArtist.setText(
-                first.artist != null ? first.artist.stageName : "");
+        binding.playerArtist.setText(first.artistLabel());
         com.bumptech.glide.Glide.with(this)
-                .load(first.coverUrl != null ? first.coverUrl : null)
+                .load(com.oru.app.util.MediaUrl.of(first.coverUrl))
                 .placeholder(R.drawable.ic_library)
                 .into(binding.playerArtwork);
         binding.playerPlayButton.setImageResource(com.oru.app.R.drawable.ic_play);
@@ -154,10 +151,7 @@ public class PlaylistActivity extends AppCompatActivity {
     }
 
     private String describe(Throwable error) {
-        if (error instanceof java.io.IOException) {
-            return getString(R.string.error_network);
-        }
-        return getString(R.string.error_unknown);
+        return com.oru.app.ui.components.UiErrors.message(this, error);
     }
 
     @Override

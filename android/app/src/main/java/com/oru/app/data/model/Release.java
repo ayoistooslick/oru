@@ -1,10 +1,12 @@
 package com.oru.app.data.model;
 
-import java.util.List;
-
 import com.google.gson.annotations.SerializedName;
 
+import java.util.List;
+
+/** A single, EP or album: the songs it groups and whether it is out yet. */
 public class Release {
+
     @SerializedName("id")
     public int id;
 
@@ -14,27 +16,27 @@ public class Release {
     @SerializedName("title")
     public String title;
 
+    /** "single", "ep" or "album". */
     @SerializedName("kind")
-    public String kind; // "single" | "ep" | "album"
+    public String kind;
 
-    @SerializedName("cover_url")
-    public String coverUrl;
+    /** "draft", "scheduled" or "published". */
+    @SerializedName("status")
+    public String status;
 
-    @SerializedName("is_published")
-    public boolean isPublished;
+    @SerializedName("published_at")
+    public String publishedAt;
 
     @SerializedName("song_ids")
     public List<Integer> songIds;
 
+    /** Filled in when the release is read on its own. */
     @SerializedName("songs")
     public List<Song> songs;
 
-    @SerializedName("play_count")
-    public int playCount;
-
-    @SerializedName("created_at")
-    public String createdAt;
-
-    @SerializedName("artist")
-    public Artist artist;
+    /** A release is out once it has a publication date; list items carry only
+     * that, not the status. */
+    public boolean isPublished() {
+        return publishedAt != null || "published".equals(status);
+    }
 }

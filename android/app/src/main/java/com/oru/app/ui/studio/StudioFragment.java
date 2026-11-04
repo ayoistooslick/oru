@@ -88,7 +88,8 @@ public class StudioFragment extends Fragment {
                 binding.progressBar.setVisibility(View.GONE);
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
-                        getString(R.string.error_network));
+                        com.oru.app.ui.components.UiErrors
+                                .message(requireContext(), error));
             }
         });
     }

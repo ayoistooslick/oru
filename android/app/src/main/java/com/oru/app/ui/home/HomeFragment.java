@@ -14,7 +14,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.oru.app.R;
-import com.oru.app.data.model.FeedItem;
+import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.MusicRepository;
 import com.oru.app.data.repository.CommunityRepository;
@@ -80,12 +80,12 @@ public class HomeFragment extends Fragment {
         binding.emptyView.getRoot().setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
 
-        musicRepo.getFeedFollowing(new Callback<List<FeedItem>>() {
+        musicRepo.getFeedFollowing(new Callback<List<Song>>() {
             @Override
-            public void onSuccess(List<FeedItem> items) {
+            public void onSuccess(List<Song> items) {
                 binding.swipeRefresh.setRefreshing(false);
                 binding.progressBar.setVisibility(View.GONE);
-                if (items.isEmpty()) {
+                if (items == null || items.isEmpty()) {
                     binding.emptyView.getRoot().setVisibility(View.VISIBLE);
                 } else {
                     feedAdapter.submitList(items);
@@ -105,10 +105,8 @@ public class HomeFragment extends Fragment {
     }
 
     private String describe(Throwable error) {
-        if (error instanceof java.io.IOException) {
-            return getString(R.string.error_network);
-        }
-        return getString(R.string.error_unknown);
+        return com.oru.app.ui.components.UiErrors
+                .message(requireContext(), error);
     }
 
     @Override

@@ -30,7 +30,7 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
                 public boolean areContentsTheSame(@NonNull Song oldItem,
                         @NonNull Song newItem) {
                     return oldItem.title.equals(newItem.title)
-                            && oldItem.isPublished == newItem.isPublished;
+                            && oldItem.isPublished() == newItem.isPublished();
                 }
             };
 
@@ -57,10 +57,10 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
 
         void bind(Song song) {
             binding.titleText.setText(song.title);
-            binding.statusText.setText(song.isPublished ? "Published" : "Unpublished");
+            binding.statusText.setText(song.isPublished() ? "Published" : "Unpublished");
             binding.statusText.setTextColor(
                     binding.getRoot().getContext().getColor(
-                            song.isPublished ? R.color.ink_faint : R.color.flame));
+                            song.isPublished() ? R.color.ink_faint : R.color.flame));
             binding.getRoot().setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),

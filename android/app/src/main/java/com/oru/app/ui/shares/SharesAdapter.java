@@ -1,5 +1,6 @@
 package com.oru.app.ui.shares;
 
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -8,28 +9,32 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.oru.app.R;
-import com.oru.app.data.model.SharedSong;
+import com.oru.app.data.model.Song;
 import com.oru.app.databinding.ItemShareBinding;
+import com.oru.app.ui.player.PlayerActivity;
 
-public class SharesAdapter extends ListAdapter<SharedSong, SharesAdapter.VH> {
+import java.util.Objects;
+
+/** Songs you shared, with the review status their artist gave them. */
+public class SharesAdapter extends ListAdapter<Song, SharesAdapter.VH> {
 
     public SharesAdapter() {
         super(DIFF_CALLBACK);
     }
 
-    private static final DiffUtil.ItemCallback<SharedSong> DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<SharedSong>() {
+    private static final DiffUtil.ItemCallback<Song> DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<Song>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull SharedSong oldItem,
-                        @NonNull SharedSong newItem) {
+                public boolean areItemsTheSame(@NonNull Song oldItem,
+                        @NonNull Song newItem) {
                     return oldItem.id == newItem.id;
                 }
 
                 @Override
-                public boolean areContentsTheSame(@NonNull SharedSong oldItem,
-                        @NonNull SharedSong newItem) {
-                    return oldItem.shareStatus.equals(newItem.shareStatus);
+                public boolean areContentsTheSame(@NonNull Song oldItem,
+                        @NonNull Song newItem) {
+                    return Objects.equals(oldItem.status, newItem.status)
+                            && Objects.equals(oldItem.title, newItem.title);
                 }
             };
 
@@ -54,21 +59,16 @@ public class SharesAdapter extends ListAdapter<SharedSong, SharesAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(SharedSong item) {
-            binding.titleText.setText(item.song != null ? item.song.title : "");
-            binding.artistText.setText(
-                    item.song != null && item.song.artist != null
-                            ? item.song.artist.stageName
-                            : "");
-            binding.statusText.setText(item.shareStatus);
+        void bind(Song song) {
+            binding.titleText.setText(song.title);
+            binding.artistText.setText(song.artistLabel());
+            binding.statusText.setText(
+                    song.status != null ? song.status : "");
             binding.getRoot().setOnClickListener(v -> {
-                if (item.song != null) {
-                    android.content.Intent i = new android.content.Intent(
-                            binding.getRoot().getContext(),
-                            com.oru.app.ui.player.PlayerActivity.class);
-                    i.putExtra("songId", item.song.id);
-                    binding.getRoot().getContext().startActivity(i);
-                }
+                Intent i = new Intent(binding.getRoot().getContext(),
+                        PlayerActivity.class);
+                i.putExtra("songId", song.id);
+                binding.getRoot().getContext().startActivity(i);
             });
         }
     }

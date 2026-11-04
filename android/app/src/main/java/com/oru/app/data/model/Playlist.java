@@ -4,7 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/** A playlist: the songs it holds are only listed when it is read on its own. */
 public class Playlist {
+
     @SerializedName("id")
     public int id;
 
@@ -14,24 +16,19 @@ public class Playlist {
     @SerializedName("title")
     public String title;
 
-    @SerializedName("description")
-    public String description;
-
-    @SerializedName("cover_url")
-    public String coverUrl;
-
     @SerializedName("is_public")
     public boolean isPublic;
 
-    @SerializedName("song_count")
-    public int songCount;
-
-    @SerializedName("created_at")
-    public String createdAt;
-
-    @SerializedName("owner")
-    public User owner;
+    @SerializedName("song_ids")
+    public List<Integer> songIds;
 
     @SerializedName("songs")
     public List<Song> songs;
+
+    public int songCount() {
+        if (songs != null) {
+            return songs.size();
+        }
+        return songIds != null ? songIds.size() : 0;
+    }
 }

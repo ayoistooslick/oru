@@ -4,13 +4,12 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/** /discover answers with the songs it has chosen, newest and best first. */
 public class DiscoverResult {
-    @SerializedName("songs")
+
+    @SerializedName("items")
     public List<Song> songs;
 
-    @SerializedName("artists")
-    public List<Artist> artists;
-
-    @SerializedName("playlists")
-    public List<Playlist> playlists;
+    @SerializedName("ranking")
+    public String ranking;
 }

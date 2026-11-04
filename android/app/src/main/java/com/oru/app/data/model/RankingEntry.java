@@ -2,19 +2,15 @@ package com.oru.app.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/** One place in the weekly chart: the song and how often it was played. */
 public class RankingEntry {
+
     @SerializedName("rank")
     public int rank;
 
-    @SerializedName("artist_id")
-    public int artistId;
+    @SerializedName("plays")
+    public int plays;
 
-    @SerializedName("artist")
-    public Artist artist;
-
-    @SerializedName("weekly_listens")
-    public int weeklyListens;
-
-    @SerializedName("weekly_growth")
-    public int weeklyGrowth;
+    @SerializedName("song")
+    public Song song;
 }
