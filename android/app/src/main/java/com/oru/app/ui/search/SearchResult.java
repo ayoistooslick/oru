@@ -21,8 +21,8 @@ public class SearchResult {
         this.artist = null;
         this.playlist = null;
         this.title = song.title;
-        this.subtitle = song.artist != null ? song.artist.stageName : "";
-        this.meta = song.durationMs / 1000 + "s · " + song.likesCount + " likes";
+        this.subtitle = song.artistLabel();
+        this.meta = song.genreLabel();
     }
 
     public SearchResult(Artist artist, Type type) {
@@ -32,7 +32,7 @@ public class SearchResult {
         this.playlist = null;
         this.title = artist.stageName;
         this.subtitle = artist.bio != null ? artist.bio : "";
-        this.meta = artist.followersCount + " followers";
+        this.meta = artist.handle != null ? "@" + artist.handle : "";
     }
 
     public SearchResult(Playlist playlist, Type type) {
@@ -41,9 +41,7 @@ public class SearchResult {
         this.artist = null;
         this.playlist = playlist;
         this.title = playlist.title;
-        this.subtitle = playlist.owner != null
-                ? "by " + playlist.owner.displayName
-                : "by " + playlist.ownerId;
-        this.meta = playlist.songCount + " songs";
+        this.subtitle = playlist.isPublic ? "Public playlist" : "Private playlist";
+        this.meta = playlist.songCount() + " songs";
     }
 }

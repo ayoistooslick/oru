@@ -2,12 +2,18 @@ package com.oru.app.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/** An artist profile, as the API's artist_data() describes it. */
 public class Artist {
-    @SerializedName("id")
-    public int id;
 
     @SerializedName("user_id")
     public int userId;
+
+    /** Also used as the id when following this artist. */
+    @SerializedName("id")
+    public int id;
+
+    @SerializedName("handle")
+    public String handle;
 
     @SerializedName("stage_name")
     public String stageName;
@@ -15,33 +21,22 @@ public class Artist {
     @SerializedName("bio")
     public String bio;
 
-    @SerializedName("banner_url")
-    public String bannerUrl;
-
     @SerializedName("avatar_url")
     public String avatarUrl;
 
-    @SerializedName("is_verified")
-    public boolean isVerified;
+    @SerializedName("banner_url")
+    public String bannerUrl;
 
-    @SerializedName("followers_count")
-    public int followersCount;
+    /** Only on the artist's own page. */
+    @SerializedName("published_song_count")
+    public int publishedSongCount;
 
-    @SerializedName("likes_count")
-    public int likesCount;
+    /** Only on the artist's own page. */
+    @SerializedName("follower_count")
+    public int followerCount;
 
-    @SerializedName("listens_count")
-    public int listensCount;
-
-    @SerializedName("song_count")
-    public int songCount;
-
-    @SerializedName("release_count")
-    public int releaseCount;
-
-    @SerializedName("is_followed")
-    public boolean isFollowed;
-
-    @SerializedName("created_at")
-    public String createdAt;
+    /** The artist id the API uses for follows and lookups. */
+    public int artistId() {
+        return userId != 0 ? userId : id;
+    }
 }

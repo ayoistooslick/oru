@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
-import com.oru.app.data.model.FeedItem;
 import com.oru.app.data.model.Playlist;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;

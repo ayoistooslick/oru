@@ -105,9 +105,8 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         void bind(Song song) {
             binding.titleText.setText(song.title);
-            binding.artistText.setText(
-                    song.artist != null ? song.artist.stageName : "");
-            binding.likesText.setText(String.valueOf(song.likesCount));
+            binding.artistText.setText(song.artistLabel());
+            binding.likesText.setText(song.genreLabel());
             binding.playButton.setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),

@@ -125,13 +125,12 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void populateUI(Song song) {
         binding.titleText.setText(song.title);
-        binding.artistText.setText(
-                song.artist != null ? song.artist.stageName : "");
-        binding.albumText.setText(
-                song.artist != null ? song.artist.stageName : "");
-        if (song.coverUrl != null) {
+        binding.artistText.setText(song.artistLabel());
+        binding.albumText.setText(song.artistLabel());
+        String cover = com.oru.app.util.MediaUrl.of(song.coverUrl);
+        if (cover != null) {
             com.bumptech.glide.Glide.with(this)
-                    .load(song.coverUrl)
+                    .load(cover)
                     .placeholder(R.drawable.ic_library)
                     .into(binding.coverImage);
         }
@@ -142,9 +141,9 @@ public class PlayerActivity extends AppCompatActivity {
     private void loadSong(Song song) {
         if (player == null) return;
         MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(
-                song.audioUrl, song.id, song.title,
-                song.artist != null ? song.artist.stageName : null,
-                song.coverUrl);
+                com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
+                song.title, song.artistLabel(),
+                com.oru.app.util.MediaUrl.of(song.coverUrl));
         player.setMediaItem(mediaItem);
         player.prepare();
         player.play();

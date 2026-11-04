@@ -2,28 +2,42 @@ package com.oru.app.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/** An artist's own numbers, over all time and over the last seven days. */
 public class ArtistStats {
-    @SerializedName("total_listens")
-    public int totalListens;
 
-    @SerializedName("total_plays")
-    public int totalPlays;
+    @SerializedName("artist_id")
+    public int artistId;
 
-    @SerializedName("followers_count")
-    public int followersCount;
+    @SerializedName("published_songs")
+    public int publishedSongs;
 
-    @SerializedName("likes_count")
-    public int likesCount;
+    @SerializedName("likes")
+    public int likes;
 
-    @SerializedName("song_count")
-    public int songCount;
+    /** Plays long enough to count toward discovery. */
+    @SerializedName("qualified_listens")
+    public int qualifiedListens;
 
-    @SerializedName("release_count")
-    public int releaseCount;
+    @SerializedName("weekly_plays")
+    public int weeklyPlays;
 
-    @SerializedName("weekly_listens")
-    public int weeklyListens;
+    @SerializedName("weekly_likes")
+    public int weeklyLikes;
 
-    @SerializedName("weekly_growth")
-    public int weeklyGrowth;
+    @SerializedName("weekly_top_song")
+    public TopSong weeklyTopSong;
+
+    @SerializedName("window_days")
+    public int windowDays;
+
+    public static class TopSong {
+        @SerializedName("id")
+        public int id;
+
+        @SerializedName("title")
+        public String title;
+
+        @SerializedName("plays")
+        public int plays;
+    }
 }

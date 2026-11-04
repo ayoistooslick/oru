@@ -49,6 +49,7 @@ public class ApiClient {
 
         Gson gson = new GsonBuilder()
                 .setLenient()
+                .registerTypeAdapterFactory(new ApiResponseAdapterFactory())
                 .create();
 
         okHttpClient = new OkHttpClient.Builder()
@@ -65,6 +66,13 @@ public class ApiClient {
                 .client(okHttpClient)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
+    }
+
+    /** The host without a trailing slash, for building media addresses. */
+    public static String origin() {
+        return BASE_URL.endsWith("/")
+                ? BASE_URL.substring(0, BASE_URL.length() - 1)
+                : BASE_URL;
     }
 
     public static Retrofit getClient() {

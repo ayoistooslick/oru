@@ -30,7 +30,8 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
                 public boolean areContentsTheSame(@NonNull Song oldItem,
                         @NonNull Song newItem) {
                     return oldItem.title.equals(newItem.title)
-                            && oldItem.durationMs == newItem.durationMs;
+                            && java.util.Objects.equals(oldItem.status,
+                                    newItem.status);
                 }
             };
 
@@ -63,7 +64,10 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
         void bind(int trackNumber, Song song) {
             binding.trackNumberText.setText(String.valueOf(trackNumber));
             binding.titleText.setText(song.title);
-            binding.durationText.setText(formatDuration(song.durationMs));
+            binding.durationText.setText(
+                    song.genres != null && !song.genres.isEmpty()
+                            ? song.genres.get(0)
+                            : "");
             binding.getRoot().setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),

@@ -30,8 +30,10 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.VH> {
                 public boolean areContentsTheSame(@NonNull Release oldItem,
                         @NonNull Release newItem) {
                     return oldItem.title.equals(newItem.title)
-                            && oldItem.kind.equals(newItem.kind)
-                            && oldItem.playCount == newItem.playCount;
+                            && java.util.Objects.equals(oldItem.kind,
+                                    newItem.kind)
+                            && java.util.Objects.equals(oldItem.status,
+                                    newItem.status);
                 }
             };
 
@@ -59,7 +61,8 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.VH> {
         void bind(Release release) {
             binding.titleText.setText(release.title);
             binding.kindText.setText(release.kind);
-            binding.playsText.setText(String.valueOf(release.playCount));
+            binding.playsText.setText(
+                    release.isPublished() ? "Published" : "Unreleased");
             binding.coverImage.setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),

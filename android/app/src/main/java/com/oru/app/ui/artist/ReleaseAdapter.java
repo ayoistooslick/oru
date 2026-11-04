@@ -28,7 +28,8 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.ViewHold
                 @Override
                 public boolean areContentsTheSame(@NonNull Release oldItem, @NonNull Release newItem) {
                     return oldItem.title.equals(newItem.title)
-                            && oldItem.createdAt.equals(newItem.createdAt);
+                            && java.util.Objects.equals(oldItem.status,
+                                    newItem.status);
                 }
             };
 
@@ -44,10 +45,14 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Release release = getItem(position);
         holder.titleText.setText(release.title);
-        holder.kindText.setText(release.createdAt);
-        if (release.coverUrl != null) {
+        holder.kindText.setText(release.kind != null ? release.kind : "");
+        // Releases have no artwork of their own; show the first track's.
+        String cover = release.songs != null && !release.songs.isEmpty()
+                ? com.oru.app.util.MediaUrl.of(release.songs.get(0).coverUrl)
+                : null;
+        if (cover != null) {
             Glide.with(holder.itemView.getContext())
-                    .load(release.coverUrl)
+                    .load(cover)
                     .into(holder.coverImage);
         }
     }
