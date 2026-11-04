@@ -148,6 +148,7 @@ def ensure_schema() -> None:
         "songs": {
             "shared_by_user_id": "ALTER TABLE songs ADD COLUMN shared_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
             "source_url": "ALTER TABLE songs ADD COLUMN source_url VARCHAR(500)",
+            "duration_ms": "ALTER TABLE songs ADD COLUMN duration_ms INTEGER",
         },
         "users": {
             "avatar_key": "ALTER TABLE users ADD COLUMN avatar_key VARCHAR(500)",

@@ -1,8 +1,10 @@
 package com.oru.app.data.repository;
 
 import com.google.gson.Gson;
+import com.oru.app.data.api.ApiCall;
 import com.oru.app.data.api.ApiClient;
 import com.oru.app.data.api.ApiService;
+import com.oru.app.data.api.Uploads;
 import com.oru.app.data.model.*;
 import com.oru.app.data.session.SessionManager;
 
@@ -226,6 +228,20 @@ public class AuthRepository {
                 cb.onFailure(t);
             }
         });
+    }
+
+    /** Replaces the profile picture; the API takes it as a file part. */
+    public void uploadAvatar(java.io.File file, String mime, Callback<User> cb) {
+        ApiCall.enqueue(api.uploadAvatar(
+                Uploads.file("file", file.getName(), mime, file)),
+                gson, "Couldn't upload that picture", cb);
+    }
+
+    public void uploadBanner(java.io.File file, String mime,
+            Callback<Artist> cb) {
+        ApiCall.enqueue(api.uploadBanner(
+                Uploads.file("file", file.getName(), mime, file)),
+                gson, "Couldn't upload that banner", cb);
     }
 
     public void createArtistProfile(String stageName, Callback<Artist> cb) {

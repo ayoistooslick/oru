@@ -146,12 +146,18 @@ public class ReleaseActivity extends AppCompatActivity {
         binding.errorView.errorMessage.setText(describe(error));
     }
 
-    /** Releases have no artwork of their own; use the first track's. */
+    /** The API reports the release's artwork, borrowed from its first track. */
     private String firstCover(Release r) {
-        if (r == null || r.songs == null || r.songs.isEmpty()) {
+        if (r == null) {
             return null;
         }
-        return com.oru.app.util.MediaUrl.of(r.songs.get(0).coverUrl);
+        String cover = com.oru.app.util.MediaUrl.of(r.coverUrl);
+        if (cover != null) {
+            return cover;
+        }
+        return r.songs != null && !r.songs.isEmpty()
+                ? com.oru.app.util.MediaUrl.of(r.songs.get(0).coverUrl)
+                : null;
     }
 
     private String describe(Throwable error) {

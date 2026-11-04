@@ -15,6 +15,18 @@ from app.storage import storage
 
 router = APIRouter(tags=["music"])
 MAX_FEATURES = 5
+MAX_DURATION_MS = 6 * 60 * 60 * 1000
+
+
+def _sane_duration(value: int | None) -> int | None:
+    """The client that uploaded the audio reports its length, since only it has
+    the file open; anything impossible is refused rather than stored."""
+    if value is None:
+        return None
+    if value <= 0 or value > MAX_DURATION_MS:
+        raise HTTPException(status_code=422, detail={"code": "invalid_duration",
+                                                    "message": "That audio length does not look right"})
+    return value
 
 
 def is_insider(song: Song, viewer: User | None) -> bool:
@@ -48,10 +60,18 @@ def featuring(song: Song, db: Session) -> list[dict]:
 def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
     genres = db.scalars(select(Genre.name).join(SongGenre).where(SongGenre.song_id == song.id).order_by(Genre.name)).all()
     readable = can_access(song, viewer)
+    likes = db.scalar(select(func.count()).select_from(Like).where(Like.song_id == song.id)) or 0
+    plays = db.scalar(
+        select(func.count(ListeningEvent.id)).where(ListeningEvent.song_id == song.id, ListeningEvent.counted.is_(True))
+    ) or 0
+    liked = viewer is not None and bool(
+        db.scalar(select(func.count()).select_from(Like).where(Like.song_id == song.id, Like.user_id == viewer.id))
+    )
     return {"id": song.id, "artist_id": song.artist_id, "artist_handle": song.artist.handle,
             "artist_name": song.artist.artist_profile.stage_name if song.artist.artist_profile else song.artist.display_name,
             "artist_avatar_url": f"/api/v1/users/{song.artist_id}/avatar" if song.artist.avatar_key else None,
             "title": song.title, "description": song.description, "genres": genres, "status": song.status,
+            "duration_ms": song.duration_ms, "likes_count": likes, "plays_count": plays, "is_liked": liked,
             "created_at": song.created_at, "published_at": song.published_at,
             "audio_url": f"/api/v1/songs/{song.id}/audio" if readable else None,
             "cover_url": f"/api/v1/songs/{song.id}/cover" if song.cover_key and readable else None,
@@ -59,6 +79,19 @@ def song_data(song: Song, db: Session, viewer: User | None = None) -> dict:
             "featuring": featuring(song, db),
             "shared_by": ({"handle": song.shared_by.handle, "display_name": song.shared_by.display_name}
                           if song.shared_by is not None else None)}
+
+
+def release_data(release: Release, db: Session, song_ids: list[int]) -> dict:
+    """A release has no artwork or length of its own, so it borrows the first
+    song's cover: that is the picture every release card shows."""
+    cover = None
+    if song_ids:
+        first = db.get(Song, song_ids[0])
+        if first is not None and first.cover_key:
+            cover = f"/api/v1/songs/{first.id}/cover"
+    return {"id": release.id, "artist_id": release.artist_id, "title": release.title,
+            "kind": release.kind, "status": release.status, "published_at": release.published_at,
+            "song_ids": song_ids, "song_count": len(song_ids), "cover_url": cover}
 
 
 def visible_song(song_id: int, db: Session, viewer: User | None = None) -> Song:
@@ -142,6 +175,7 @@ def list_songs(q: str | None = None, genre: str | None = None, limit: int = 20, 
 @router.post("/artists/me/songs", status_code=201)
 def upload_song(title: str = Form(min_length=1, max_length=120), description: str = Form(default="", max_length=2000),
                 genres: list[str] = Form(default=[]), featured: list[int] = Form(default=[]),
+                duration_ms: int | None = Form(default=None),
                 audio: UploadFile = File(...), cover: UploadFile | None = File(default=None),
                 artist: User = Depends(artist_user), db: Session = Depends(get_db)):
     audio_key = _save_upload(audio, AUDIO_TYPES, settings.max_audio_bytes)
@@ -150,7 +184,8 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
         if cover is not None and cover.filename:
             cover_key = _save_upload(cover, IMAGE_TYPES, settings.max_cover_bytes)
         song = Song(artist_id=artist.id, title=title.strip(), description=description.strip(), audio_key=audio_key,
-                    cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream", status="draft")
+                    cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream",
+                    duration_ms=_sane_duration(duration_ms), status="draft")
         db.add(song)
         _attach_genres(db, song, genres)
         _attach_features(db, song, featured, artist)
@@ -169,6 +204,7 @@ def upload_song(title: str = Form(min_length=1, max_length=120), description: st
 def share_song(title: str = Form(min_length=1, max_length=120), description: str = Form(default="", max_length=2000),
                genres: list[str] = Form(default=[]), artist_id: int = Form(...),
                source_url: str = Form(min_length=4, max_length=500),
+               duration_ms: int | None = Form(default=None),
                audio: UploadFile = File(...), cover: UploadFile | None = File(default=None),
                user: User = Depends(current_user), db: Session = Depends(get_db)):
     """A listener shares a song by an artist who is on ORU. The artist keeps the
@@ -185,7 +221,8 @@ def share_song(title: str = Form(min_length=1, max_length=120), description: str
         if cover is not None and cover.filename:
             cover_key = _save_upload(cover, IMAGE_TYPES, settings.max_cover_bytes)
         song = Song(artist_id=target.id, title=title.strip(), description=description.strip(), audio_key=audio_key,
-                    cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream", status="pending",
+                    cover_key=cover_key, audio_type=audio.content_type or "application/octet-stream",
+                    duration_ms=_sane_duration(duration_ms), status="pending",
                     shared_by_user_id=user.id, source_url=url)
         db.add(song)
         _attach_genres(db, song, genres)
@@ -400,7 +437,7 @@ def create_release(payload: ReleaseCreate, artist: User = Depends(artist_user), 
     db.flush()
     db.add_all([ReleaseSong(release_id=release.id, song_id=song_id, position=index) for index, song_id in enumerate(payload.song_ids)])
     db.commit()
-    return {"release": {"id": release.id, "title": release.title, "kind": release.kind, "status": release.status, "song_ids": payload.song_ids}}
+    return {"release": release_data(release, db, payload.song_ids)}
 
 
 @router.post("/artists/me/releases/{release_id}/publish")
@@ -416,7 +453,7 @@ def publish_release(release_id: int, artist: User = Depends(artist_user), db: Se
         song.status = "published"
         song.published_at = now
     db.commit()
-    return {"release": {"id": release.id, "title": release.title, "kind": release.kind, "status": release.status, "song_ids": song_ids}}
+    return {"release": release_data(release, db, song_ids)}
 
 
 @router.get("/artists/me/releases")
@@ -429,8 +466,7 @@ def own_releases(limit: int = 50, offset: int = 0,
     items = []
     for release in releases:
         song_ids = db.scalars(select(ReleaseSong.song_id).where(ReleaseSong.release_id == release.id).order_by(ReleaseSong.position)).all()
-        items.append({"id": release.id, "artist_id": release.artist_id, "title": release.title, "kind": release.kind,
-                      "status": release.status, "published_at": release.published_at, "song_ids": song_ids})
+        items.append(release_data(release, db, song_ids))
     return {"items": items, "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
 
 
@@ -457,7 +493,7 @@ def list_artist_releases(artist_id: int, limit: int = 20, offset: int = 0, db: S
     items = []
     for release in releases:
         song_ids = db.scalars(select(ReleaseSong.song_id).where(ReleaseSong.release_id == release.id).order_by(ReleaseSong.position)).all()
-        items.append({"id": release.id, "artist_id": artist_id, "title": release.title, "kind": release.kind, "published_at": release.published_at, "song_ids": song_ids})
+        items.append(release_data(release, db, song_ids))
     return {"items": items, "limit": min(max(limit, 1), 50), "offset": max(offset, 0)}
 
 
@@ -468,7 +504,7 @@ def get_release(release_id: int, user: User | None = Depends(optional_current_us
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Release not found"})
     song_ids = db.scalars(select(ReleaseSong.song_id).where(ReleaseSong.release_id == release.id).order_by(ReleaseSong.position)).all()
     songs = [song_data(song, db, user) for song_id in song_ids if (song := db.get(Song, song_id)) is not None and song.status == "published"]
-    return {"release": {"id": release.id, "artist_id": release.artist_id, "title": release.title, "kind": release.kind, "published_at": release.published_at, "songs": songs}}
+    return {"release": release_data(release, db, song_ids) | {"songs": songs}}
 
 
 @router.get("/feed/following")

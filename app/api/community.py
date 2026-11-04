@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,27 @@ from app.schemas import ArtistPostCreate, PlaylistCreate, PlaylistUpdate
 from app.api.music import song_data
 
 router = APIRouter(tags=["community"])
+
+
+def playlist_data(playlist: Playlist, db: Session, songs: list[dict] | None = None) -> dict:
+    """A playlist card needs its owner and a picture; the playlist itself stores
+    neither, so both come from its songs and its owner's account."""
+    song_ids = db.scalars(
+        select(PlaylistSong.song_id).where(PlaylistSong.playlist_id == playlist.id).order_by(PlaylistSong.position)
+    ).all()
+    cover = None
+    if song_ids:
+        first = db.get(Song, song_ids[0])
+        if first is not None and first.cover_key:
+            cover = f"/api/v1/songs/{first.id}/cover"
+    owner = db.get(User, playlist.owner_id)
+    data = {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public,
+            "owner_id": playlist.owner_id, "song_count": len(song_ids), "song_ids": song_ids,
+            "cover_url": cover, "created_at": playlist.created_at,
+            "owner": {"handle": owner.handle, "display_name": owner.display_name} if owner else None}
+    if songs is not None:
+        data["songs"] = songs
+    return data
 
 
 def owned_playlist(playlist_id: int, user: User, db: Session) -> Playlist:
@@ -37,6 +58,11 @@ def unfollow_artist(artist_id: int, user: User = Depends(current_user), db: Sess
     return {"artist_id": artist_id, "following": False}
 
 
+def _likes_for(db: Session, song_id: int) -> int:
+    """How many listeners like this song, so clients can update in place."""
+    return db.scalar(select(func.count()).select_from(Like).where(Like.song_id == song_id)) or 0
+
+
 @router.post("/songs/{song_id}/likes", status_code=201)
 def like_song(song_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     song = db.get(Song, song_id)
@@ -44,7 +70,7 @@ def like_song(song_id: int, user: User = Depends(current_user), db: Session = De
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Song not found"})
     db.merge(Like(user_id=user.id, song_id=song_id))
     db.commit()
-    return {"song_id": song_id, "liked": True}
+    return {"song_id": song_id, "liked": True, "likes_count": _likes_for(db, song_id)}
 
 
 @router.delete("/songs/{song_id}/likes")
@@ -53,7 +79,7 @@ def unlike_song(song_id: int, user: User = Depends(current_user), db: Session = 
     if relation:
         db.delete(relation)
         db.commit()
-    return {"song_id": song_id, "liked": False}
+    return {"song_id": song_id, "liked": False, "likes_count": _likes_for(db, song_id)}
 
 
 @router.post("/playlists", status_code=201)
@@ -62,17 +88,13 @@ def create_playlist(payload: PlaylistCreate, user: User = Depends(current_user),
     db.add(playlist)
     db.commit()
     db.refresh(playlist)
-    return {"playlist": {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public, "owner_id": user.id, "song_ids": []}}
+    return {"playlist": playlist_data(playlist, db)}
 
 
 @router.get("/playlists")
 def list_own_playlists(user: User = Depends(current_user), db: Session = Depends(get_db)):
     playlists = db.scalars(select(Playlist).where(Playlist.owner_id == user.id).order_by(Playlist.created_at.desc())).all()
-    items = []
-    for playlist in playlists:
-        count = db.scalar(select(func.count(PlaylistSong.song_id)).where(PlaylistSong.playlist_id == playlist.id)) or 0
-        items.append({"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public,
-                      "owner_id": playlist.owner_id, "song_count": count, "created_at": playlist.created_at})
+    items = [playlist_data(playlist, db) for playlist in playlists]
     return {"items": items, "limit": len(items), "offset": 0}
 
 
@@ -118,7 +140,7 @@ def get_playlist(playlist_id: int, user: User | None = Depends(optional_current_
         song = db.get(Song, entry.song_id)
         if song and song.status == "published":
             songs.append({"position": entry.position, **song_data(song, db, user)})
-    return {"playlist": {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public, "owner_id": playlist.owner_id, "songs": songs}}
+    return {"playlist": playlist_data(playlist, db, songs)}
 
 
 @router.patch("/playlists/{playlist_id}")
@@ -129,7 +151,18 @@ def update_playlist(playlist_id: int, payload: PlaylistUpdate, user: User = Depe
     if payload.is_public is not None:
         playlist.is_public = payload.is_public
     db.commit()
-    return {"playlist": {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public}}
+    return {"playlist": playlist_data(playlist, db)}
+
+
+@router.delete("/playlists/{playlist_id}", status_code=204)
+def delete_playlist(playlist_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Deletes a playlist the caller owns; its entries go with it."""
+    playlist = owned_playlist(playlist_id, user, db)
+    for entry in db.scalars(select(PlaylistSong).where(PlaylistSong.playlist_id == playlist.id)).all():
+        db.delete(entry)
+    db.delete(playlist)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/playlists/{playlist_id}/songs/{song_id}", status_code=201)

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Check, ImagePlus, Music4 } from "../components/icons";
 import { request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
+import { audioDuration } from "../lib/audio";
 import type { Artist, Paginated, Song } from "../lib/types";
 import { Button, EmptyState, Field, Spinner, TextArea } from "../components/ui";
 import { TrackRow } from "../components/TrackRow";
@@ -108,6 +109,8 @@ export function SongSharing() {
     form.append("source_url", sourceUrl.trim());
     form.append("description", description.trim());
     form.append("audio", audio);
+    const durationMs = await audioDuration(audio);
+    if (durationMs) form.append("duration_ms", String(durationMs));
     if (cover) form.append("cover", cover);
 
     setBusy(true);

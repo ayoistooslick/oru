@@ -14,8 +14,23 @@ import com.oru.app.databinding.ItemStudioSongBinding;
 
 public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
 
+    /** Long-press actions for a track in the studio. */
+    public interface Listener {
+        void onPublish(Song song);
+
+        void onUnpublish(Song song);
+
+        void onDelete(Song song);
+    }
+
+    private Listener listener;
+
     public StudioAdapter() {
         super(DIFF_CALLBACK);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     private static final DiffUtil.ItemCallback<Song> DIFF_CALLBACK =
@@ -68,6 +83,46 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
                 i.putExtra("songId", song.id);
                 binding.getRoot().getContext().startActivity(i);
             });
+            binding.getRoot().setOnLongClickListener(v -> {
+                showActions(song);
+                return true;
+            });
+        }
+
+        private void showActions(Song song) {
+            android.content.Context context = binding.getRoot().getContext();
+            String[] items = song.isPublished()
+                    ? new String[]{"Unpublish", "Delete"}
+                    : new String[]{"Publish", "Delete"};
+            new androidx.appcompat.app.AlertDialog.Builder(context)
+                    .setTitle(song.title)
+                    .setItems(items, (dialog, which) -> {
+                        if (listener == null) {
+                            return;
+                        }
+                        boolean first = which == 0;
+                        if (first && song.isPublished()) {
+                            listener.onUnpublish(song);
+                        } else if (first) {
+                            listener.onPublish(song);
+                        } else {
+                            confirmDelete(context, song);
+                        }
+                    })
+                    .show();
+        }
+
+        private void confirmDelete(android.content.Context context, Song song) {
+            new androidx.appcompat.app.AlertDialog.Builder(context)
+                    .setTitle("Delete " + song.title + "?")
+                    .setMessage("This removes the track and its audio for good.")
+                    .setNegativeButton(com.oru.app.R.string.cancel, null)
+                    .setPositiveButton("Delete", (dialog, which) -> {
+                        if (listener != null) {
+                            listener.onDelete(song);
+                        }
+                    })
+                    .show();
         }
     }
 }

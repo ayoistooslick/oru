@@ -22,7 +22,10 @@ public class SearchResult {
         this.playlist = null;
         this.title = song.title;
         this.subtitle = song.artistLabel();
-        this.meta = song.genreLabel();
+        String length = song.durationLabel();
+        String genres = song.genreLabel();
+        this.meta = length.isEmpty() ? genres
+                : genres.isEmpty() ? length : length + " · " + genres;
     }
 
     public SearchResult(Artist artist, Type type) {

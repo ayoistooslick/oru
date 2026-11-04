@@ -90,6 +90,18 @@
             android:theme="@style/Theme.Oru" />
 
         <activity
+            android:name=".ui.studio.UploadActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Oru" />
+
+        <activity
+            android:name=".ui.shares.ShareActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Oru" />
+
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.Oru" />

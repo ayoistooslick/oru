@@ -32,6 +32,16 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <ImageView
+                android:id="@+id/avatarImage"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginBottom="16dp"
+                android:background="@color/card"
+                android:contentDescription="Profile picture"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_artist" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -80,7 +90,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Avatar"
+                    android:text="Profile picture"
                     android:textAppearance="@style/TextAppearance.Oru.Body"
                     android:textColor="@color/ink" />
 
@@ -93,43 +103,31 @@
 
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginVertical="16dp"
-                android:background="@color/hair" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Audio"
-                android:textAppearance="@style/TextAppearance.Oru.Title"
-                android:textColor="@color/ink" />
-
             <LinearLayout
-                android:id="@+id/downloadQualityButton"
+                android:id="@+id/bannerButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:background="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:padding="16dp"
-                android:background="?attr/selectableItemBackground">
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Download quality"
+                    android:text="Artist banner"
                     android:textAppearance="@style/TextAppearance.Oru.Body"
                     android:textColor="@color/ink" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="High"
-                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                    android:textColor="@color/ink_faint" />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/ink_faint" />
 
             </LinearLayout>
 
@@ -170,6 +168,31 @@
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/ink_faint"
                     android:contentDescription="@null" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="@color/hair" />
+
+            <LinearLayout
+                android:id="@+id/signOutButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sign out"
+                    android:textAppearance="@style/TextAppearance.Oru.Body"
+                    android:textColor="@color/flame" />
 
             </LinearLayout>
 

@@ -3,10 +3,14 @@ package com.oru.app.data.repository;
 import com.google.gson.Gson;
 import com.oru.app.data.api.ApiCall;
 import com.oru.app.data.api.ApiService;
+import com.oru.app.data.api.Uploads;
 import com.oru.app.data.model.*;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
+import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
 /**
@@ -37,6 +41,12 @@ public class MusicRepository {
 
     public void getSong(int songId, Callback<Song> cb) {
         ApiCall.enqueue(api.getSong(songId), gson, "Couldn't load this song", cb);
+    }
+
+    /** Artists matching a search, used when crediting a shared song. */
+    public void searchArtists(String query, Callback<List<Artist>> cb) {
+        ApiCall.enqueue(api.listArtists(query, 20), gson,
+                "Couldn't search artists", cb);
     }
 
     public void getArtist(int artistId, Callback<Artist> cb) {
@@ -71,6 +81,29 @@ public class MusicRepository {
             Callback<ListenRecord> cb) {
         ApiCall.enqueue(api.recordListen(songId, new ListeningCreate(listenedMs)),
                 gson, "Couldn't record that listen", cb);
+    }
+
+    /** Uploads a track: the audio file, optional artwork, and the fields the
+     * API's multipart form expects. */
+    public void uploadSong(String title, String description, List<String> genres,
+            long durationMs, File audio, String audioMime, File cover,
+            String coverMime, Callback<Song> cb) {
+        List<RequestBody> genreParts = new ArrayList<>();
+        if (genres != null) {
+            for (String genre : genres) {
+                if (genre != null && !genre.trim().isEmpty()) {
+                    genreParts.add(Uploads.text(genre.trim()));
+                }
+            }
+        }
+        ApiCall.enqueue(api.createSong(Uploads.text(title),
+                Uploads.text(description), genreParts, new ArrayList<>(),
+                Uploads.number(durationMs),
+                Uploads.file("audio", audio.getName(), audioMime, audio),
+                cover != null
+                        ? Uploads.file("cover", cover.getName(), coverMime, cover)
+                        : null),
+                gson, "Couldn't upload this song", cb);
     }
 
     public void getMySongs(Callback<List<Song>> cb) {

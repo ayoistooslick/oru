@@ -46,10 +46,11 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.ViewHold
         Release release = getItem(position);
         holder.titleText.setText(release.title);
         holder.kindText.setText(release.kind != null ? release.kind : "");
-        // Releases have no artwork of their own; show the first track's.
-        String cover = release.songs != null && !release.songs.isEmpty()
-                ? com.oru.app.util.MediaUrl.of(release.songs.get(0).coverUrl)
-                : null;
+        // The API sends the release's artwork; fall back to its first track.
+        String cover = com.oru.app.util.MediaUrl.of(release.coverUrl);
+        if (cover == null && release.songs != null && !release.songs.isEmpty()) {
+            cover = com.oru.app.util.MediaUrl.of(release.songs.get(0).coverUrl);
+        }
         if (cover != null) {
             Glide.with(holder.itemView.getContext())
                     .load(cover)

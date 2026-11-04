@@ -3,8 +3,9 @@ package com.oru.app.data.api;
 import com.oru.app.data.model.*;
 
 import java.util.List;
-import java.util.Map;
 
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.*;
@@ -37,8 +38,10 @@ public interface ApiService {
     @PATCH("api/v1/listeners/me")
     Call<ApiResponse<User>> updateProfile(@Body ProfileUpdate body);
 
+    // Pictures arrive as a file part named "file".
+    @Multipart
     @POST("api/v1/listeners/me/avatar")
-    Call<ApiResponse<User>> uploadAvatar(@Body Map<String, String> body);
+    Call<ApiResponse<User>> uploadAvatar(@Part("file") MultipartBody.Part file);
 
     @DELETE("api/v1/listeners/me/avatar")
     Call<ApiResponse<User>> deleteAvatar();
@@ -52,8 +55,9 @@ public interface ApiService {
     @POST("api/v1/artists/me")
     Call<ApiResponse<Artist>> createArtistProfile(@Body ArtistProfileCreate body);
 
+    @Multipart
     @POST("api/v1/artists/me/banner")
-    Call<ApiResponse<Artist>> uploadBanner(@Body Map<String, String> body);
+    Call<ApiResponse<Artist>> uploadBanner(@Part("file") MultipartBody.Part file);
 
     @DELETE("api/v1/artists/me/banner")
     Call<ApiResponse<Artist>> deleteBanner();
@@ -63,7 +67,9 @@ public interface ApiService {
             @Path("artistId") int artistId);
 
     @GET("api/v1/artists")
-    Call<ApiResponse<List<Artist>>> listArtists();
+    Call<ApiResponse<List<Artist>>> listArtists(
+            @Query("q") String query,
+            @Query("limit") int limit);
 
     @GET("api/v1/artists/{artistId}")
     Call<ApiResponse<Artist>> getArtist(@Path("artistId") int artistId);
@@ -112,8 +118,17 @@ public interface ApiService {
     @GET("api/v1/songs/{songId}/cover")
     Call<ResponseBody> getSongCover(@Path("songId") int songId);
 
+    // Uploads are multipart forms: the audio is a file, the rest are fields.
+    @Multipart
     @POST("api/v1/artists/me/songs")
-    Call<ApiResponse<Song>> createSong(@Body SongCreate body);
+    Call<ApiResponse<Song>> createSong(
+            @Part("title") RequestBody title,
+            @Part("description") RequestBody description,
+            @Part("genres") List<RequestBody> genres,
+            @Part("featured") List<RequestBody> featured,
+            @Part("duration_ms") RequestBody durationMs,
+            @Part MultipartBody.Part audio,
+            @Part MultipartBody.Part cover);
 
     @POST("api/v1/artists/me/songs/{songId}/publish")
     Call<ApiResponse<Song>> publishSong(@Path("songId") int songId);
@@ -188,6 +203,10 @@ public interface ApiService {
     Call<ApiResponse<Playlist>> updatePlaylist(
             @Path("playlistId") int playlistId, @Body PlaylistUpdate body);
 
+    @DELETE("api/v1/playlists/{playlistId}")
+    Call<ApiResponse<Void>> deletePlaylist(
+            @Path("playlistId") int playlistId);
+
     @POST("api/v1/playlists/{playlistId}/songs/{songId}")
     Call<ApiResponse<PlaylistSong>> addSongToPlaylist(
             @Path("playlistId") int playlistId,
@@ -204,8 +223,17 @@ public interface ApiService {
 
     // ---- Sharing ----
 
+    @Multipart
     @POST("api/v1/songs/share")
-    Call<ApiResponse<ShareLink>> createShareLink(@Body ShareCreate body);
+    Call<ApiResponse<Song>> shareSong(
+            @Part("artist_id") RequestBody artistId,
+            @Part("title") RequestBody title,
+            @Part("description") RequestBody description,
+            @Part("genres") List<RequestBody> genres,
+            @Part("source_url") RequestBody sourceUrl,
+            @Part("duration_ms") RequestBody durationMs,
+            @Part MultipartBody.Part audio,
+            @Part MultipartBody.Part cover);
 
     @GET("api/v1/shared/songs")
     Call<ApiResponse<List<Song>>> listSharedSongs();
@@ -216,8 +244,13 @@ public interface ApiService {
     @GET("api/v1/songs/pending-shares")
     Call<ApiResponse<List<Song>>> listPendingShares();
 
+    @FormUrlEncoded
     @POST("api/v1/shared/external")
-    Call<ApiResponse<ExternalShare>> createExternalShare(@Body ExternalShareCreate body);
+    Call<ApiResponse<ExternalShare>> createExternalShare(
+            @Field("title") String title,
+            @Field("artist_name") String artistName,
+            @Field("url") String url,
+            @Field("note") String note);
 
     @GET("api/v1/shared/external")
     Call<ApiResponse<List<ExternalShare>>> listExternalShares();

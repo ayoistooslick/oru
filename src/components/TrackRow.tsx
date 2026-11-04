@@ -5,6 +5,7 @@ import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";
 import { useToasts } from "../state/ToastContext";
 import type { Song } from "../lib/types";
+import { formatDuration } from "../lib/format";
 import { Cover } from "./Cover";
 
 interface TrackRowProps {
@@ -115,6 +116,11 @@ export function TrackRow({
       </button>
 
       <div className="flex items-center gap-1">
+        {song.duration_ms ? (
+          <span className="mr-1 text-[12.5px] tabular-nums text-ink-soft">
+            {formatDuration(song.duration_ms / 1000)}
+          </span>
+        ) : null}
         {actions}
         {onRemove ? (
           <button

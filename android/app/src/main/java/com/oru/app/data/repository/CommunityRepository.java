@@ -72,6 +72,11 @@ public class CommunityRepository {
                 gson, "Couldn't update the playlist", cb);
     }
 
+    public void deletePlaylist(int playlistId, Callback<Void> cb) {
+        ApiCall.enqueue(api.deletePlaylist(playlistId), gson,
+                "Couldn't delete that playlist", cb);
+    }
+
     public void addSongToPlaylist(int playlistId, int songId,
             Callback<PlaylistSong> cb) {
         ApiCall.enqueue(api.addSongToPlaylist(playlistId, songId), gson,

@@ -61,6 +61,13 @@ public class ReleaseAdapter extends ListAdapter<Release, ReleaseAdapter.VH> {
         void bind(Release release) {
             binding.titleText.setText(release.title);
             binding.kindText.setText(release.kind);
+            String cover = com.oru.app.util.MediaUrl.of(release.coverUrl);
+            if (cover != null) {
+                com.bumptech.glide.Glide.with(binding.getRoot().getContext())
+                        .load(cover)
+                        .placeholder(com.oru.app.R.drawable.ic_library)
+                        .into(binding.coverImage);
+            }
             binding.playsText.setText(
                     release.isPublished() ? "Published" : "Unreleased");
             binding.coverImage.setOnClickListener(v -> {

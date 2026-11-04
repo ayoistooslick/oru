@@ -31,9 +31,19 @@ public class Artist {
     @SerializedName("published_song_count")
     public int publishedSongCount;
 
-    /** Only on the artist's own page. */
     @SerializedName("follower_count")
     public int followerCount;
+
+    /** Counted plays across this artist's published songs. */
+    @SerializedName("plays_count")
+    public int playsCount;
+
+    @SerializedName("likes_count")
+    public int likesCount;
+
+    /** Whether the signed-in listener follows this artist. */
+    @SerializedName("is_followed")
+    public boolean isFollowed;
 
     /** The artist id the API uses for follows and lookups. */
     public int artistId() {

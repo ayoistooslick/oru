@@ -4,45 +4,79 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
-import androidx.media3.common.util.UnstableApi;
-import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.session.MediaSession;
 
-import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.slider.Slider;
 import com.oru.app.R;
-import com.oru.app.data.model.ApiResponse;
+import com.oru.app.data.model.LikeResult;
 import com.oru.app.data.model.Song;
+import com.oru.app.data.repository.Callback;
+import com.oru.app.data.repository.CommunityRepository;
+import com.oru.app.data.repository.MusicRepository;
 import com.oru.app.databinding.ActivityPlayerBinding;
 import com.oru.app.media.PlayerService;
+import com.oru.app.ui.components.UiErrors;
+import com.oru.app.util.LazySession;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/** The full player: transport, scrubbing, like and share. */
 public class PlayerActivity extends AppCompatActivity {
 
     private ActivityPlayerBinding binding;
-    private ExoPlayer player;
-    private MediaSession mediaSession;
+    private androidx.media3.exoplayer.ExoPlayer player;
+    private androidx.media3.session.MediaSession mediaSession;
     private AtomicBoolean serviceBound = new AtomicBoolean(false);
     private Song currentSong;
+
+    private MusicRepository musicRepo;
+    private CommunityRepository communityRepo;
+
+    private final Handler ticker = new Handler(Looper.getMainLooper());
+    private final Runnable tick = new Runnable() {
+        @Override
+        public void run() {
+            updateProgress();
+            ticker.postDelayed(this, 500);
+        }
+    };
+
+    private final Player.Listener playerListener = new Player.Listener() {
+        @Override
+        public void onIsPlayingChanged(boolean isPlaying) {
+            updatePlayPauseButtons();
+        }
+
+        @Override
+        public void onRepeatModeChanged(int repeatMode) {
+            updateModeButtons();
+        }
+
+        @Override
+        public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+            updateModeButtons();
+        }
+    };
 
     private final ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            PlayerService.LocalBinder binder =
-                    (PlayerService.LocalBinder) service;
+            PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
             player = binder.getPlayer();
             mediaSession = binder.getMediaSession();
             serviceBound.set(true);
+            player.addListener(playerListener);
             if (currentSong != null) {
                 loadSong(currentSong);
             }
@@ -62,15 +96,49 @@ public class PlayerActivity extends AppCompatActivity {
         binding = ActivityPlayerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        binding.toolbar.setNavigationOnClickListener(v -> finish());
+        musicRepo = new MusicRepository(LazySession.getApiService(),
+                LazySession.getGson());
+        communityRepo = new CommunityRepository(LazySession.getApiService(),
+                LazySession.getGson());
 
-        binding.playButton.setOnClickListener(v -> {
-            if (player != null) {
-                if (player.isPlaying()) player.pause();
-                else player.play();
-                updatePlayPauseButtons();
+        binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.playButton.setOnClickListener(v -> togglePlay());
+        binding.miniPlayPauseButton.setOnClickListener(v -> togglePlay());
+        binding.previousButton.setOnClickListener(v -> jump(-1));
+        binding.nextButton.setOnClickListener(v -> jump(1));
+        binding.shuffleButton.setOnClickListener(v -> toggleShuffle());
+        binding.repeatButton.setOnClickListener(v -> cycleRepeat());
+        binding.likeButton.setOnClickListener(v -> toggleLike());
+        binding.miniLikeButton.setOnClickListener(v -> toggleLike());
+        binding.shareButton.setOnClickListener(v -> shareSong());
+
+        binding.toolbar.inflateMenu(R.menu.player_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_report) {
+                askReportReason();
+                return true;
             }
+            return false;
         });
+
+        binding.progressSlider.addOnSliderTouchListener(
+                new Slider.OnSliderTouchListener() {
+                    @Override
+                    public void onStartTrackingTouch(@NonNull Slider slider) {
+                        ticker.removeCallbacks(tick);
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(@NonNull Slider slider) {
+                        if (player != null) {
+                            long duration = player.getDuration();
+                            if (duration > 0) {
+                                player.seekTo((long) (duration * slider.getValue() / 100f));
+                            }
+                        }
+                        ticker.post(tick);
+                    }
+                });
 
         Intent intent = new Intent(this, PlayerService.class);
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -83,63 +151,59 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void loadSongById(int songId) {
         binding.progressBar.setVisibility(View.VISIBLE);
-        com.oru.app.data.api.ApiService api
-                = com.oru.app.util.LazySession.getApiService();
-        api.getSong(songId).enqueue(
-                new retrofit2.Callback<ApiResponse<Song>>() {
-                    @Override
-                    public void onResponse(
-                            retrofit2.Call<ApiResponse<Song>> call,
-                            retrofit2.Response<ApiResponse<Song>> response) {
-                        if (response.isSuccessful()
-                                && response.body() != null
-                                && response.body().data != null) {
-                            currentSong = response.body().data;
-                            runOnUiThread(() -> {
-                                binding.progressBar.setVisibility(View.GONE);
-                                populateUI(currentSong);
-                                if (serviceBound.get()
-                                        && player != null) {
-                                    loadSong(currentSong);
-                                }
-                            });
-                        } else {
-                            runOnUiThread(() -> {
-                                binding.progressBar.setVisibility(View.GONE);
-                                showError();
-                            });
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(
-                            retrofit2.Call<ApiResponse<Song>> call,
-                            Throwable t) {
-                        runOnUiThread(() -> {
-                            binding.progressBar.setVisibility(View.GONE);
-                            showError();
-                        });
+        musicRepo.getSong(songId, new Callback<Song>() {
+            @Override
+            public void onSuccess(Song song) {
+                runOnUiThread(() -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    currentSong = song;
+                    populateUI(song);
+                    if (serviceBound.get() && player != null) {
+                        loadSong(song);
                     }
                 });
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                runOnUiThread(() -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    showError(error);
+                });
+            }
+        });
     }
 
     private void populateUI(Song song) {
         binding.titleText.setText(song.title);
         binding.artistText.setText(song.artistLabel());
-        binding.albumText.setText(song.artistLabel());
+        String length = song.durationLabel();
+        String genres = song.genreLabel();
+        binding.albumText.setText(length.isEmpty() ? genres
+                : genres.isEmpty() ? length : length + " · " + genres);
+        binding.totalTimeText.setText(length.isEmpty() ? "0:00" : length);
         String cover = com.oru.app.util.MediaUrl.of(song.coverUrl);
         if (cover != null) {
             com.bumptech.glide.Glide.with(this)
                     .load(cover)
                     .placeholder(R.drawable.ic_library)
                     .into(binding.coverImage);
+            com.bumptech.glide.Glide.with(this)
+                    .load(cover)
+                    .placeholder(R.drawable.ic_library)
+                    .into(binding.miniArtwork);
         }
-        binding.miniArtwork.setImageResource(R.drawable.ic_library);
+        binding.miniTitle.setText(song.title);
+        binding.miniArtist.setText(song.artistLabel());
         updatePlayPauseButtons();
+        updateLikeButtons();
+        updateModeButtons();
     }
 
     private void loadSong(Song song) {
-        if (player == null) return;
+        if (player == null) {
+            return;
+        }
         MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(
                 com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
                 song.title, song.artistLabel(),
@@ -149,10 +213,213 @@ public class PlayerActivity extends AppCompatActivity {
         player.play();
         updatePlayPauseButtons();
         binding.miniPlayerBar.setVisibility(View.VISIBLE);
+        ticker.removeCallbacks(tick);
+        ticker.post(tick);
+    }
+
+    private void togglePlay() {
+        if (player == null) {
+            return;
+        }
+        if (player.isPlaying()) {
+            player.pause();
+        } else {
+            player.play();
+        }
+        updatePlayPauseButtons();
+    }
+
+    /** A single track, so these skip 15 seconds either way. */
+    private void jump(int direction) {
+        if (player == null) {
+            return;
+        }
+        long target = player.getCurrentPosition() + direction * 15_000L;
+        long duration = player.getDuration();
+        if (target < 0) {
+            target = 0;
+        }
+        if (duration > 0 && target > duration) {
+            target = duration;
+        }
+        player.seekTo(target);
+        updateProgress();
+    }
+
+    private void toggleShuffle() {
+        if (player == null) {
+            return;
+        }
+        player.setShuffleModeEnabled(!player.getShuffleModeEnabled());
+        updateModeButtons();
+    }
+
+    private void cycleRepeat() {
+        if (player == null) {
+            return;
+        }
+        int next = player.getRepeatMode() == Player.REPEAT_MODE_OFF
+                ? Player.REPEAT_MODE_ALL
+                : player.getRepeatMode() == Player.REPEAT_MODE_ALL
+                        ? Player.REPEAT_MODE_ONE
+                        : Player.REPEAT_MODE_OFF;
+        player.setRepeatMode(next);
+        updateModeButtons();
+    }
+
+    private void toggleLike() {
+        if (currentSong == null) {
+            return;
+        }
+        boolean liked = currentSong.isLiked;
+        Callback<LikeResult> done = new Callback<LikeResult>() {
+            @Override
+            public void onSuccess(LikeResult result) {
+                runOnUiThread(() -> {
+                    currentSong.isLiked = result != null ? result.liked
+                            : !liked;
+                    if (result != null) {
+                        currentSong.likesCount = result.likesCount;
+                    }
+                    updateLikeButtons();
+                });
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                runOnUiThread(() -> Toast.makeText(PlayerActivity.this,
+                        UiErrors.message(PlayerActivity.this, error),
+                        Toast.LENGTH_LONG).show());
+            }
+        };
+        if (liked) {
+            communityRepo.unlikeSong(currentSong.id, done);
+        } else {
+            communityRepo.likeSong(currentSong.id, done);
+        }
+    }
+
+    private void shareSong() {
+        if (currentSong == null) {
+            return;
+        }
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType("text/plain");
+        send.putExtra(Intent.EXTRA_SUBJECT, currentSong.title);
+        send.putExtra(Intent.EXTRA_TEXT, currentSong.title + " by "
+                + currentSong.artistLabel() + " on ORU — "
+                + "https://oru.freebuff.app");
+        startActivity(Intent.createChooser(send, "Share this song"));
+    }
+
+    private void askReportReason() {
+        if (currentSong == null) {
+            return;
+        }
+        final String[] reasons = {"copyright", "harassment", "spam",
+                "impersonation", "other"};
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Report " + currentSong.title)
+                .setItems(reasons, (dialog, which) -> askReportDetails(
+                        reasons[which]))
+                .setNegativeButton(com.oru.app.R.string.cancel, null)
+                .show();
+    }
+
+    private void askReportDetails(String reason) {
+        final android.widget.EditText details = new android.widget.EditText(this);
+        details.setHint("Anything that helps us look");
+        details.setMinLines(2);
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Report as " + reason)
+                .setView(details)
+                .setNegativeButton(com.oru.app.R.string.cancel, null)
+                .setPositiveButton("Send", (dialog, which) -> {
+                    com.oru.app.data.repository.ModerationRepository reports =
+                            new com.oru.app.data.repository.ModerationRepository(
+                                    LazySession.getApiService(),
+                                    LazySession.getGson());
+                    reports.createReport("song", currentSong.id, reason,
+                            details.getText().toString().trim(),
+                            new Callback<com.oru.app.data.model.Report>() {
+                                @Override
+                                public void onSuccess(
+                                        com.oru.app.data.model.Report report) {
+                                    runOnUiThread(() -> Toast.makeText(
+                                            PlayerActivity.this,
+                                            "Report sent — thank you",
+                                            Toast.LENGTH_LONG).show());
+                                }
+
+                                @Override
+                                public void onFailure(Throwable error) {
+                                    runOnUiThread(() -> Toast.makeText(
+                                            PlayerActivity.this,
+                                            UiErrors.message(PlayerActivity.this,
+                                                    error),
+                                            Toast.LENGTH_LONG).show());
+                                }
+                            });
+                })
+                .show();
+    }
+
+    private void updateLikeButtons() {
+        int tint = currentSong != null && currentSong.isLiked
+                ? R.color.flame : R.color.ink_soft;
+        binding.likeButton.setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(tint)));
+        binding.miniLikeButton.setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(tint)));
+    }
+
+    private void updateModeButtons() {
+        if (player == null) {
+            return;
+        }
+        int active = R.color.flame;
+        int idle = R.color.ink_faint;
+        binding.shuffleButton.setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(
+                        player.getShuffleModeEnabled() ? active : idle)));
+        binding.repeatButton.setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(
+                        player.getRepeatMode() == Player.REPEAT_MODE_OFF
+                                ? idle : active)));
+    }
+
+    private void updateProgress() {
+        if (player == null) {
+            return;
+        }
+        long position = player.getCurrentPosition();
+        long duration = player.getDuration();
+        if (duration > 0) {
+            // Material sliders only accept values on their step grid.
+            float percent = Math.max(0f, Math.min(100f,
+                    Math.round(position * 100f / duration)));
+            if (binding.progressSlider.getValue() != percent) {
+                binding.progressSlider.setValue(percent);
+            }
+            if (binding.miniProgressSlider.getValue() != percent) {
+                binding.miniProgressSlider.setValue(percent);
+            }
+            binding.totalTimeText.setText(clock(duration));
+        }
+        binding.currentTimeText.setText(clock(position));
+        updatePlayPauseButtons();
+    }
+
+    private static String clock(long millis) {
+        long seconds = Math.max(0, millis / 1000);
+        return String.format(java.util.Locale.US, "%d:%02d", seconds / 60,
+                seconds % 60);
     }
 
     private void updatePlayPauseButtons() {
-        if (player == null) return;
+        if (player == null) {
+            return;
+        }
         boolean playing = player.isPlaying();
         binding.playButton.setImageResource(
                 playing ? R.drawable.ic_pause : R.drawable.ic_play);
@@ -160,19 +427,28 @@ public class PlayerActivity extends AppCompatActivity {
                 playing ? R.drawable.ic_pause : R.drawable.ic_play);
     }
 
-    private void showError() {
+    private void showError(Throwable error) {
         binding.errorView.getRoot().setVisibility(View.VISIBLE);
+        binding.errorView.errorMessage.setText(
+                UiErrors.message(this, error));
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             int songId = getIntent().getIntExtra("songId", -1);
-            if (songId > 0) loadSongById(songId);
+            if (songId > 0) {
+                loadSongById(songId);
+            }
         });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindService(connection);
+        ticker.removeCallbacks(tick);
+        try {
+            unbindService(connection);
+        } catch (IllegalArgumentException ignored) {
+            // Never bound, nothing to release.
+        }
         serviceBound.set(false);
     }
 }
