@@ -33,6 +33,18 @@ public class ApiResponse<T> {
 
         @SerializedName("message")
         public String message;
+
+        /** Validation failures name the field that needs fixing. */
+        @SerializedName("details")
+        public java.util.List<ApiErrorDetail> details;
+    }
+
+    public static class ApiErrorDetail {
+        @SerializedName("field")
+        public String field;
+
+        @SerializedName("message")
+        public String message;
     }
 
     public static class ApiException extends Exception {

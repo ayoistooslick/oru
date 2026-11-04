@@ -28,37 +28,71 @@ public class AuthRepository {
         this.gson = gson;
     }
 
+    /**
+     * Non-2xx replies carry the API's own error envelope, so keep its message.
+     * A bare IOException here made the auth screen report every failure as a
+     * connection problem, a rejected password included.
+     */
+    private Throwable failure(Response<?> response) {
+        String message = null;
+        String code = "http_" + response.code();
+        ResponseBody errorBody = response.errorBody();
+        if (errorBody != null) {
+            try {
+                ApiResponse<?> parsed = gson.fromJson(errorBody.string(), ApiResponse.class);
+                if (parsed != null && parsed.error != null) {
+                    message = parsed.error.message;
+                    if (parsed.error.code != null) {
+                        code = parsed.error.code;
+                    }
+                    // A validation failure explains itself per field, which is
+                    // more use to someone filling in the sign-up form.
+                    if (parsed.error.details != null && !parsed.error.details.isEmpty()
+                            && parsed.error.details.get(0).message != null) {
+                        message = parsed.error.details.get(0).message;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fall back to the status code below.
+            }
+        }
+        if (message == null || message.isEmpty()) {
+            message = "Server error (" + response.code() + ")";
+        }
+        return new ApiResponse.ApiException(code, message);
+    }
+
+    private Throwable emptyReply() {
+        return new ApiResponse.ApiException("empty_response", "Server error (empty reply)");
+    }
+
+    /** A 201 from the sign-up call already carries a session token. */
     public void register(String email, String password, String handle,
-            String displayName, Callback<User> cb) {
+            String displayName, Callback<TokenResponse> cb) {
         RegisterRequest body = new RegisterRequest(email, password, handle,
                 displayName);
-        api.register(body).enqueue(new retrofit2.Callback<ApiResponse<User>>() {
+        api.register(body).enqueue(new retrofit2.Callback<TokenResponse>() {
             @Override
-            public void onResponse(retrofit2.Call<ApiResponse<User>> call,
-                    retrofit2.Response<ApiResponse<User>> response) {
+            public void onResponse(retrofit2.Call<TokenResponse> call,
+                    retrofit2.Response<TokenResponse> response) {
                 try {
                     if (!response.isSuccessful()) {
-                        cb.onFailure(new IOException(
-                                "register failed: " + response.code()));
+                        cb.onFailure(failure(response));
                         return;
                     }
-                    ApiResponse<User> bodyRes = response.body();
-                    if (bodyRes == null || !bodyRes.isSuccess()) {
-                        cb.onFailure(new IOException(
-                                bodyRes != null ? bodyRes.error.message
-                                        : "register failed"));
+                    TokenResponse token = response.body();
+                    if (token == null || token.accessToken == null) {
+                        cb.onFailure(emptyReply());
                         return;
                     }
-                    User user = bodyRes.data;
-                    cb.onSuccess(user);
+                    cb.onSuccess(token);
                 } catch (Exception e) {
                     cb.onFailure(e);
                 }
             }
 
             @Override
-            public void onFailure(retrofit2.Call<ApiResponse<User>> call,
-                    Throwable t) {
+            public void onFailure(retrofit2.Call<TokenResponse> call, Throwable t) {
                 cb.onFailure(t);
             }
         });
@@ -66,32 +100,28 @@ public class AuthRepository {
 
     public void login(String email, String password, Callback<TokenResponse> cb) {
         LoginRequest body = new LoginRequest(email, password);
-        api.login(body).enqueue(new retrofit2.Callback<ApiResponse<TokenResponse>>() {
+        api.login(body).enqueue(new retrofit2.Callback<TokenResponse>() {
             @Override
-            public void onResponse(retrofit2.Call<ApiResponse<TokenResponse>> call,
-                    retrofit2.Response<ApiResponse<TokenResponse>> response) {
+            public void onResponse(retrofit2.Call<TokenResponse> call,
+                    retrofit2.Response<TokenResponse> response) {
                 try {
                     if (!response.isSuccessful()) {
-                        cb.onFailure(new IOException(
-                                "login failed: " + response.code()));
+                        cb.onFailure(failure(response));
                         return;
                     }
-                    ApiResponse<TokenResponse> bodyRes = response.body();
-                    if (bodyRes == null || !bodyRes.isSuccess()) {
-                        cb.onFailure(new IOException(
-                                bodyRes != null ? bodyRes.error.message
-                                        : "login failed"));
+                    TokenResponse token = response.body();
+                    if (token == null || token.accessToken == null) {
+                        cb.onFailure(emptyReply());
                         return;
                     }
-                    cb.onSuccess(bodyRes.data);
+                    cb.onSuccess(token);
                 } catch (Exception e) {
                     cb.onFailure(e);
                 }
             }
 
             @Override
-            public void onFailure(retrofit2.Call<ApiResponse<TokenResponse>> call,
-                    Throwable t) {
+            public void onFailure(retrofit2.Call<TokenResponse> call, Throwable t) {
                 cb.onFailure(t);
             }
         });
@@ -99,64 +129,56 @@ public class AuthRepository {
 
     public void googleLogin(String idToken, Callback<TokenResponse> cb) {
         GoogleLoginRequest body = new GoogleLoginRequest(idToken);
-        api.googleLogin(body).enqueue(new retrofit2.Callback<ApiResponse<TokenResponse>>() {
+        api.googleLogin(body).enqueue(new retrofit2.Callback<TokenResponse>() {
             @Override
-            public void onResponse(retrofit2.Call<ApiResponse<TokenResponse>> call,
-                    retrofit2.Response<ApiResponse<TokenResponse>> response) {
+            public void onResponse(retrofit2.Call<TokenResponse> call,
+                    retrofit2.Response<TokenResponse> response) {
                 try {
                     if (!response.isSuccessful()) {
-                        cb.onFailure(new IOException(
-                                "google login failed: " + response.code()));
+                        cb.onFailure(failure(response));
                         return;
                     }
-                    ApiResponse<TokenResponse> bodyRes = response.body();
-                    if (bodyRes == null || !bodyRes.isSuccess()) {
-                        cb.onFailure(new IOException(
-                                bodyRes != null ? bodyRes.error.message
-                                        : "google login failed"));
+                    TokenResponse token = response.body();
+                    if (token == null || token.accessToken == null) {
+                        cb.onFailure(emptyReply());
                         return;
                     }
-                    cb.onSuccess(bodyRes.data);
+                    cb.onSuccess(token);
                 } catch (Exception e) {
                     cb.onFailure(e);
                 }
             }
 
             @Override
-            public void onFailure(retrofit2.Call<ApiResponse<TokenResponse>> call,
-                    Throwable t) {
+            public void onFailure(retrofit2.Call<TokenResponse> call, Throwable t) {
                 cb.onFailure(t);
             }
         });
     }
 
     public void getCurrentUser(Callback<User> cb) {
-        api.getCurrentUser().enqueue(new retrofit2.Callback<ApiResponse<User>>() {
+        api.getCurrentUser().enqueue(new retrofit2.Callback<UserEnvelope>() {
             @Override
-            public void onResponse(retrofit2.Call<ApiResponse<User>> call,
-                    retrofit2.Response<ApiResponse<User>> response) {
+            public void onResponse(retrofit2.Call<UserEnvelope> call,
+                    retrofit2.Response<UserEnvelope> response) {
                 try {
                     if (!response.isSuccessful()) {
-                        cb.onFailure(new IOException(
-                                "get current user failed: " + response.code()));
+                        cb.onFailure(failure(response));
                         return;
                     }
-                    ApiResponse<User> bodyRes = response.body();
-                    if (bodyRes == null || !bodyRes.isSuccess()) {
-                        cb.onFailure(new IOException(
-                                bodyRes != null ? bodyRes.error.message
-                                        : "get current user failed"));
+                    UserEnvelope body = response.body();
+                    if (body == null || body.user == null) {
+                        cb.onFailure(emptyReply());
                         return;
                     }
-                    cb.onSuccess(bodyRes.data);
+                    cb.onSuccess(body.user);
                 } catch (Exception e) {
                     cb.onFailure(e);
                 }
             }
 
             @Override
-            public void onFailure(retrofit2.Call<ApiResponse<User>> call,
-                    Throwable t) {
+            public void onFailure(retrofit2.Call<UserEnvelope> call, Throwable t) {
                 cb.onFailure(t);
             }
         });

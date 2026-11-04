@@ -17,20 +17,22 @@ public interface ApiService {
 
     // ---- Auth ----
 
+    // The API answers auth calls with a bare object ({"user": .., "access_token": ..}),
+    // not the {"data": ..} envelope, so these are parsed as-is.
     @POST("api/v1/auth/register")
-    Call<ApiResponse<User>> register(@Body RegisterRequest body);
+    Call<TokenResponse> register(@Body RegisterRequest body);
 
     @POST("api/v1/auth/login")
-    Call<ApiResponse<TokenResponse>> login(@Body LoginRequest body);
+    Call<TokenResponse> login(@Body LoginRequest body);
 
     @POST("api/v1/auth/google")
-    Call<ApiResponse<TokenResponse>> googleLogin(@Body GoogleLoginRequest body);
+    Call<TokenResponse> googleLogin(@Body GoogleLoginRequest body);
 
     @GET("api/v1/auth/config")
-    Call<ApiResponse<AuthConfig>> authConfig();
+    Call<AuthConfig> authConfig();
 
     @GET("api/v1/auth/me")
-    Call<ApiResponse<User>> getCurrentUser();
+    Call<UserEnvelope> getCurrentUser();
 
     @PATCH("api/v1/listeners/me")
     Call<ApiResponse<User>> updateProfile(@Body ProfileUpdate body);
