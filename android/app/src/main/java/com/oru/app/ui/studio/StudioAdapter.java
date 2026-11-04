@@ -62,7 +62,7 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
         holder.bind(getItem(position));
     }
 
-    static class VH extends RecyclerView.ViewHolder {
+    class VH extends RecyclerView.ViewHolder {
         private final ItemStudioSongBinding binding;
 
         VH(ItemStudioSongBinding binding) {
