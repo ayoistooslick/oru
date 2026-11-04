@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.oru.app.R;
+import com.oru.app.data.model.ApiResponse;
 import com.oru.app.data.model.TokenResponse;
 import com.oru.app.data.repository.AuthRepository;
 import com.oru.app.data.repository.Callback;
@@ -175,6 +176,12 @@ public class AuthActivity extends AppCompatActivity {
             binding.passwordLayout.setError("Enter your password");
             return;
         }
+        // The API refuses a shorter password on sign-up (min_length=10), so say
+        // so here rather than after a round trip.
+        if (isSignUp && password.length() < 10) {
+            binding.passwordLayout.setError("Use at least 10 characters");
+            return;
+        }
 
         busy.set(true);
         binding.progressBar.setVisibility(View.VISIBLE);
@@ -218,23 +225,12 @@ public class AuthActivity extends AppCompatActivity {
                     LazySession.getGson());
         }
         authRepo.register(email, password, handle, displayName,
-                new Callback<com.oru.app.data.model.User>() {
+                new Callback<TokenResponse>() {
                     @Override
-                    public void onSuccess(com.oru.app.data.model.User user) {
-                        // Registration returns the user; the backend returns a
-                        // token in the response for login flow.
-                        // For ORU, register does not return a token; we prompt
-                        // login after registration.
-                        binding.progressBar.setVisibility(View.GONE);
-                        binding.primaryButton.setEnabled(true);
-                        busy.set(false);
-                        Snackbar.make(binding.getRoot(),
-                                "Account created. Sign in below.",
-                                Snackbar.LENGTH_LONG).show();
-                        toggleMode();
-                        binding.emailEditText.setText(email);
-                        binding.passwordEditText.setText("");
-                        clearError();
+                    public void onSuccess(TokenResponse token) {
+                        // Sign-up answers with a session token, so there is no
+                        // second trip through the sign-in form.
+                        finishAuth(token);
                     }
 
                     @Override
@@ -260,12 +256,17 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     private String describe(Throwable error) {
+        // The repository turns API replies into an ApiException that carries the
+        // backend's own wording, so a rejected password says so instead of
+        // blaming the connection.
+        if (error instanceof ApiResponse.ApiException) {
+            String message = error.getMessage();
+            if (message != null && !message.isEmpty()) {
+                return message;
+            }
+        }
         if (error instanceof java.io.IOException) {
             return getString(R.string.error_network);
-        }
-        // Try to read backend error message.
-        if (error.getMessage() != null && error.getMessage().startsWith("{")) {
-            return "Sign-in failed";
         }
         return getString(R.string.error_unknown);
     }

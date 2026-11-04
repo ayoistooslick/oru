@@ -19,12 +19,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
 /**
  * Builds the Retrofit client pointing at the ORU API.
  *
- * When running against the production host, the single function route carries the
- * real path in a __path query parameter. This client targets the production host
- * base URL directly (e.g. https://oru.freebuff.app) so that the HostPathMiddleware
- * receives each request through /api?__path=..., but we use the clean REST paths
- * from the backend. In practice the backend is served at the same base URL, so
- * requests to /api/v1/... resolve correctly.
+ * The production host publishes one function route at /api, so a request carries
+ * the path it wants in a __path query parameter: /api?__path=/api/v1/auth/login.
+ * HostPathInterceptor rewrites the clean REST paths from ApiService into that
+ * shape before the request leaves the device.
  *
  * For local development you can override BASE_URL via an environment-like config
  * or by setting a build variant. The network security config permits localhost
@@ -101,26 +99,25 @@ public class ApiClient {
     }
 
     /**
-     * Production single-function route rewrites /api/v1/... to /api?__path=/api/v1/...
-     * so we remap the path before it leaves the device.
+     * The host publishes a single route at /api, so /api/v1/... becomes
+     * /api?__path=/api/v1/... before it leaves the device. The query parameter
+     * must be added as a query parameter: encodedPath() percent-encodes the "?"
+     * in a string that carries one, which turns the request into /api%3F__path=…
+     * and the host answers 405 instead of routing it.
      */
     private static class HostPathInterceptor implements Interceptor {
         @Override
         public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
             String path = request.url().encodedPath();
-            // If the path already starts with /api?__path= (e.g. direct call),
-            // leave it. Otherwise rewrite /api/v1/... requests.
-            if (path.startsWith("/api/v1/") || path.startsWith("/api/v1")
-                    || path.equals("/api")) {
-                String newPath = "/api?__path=" + java.net.URLEncoder.encode(path, "UTF-8");
+            if (path.startsWith("/api/v1")) {
+                // Keep any query the call already carries (page, limit) and
+                // append the routed path next to it.
                 okhttp3.HttpUrl newUrl = request.url().newBuilder()
-                        .encodedPath(newPath)
+                        .encodedPath("/api")
+                        .addQueryParameter("__path", path)
                         .build();
-                Request newRequest = request.newBuilder()
-                        .url(newUrl)
-                        .build();
-                return chain.proceed(newRequest);
+                return chain.proceed(request.newBuilder().url(newUrl).build());
             }
             return chain.proceed(request);
         }
@@ -134,8 +131,10 @@ public class ApiClient {
         public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
             long start = System.currentTimeMillis();
+            // Log the path the API will route, not the /api wrapper it travels in.
+            String routed = request.url().queryParameter("__path");
             android.util.Log.d("OruApi", "→ " + request.method() + " "
-                    + request.url().encodedPath());
+                    + (routed != null ? routed : request.url().encodedPath()));
             Response response = chain.proceed(request);
             long took = System.currentTimeMillis() - start;
             android.util.Log.d("OruApi", "← " + response.code() + " " + took + "ms");
