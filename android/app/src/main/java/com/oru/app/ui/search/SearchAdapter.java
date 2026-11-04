@@ -41,7 +41,7 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
 
                 private String getItemIdentity(SearchResult item) {
                     if (item.song != null) return "s:" + item.song.id;
-                    if (item.artist != null) return "a:" + item.artist.id;
+                    if (item.artist != null) return "a:" + item.artist.artistId();
                     if (item.playlist != null) return "p:" + item.playlist.id;
                     return "";
                 }
@@ -82,7 +82,7 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
                     ctx.startActivity(i);
                 } else if (item.artist != null) {
                     Intent i = new Intent(ctx, com.oru.app.ui.artist.ArtistActivity.class);
-                    i.putExtra("artistId", item.artist.id);
+                    i.putExtra("artistId", item.artist.artistId());
                     ctx.startActivity(i);
                 } else if (item.playlist != null) {
                     Intent i = new Intent(ctx, com.oru.app.ui.playlist.PlaylistActivity.class);

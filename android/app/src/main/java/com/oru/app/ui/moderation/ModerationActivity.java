@@ -82,7 +82,7 @@ public class ModerationActivity extends AppCompatActivity {
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
                         com.oru.app.ui.components.UiErrors
-                                .message(this, error));
+                                .message(ModerationActivity.this, error));
             }
         });
     }

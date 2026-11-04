@@ -30,7 +30,8 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
                 public boolean areContentsTheSame(@NonNull Song oldItem,
                         @NonNull Song newItem) {
                     return oldItem.title.equals(newItem.title)
-                            && oldItem.isLiked == newItem.isLiked;
+                            && java.util.Objects.equals(oldItem.status,
+                                    newItem.status);
                 }
             };
 
