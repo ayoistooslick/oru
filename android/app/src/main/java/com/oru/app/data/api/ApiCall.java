@@ -28,8 +28,13 @@ public final class ApiCall {
             public void onResponse(retrofit2.Call<ApiResponse<T>> ignored,
                     retrofit2.Response<ApiResponse<T>> response) {
                 ApiResponse<T> body = response.body();
-                if (!response.isSuccessful() || body == null) {
+                if (!response.isSuccessful()) {
                     cb.onFailure(error(gson, response, fallback));
+                    return;
+                }
+                // 204s and other empty replies still mean the call worked.
+                if (body == null) {
+                    cb.onSuccess(null);
                     return;
                 }
                 if (body.error != null) {

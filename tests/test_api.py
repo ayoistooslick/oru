@@ -10,8 +10,11 @@ def make_artist(client, email="artist@example.com", handle="artist_one"):
     return account
 
 
-def upload_track(client, token, title="New track", content=b"fake mp3 bytes"):
-    response = client.post("/api/v1/artists/me/songs", headers=auth(token), data={"title": title, "genres": "ambient"}, files={"audio": ("song.mp3", content, "audio/mpeg")})
+def upload_track(client, token, title="New track", content=b"fake mp3 bytes", duration_ms=None):
+    data = {"title": title, "genres": "ambient"}
+    if duration_ms is not None:
+        data["duration_ms"] = str(duration_ms)
+    response = client.post("/api/v1/artists/me/songs", headers=auth(token), data=data, files={"audio": ("song.mp3", content, "audio/mpeg")})
     assert response.status_code == 201, response.text
     return response.json()["song"]["id"]
 
@@ -73,6 +76,68 @@ def test_discovery_and_listen_counting(client):
     second = client.post(f"/api/v1/songs/{song_id}/listen", headers=auth(listener["access_token"]), json={"listened_ms": 45000})
     assert first.json()["counted_for_discovery"] is True
     assert second.json()["counted_for_discovery"] is False
+
+
+def test_song_counts_artist_numbers_and_owner_fields(client):
+    artist = make_artist(client)
+    artist_id = artist["user"]["id"]
+    song_id = upload_track(client, artist["access_token"], duration_ms=215000)
+    client.post(f"/api/v1/artists/me/songs/{song_id}/publish", headers=auth(artist["access_token"]))
+
+    fresh = client.get(f"/api/v1/songs/{song_id}").json()["song"]
+    assert fresh["duration_ms"] == 215000
+    assert fresh["likes_count"] == 0
+    assert fresh["plays_count"] == 0
+    assert fresh["is_liked"] is False
+
+    listener = register(client, "counter@example.com", "counter")
+    client.post(f"/api/v1/songs/{song_id}/likes", headers=auth(listener["access_token"]))
+    client.post(f"/api/v1/songs/{song_id}/listen", headers=auth(listener["access_token"]), json={"listened_ms": 45000})
+    counted = client.get(f"/api/v1/songs/{song_id}", headers=auth(listener["access_token"])).json()["song"]
+    assert counted["likes_count"] == 1
+    assert counted["plays_count"] == 1
+    assert counted["is_liked"] is True
+
+    page = client.get(f"/api/v1/artists/{artist_id}", headers=auth(listener["access_token"])).json()
+    assert page["published_song_count"] == 1
+    assert page["plays_count"] == 1
+    assert page["likes_count"] == 1
+    assert page["is_followed"] is False
+    client.post(f"/api/v1/artists/{artist_id}/follow", headers=auth(listener["access_token"]))
+    followed = client.get(f"/api/v1/artists/{artist_id}", headers=auth(listener["access_token"])).json()
+    assert followed["is_followed"] is True
+    assert followed["follower_count"] == 1
+
+    playlist = client.post("/api/v1/playlists", headers=auth(listener["access_token"]), json={"title": "Picks", "is_public": True}).json()["playlist"]
+    assert playlist["owner"]["handle"] == "counter"
+    client.post(f"/api/v1/playlists/{playlist['id']}/songs/{song_id}", headers=auth(listener["access_token"]))
+    listing = client.get("/api/v1/playlists", headers=auth(listener["access_token"])).json()["items"][0]
+    assert listing["song_count"] == 1
+    assert listing["cover_url"] is None
+
+    release = client.post("/api/v1/artists/me/releases", headers=auth(artist["access_token"]),
+                          json={"title": "One", "kind": "single", "song_ids": [song_id]}).json()["release"]
+    assert release["song_count"] == 1
+    assert release["cover_url"] is None
+
+
+def test_owner_can_delete_a_playlist(client):
+    listener = register(client, "deleter@example.com", "deleter")
+    created = client.post("/api/v1/playlists", headers=auth(listener["access_token"]),
+                          json={"title": "Gone soon"}).json()["playlist"]
+    other = register(client, "stranger@example.com", "stranger_listener")
+    assert client.delete(f"/api/v1/playlists/{created['id']}", headers=auth(other["access_token"])).status_code == 404
+    assert client.delete(f"/api/v1/playlists/{created['id']}", headers=auth(listener["access_token"])).status_code == 204
+    assert client.get(f"/api/v1/playlists/{created['id']}", headers=auth(listener["access_token"])).status_code == 404
+
+
+def test_upload_refuses_an_impossible_duration(client):
+    artist = make_artist(client)
+    response = client.post("/api/v1/artists/me/songs", headers=auth(artist["access_token"]),
+                           data={"title": "Too long", "duration_ms": "0"},
+                           files={"audio": ("song.mp3", b"audio", "audio/mpeg")})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_duration"
 
 
 def test_reports_require_moderator_and_record_decision(client, monkeypatch):

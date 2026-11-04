@@ -4,6 +4,7 @@ import { Check, ImagePlus, Mic, Music4, Scissors, Send, Trash2, UploadCloud, Use
 import { ApiError, auth, request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
+import { audioDuration } from "../lib/audio";
 import type { Artist, ArtistPost, ArtistStats, Paginated, Release, Song } from "../lib/types";
 import { TrackRow } from "../components/TrackRow";
 import { Cover } from "../components/Cover";
@@ -202,6 +203,8 @@ function Desk({ onLeave }: { onLeave: () => void }) {
       .filter(Boolean)
       .forEach((value) => form.append("genres", value));
     form.append("audio", chosen);
+    const durationMs = await audioDuration(chosen);
+    if (durationMs) form.append("duration_ms", String(durationMs));
     featuredIds.forEach((id) => form.append("featured", String(id)));
     const art = coverRef.current?.files?.[0];
     if (art) {

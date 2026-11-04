@@ -30,6 +30,24 @@ export async function decodeAudio(blob: Blob): Promise<AudioBuffer> {
 }
 
 /** Peak levels for drawing. `buckets` is how many bars the picture gets. */
+/** How long a file plays for, read from its own header. The server never opens
+ * the audio, so the uploader is the only place that knows this. */
+export function audioDuration(file: Blob): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = document.createElement("audio");
+    const done = (value: number | null) => {
+      URL.revokeObjectURL(url);
+      resolve(value);
+    };
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () =>
+      done(Number.isFinite(audio.duration) ? Math.round(audio.duration * 1000) : null);
+    audio.onerror = () => done(null);
+    audio.src = url;
+  });
+}
+
 export function waveformPeaks(buffer: AudioBuffer, buckets = 220): number[] {
   const channel = buffer.getChannelData(0);
   const step = Math.max(1, Math.floor(channel.length / buckets));

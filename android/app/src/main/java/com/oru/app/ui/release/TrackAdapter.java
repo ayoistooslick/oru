@@ -14,8 +14,19 @@ import com.oru.app.databinding.ItemTrackBinding;
 
 public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
 
+    /** Long-pressing a track in a playlist offers to take it out. */
+    public interface Listener {
+        void onLongPress(Song song);
+    }
+
+    private Listener listener;
+
     public TrackAdapter() {
         super(DIFF_CALLBACK);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     private static final DiffUtil.ItemCallback<Song> DIFF_CALLBACK =
@@ -46,7 +57,7 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Song song = getItem(position);
-        holder.bind(position + 1, song);
+        holder.bind(position + 1, song, listener);
     }
 
     public void setTracks(java.util.List<Song> songs) {
@@ -61,13 +72,10 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(int trackNumber, Song song) {
+        void bind(int trackNumber, Song song, Listener listener) {
             binding.trackNumberText.setText(String.valueOf(trackNumber));
             binding.titleText.setText(song.title);
-            binding.durationText.setText(
-                    song.genres != null && !song.genres.isEmpty()
-                            ? song.genres.get(0)
-                            : "");
+            binding.durationText.setText(song.durationLabel());
             binding.getRoot().setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),
@@ -75,13 +83,12 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
                 i.putExtra("songId", song.id);
                 binding.getRoot().getContext().startActivity(i);
             });
-        }
-
-        private String formatDuration(int ms) {
-            int sec = ms / 1000;
-            int m = sec / 60;
-            int s = sec % 60;
-            return String.format("%d:%02d", m, s);
+            binding.getRoot().setOnLongClickListener(v -> {
+                if (listener != null) {
+                    listener.onLongPress(song);
+                }
+                return true;
+            });
         }
     }
 }

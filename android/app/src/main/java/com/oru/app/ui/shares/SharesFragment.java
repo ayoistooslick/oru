@@ -27,6 +27,12 @@ public class SharesFragment extends Fragment {
     private SharesAdapter adapter;
     private SharingRepository sharingRepo;
 
+    private final androidx.activity.result.ActivityResultLauncher<android.content.Intent> shareLauncher =
+            registerForActivityResult(
+                    new androidx.activity.result.contract.ActivityResultContracts
+                            .StartActivityForResult(),
+                    result -> loadShares(false));
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -44,6 +50,9 @@ public class SharesFragment extends Fragment {
                 new LinearLayoutManager(requireContext()));
         binding.recyclerView.setAdapter(adapter);
 
+        binding.shareSongButton.setOnClickListener(v -> shareLauncher.launch(
+                new android.content.Intent(requireContext(), ShareActivity.class)));
+
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             loadShares(true);
@@ -59,6 +68,9 @@ public class SharesFragment extends Fragment {
     }
 
     private void loadShares(boolean refresh) {
+        if (binding == null) {
+            return;
+        }
         binding.swipeRefresh.setRefreshing(refresh);
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.recyclerView.setVisibility(View.GONE);

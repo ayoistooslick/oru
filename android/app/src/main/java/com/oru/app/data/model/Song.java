@@ -37,6 +37,21 @@ public class Song {
     @SerializedName("status")
     public String status;
 
+    /** How long the audio plays for; set when the upload reported it. */
+    @SerializedName("duration_ms")
+    public int durationMs;
+
+    @SerializedName("likes_count")
+    public int likesCount;
+
+    /** Plays long enough to count toward discovery. */
+    @SerializedName("plays_count")
+    public int playsCount;
+
+    /** Whether the signed-in listener liked this song. */
+    @SerializedName("is_liked")
+    public boolean isLiked;
+
     @SerializedName("cover_url")
     public String coverUrl;
 
@@ -71,6 +86,16 @@ public class Song {
 
     public boolean isPublished() {
         return "published".equals(status);
+    }
+
+    /** "3:34", or empty when the upload never reported a length. */
+    public String durationLabel() {
+        if (durationMs <= 0) {
+            return "";
+        }
+        int seconds = durationMs / 1000;
+        return String.format(java.util.Locale.US, "%d:%02d", seconds / 60,
+                seconds % 60);
     }
 
     /** Genres as one readable line; minSdk 24 has no String.join. */

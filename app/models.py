@@ -52,6 +52,9 @@ class Song(Base):
     audio_key: Mapped[str] = mapped_column(String(500))
     cover_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     audio_type: Mapped[str] = mapped_column(String(80))
+    # Sent by whichever client uploaded the audio, which is the only place that
+    # knows how long the file is; older rows predate the field.
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

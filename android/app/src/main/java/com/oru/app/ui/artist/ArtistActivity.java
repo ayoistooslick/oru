@@ -90,9 +90,9 @@ public class ArtistActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Artist a) {
                 artist = a;
+                following = a.isFollowed;
                 populateHeader(a);
                 loadContent(a.artistId());
-                loadFollowState(a.artistId());
             }
 
             @Override
@@ -108,7 +108,7 @@ public class ArtistActivity extends AppCompatActivity {
         binding.listenersText.setText(String.valueOf(a.followerCount));
         binding.bioText.setText(a.bio != null ? a.bio : "");
         binding.songCountText.setText(String.valueOf(a.publishedSongCount));
-        binding.playsCountText.setText("");
+        binding.playsCountText.setText(String.valueOf(a.playsCount));
         binding.followersCountText.setText(formatFollows(a.followerCount));
         updateFollowButton(following);
 
@@ -199,31 +199,6 @@ public class ArtistActivity extends AppCompatActivity {
         binding.progressBar.setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.VISIBLE);
         binding.errorView.errorMessage.setText(describe(error));
-    }
-
-    /** The artist page does not carry the viewer's follow state, so ask. */
-    private void loadFollowState(int artistId) {
-        communityRepo.getFollowing(new Callback<List<Artist>>() {
-            @Override
-            public void onSuccess(List<Artist> artists) {
-                boolean follows = false;
-                if (artists != null) {
-                    for (Artist a : artists) {
-                        if (a.artistId() == artistId) {
-                            follows = true;
-                            break;
-                        }
-                    }
-                }
-                following = follows;
-                updateFollowButton(following);
-            }
-
-            @Override
-            public void onFailure(Throwable error) {
-                // Leave the button as it is; following still works.
-            }
-        });
     }
 
     private void showFailure(Throwable error) {

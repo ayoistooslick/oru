@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from app.api.uploads import IMAGE_TYPES, guess_image_type, media_response, save_upload
 from app.config import settings
 from app.database import get_db
-from app.dependencies import current_user
-from app.models import ArtistProfile, Follow, Song, User
+from app.dependencies import current_user, optional_current_user
+from app.models import ArtistProfile, Follow, Like, ListeningEvent, Song, User
 from app.schemas import ArtistProfileCreate, GoogleLoginRequest, LoginRequest, ProfileUpdate, RegisterRequest
 from app.security import create_access_token, hash_password, verify_password
 from app.storage import storage
@@ -57,13 +57,35 @@ def user_data(user: User) -> dict:
             "banner_url": f"/api/v1/artists/{user.id}/banner" if profile and profile.banner_key else None}
 
 
-def artist_data(artist: User) -> dict:
+def artist_data(artist: User, db: Session | None = None, viewer: User | None = None) -> dict:
     profile = artist.artist_profile
-    return {"user_id": artist.id, "handle": artist.handle,
+    data = {"user_id": artist.id, "handle": artist.handle,
             "stage_name": profile.stage_name if profile else artist.display_name,
             "bio": artist.bio,
             "avatar_url": f"/api/v1/users/{artist.id}/avatar" if artist.avatar_key else None,
             "banner_url": f"/api/v1/artists/{artist.id}/banner" if profile and profile.banner_key else None}
+    if db is not None:
+        data["published_song_count"] = db.scalar(
+            select(func.count(Song.id)).where(Song.artist_id == artist.id, Song.status == "published")
+        ) or 0
+        data["plays_count"] = db.scalar(
+            select(func.count(ListeningEvent.id)).join(Song, Song.id == ListeningEvent.song_id)
+            .where(Song.artist_id == artist.id, ListeningEvent.counted.is_(True))
+        ) or 0
+        data["likes_count"] = db.scalar(
+            select(func.count()).select_from(Like).join(Song, Song.id == Like.song_id)
+            .where(Song.artist_id == artist.id)
+        ) or 0
+        data["follower_count"] = db.scalar(
+            select(func.count(Follow.listener_id)).where(Follow.artist_id == artist.id)
+        ) or 0
+        data["is_followed"] = bool(
+            viewer is not None and viewer.id != artist.id and db.scalar(
+                select(func.count()).select_from(Follow)
+                .where(Follow.listener_id == viewer.id, Follow.artist_id == artist.id)
+            )
+        )
+    return data
 
 
 def _replace_image(kind: str, upload: UploadFile, previous: str | None) -> str:
@@ -200,7 +222,7 @@ def create_artist_profile(payload: ArtistProfileCreate, user: User = Depends(cur
     db.add(profile)
     db.commit()
     db.refresh(user)
-    return {"artist": artist_data(user)}
+    return {"artist": artist_data(user, db, user)}
 
 
 @router.post("/artists/me/banner")
@@ -210,7 +232,7 @@ def set_banner(file: UploadFile = File(...), user: User = Depends(current_user),
     user.artist_profile.banner_key = _replace_image("banner", file, user.artist_profile.banner_key)
     db.commit()
     db.refresh(user)
-    return {"artist": artist_data(user)}
+    return {"artist": artist_data(user, db, user)}
 
 
 @router.delete("/artists/me/banner")
@@ -219,7 +241,7 @@ def clear_banner(user: User = Depends(current_user), db: Session = Depends(get_d
         storage.delete(user.artist_profile.banner_key)
         user.artist_profile.banner_key = None
         db.commit()
-    return {"artist": artist_data(user)}
+    return {"artist": artist_data(user, db, user)}
 
 
 @router.get("/artists/{artist_id}/banner")
@@ -232,20 +254,21 @@ def get_banner(artist_id: int, request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/artists")
-def list_artists(q: str | None = None, limit: int = 20, offset: int = 0, db: Session = Depends(get_db)):
+def list_artists(q: str | None = None, limit: int = 20, offset: int = 0,
+                viewer: User | None = Depends(optional_current_user),
+                db: Session = Depends(get_db)):
     limit = min(max(limit, 1), 50)
     query = select(User).join(ArtistProfile).where(User.is_active.is_(True)).order_by(ArtistProfile.stage_name).offset(max(offset, 0)).limit(limit)
     if q:
         query = query.where(ArtistProfile.stage_name.ilike(f"%{q[:80]}%"))
     artists = db.scalars(query).all()
-    return {"items": [artist_data(artist) | {"bio": artist.bio} for artist in artists], "limit": limit, "offset": max(offset, 0)}
+    return {"items": [artist_data(artist, db, viewer) for artist in artists], "limit": limit, "offset": max(offset, 0)}
 
 
 @router.get("/artists/{artist_id}")
-def get_artist(artist_id: int, db: Session = Depends(get_db)):
+def get_artist(artist_id: int, viewer: User | None = Depends(optional_current_user),
+               db: Session = Depends(get_db)):
     artist = db.get(User, artist_id)
     if artist is None or artist.artist_profile is None or not artist.is_active:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Artist not found"})
-    songs = db.scalar(select(func.count(Song.id)).where(Song.artist_id == artist.id, Song.status == "published")) or 0
-    followers = db.scalar(select(func.count(Follow.listener_id)).where(Follow.artist_id == artist.id)) or 0
-    return artist_data(artist) | {"bio": artist.bio, "published_song_count": songs, "follower_count": followers}
+    return artist_data(artist, db, viewer)

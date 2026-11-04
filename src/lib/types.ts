@@ -41,6 +41,13 @@ export interface Song {
   description: string;
   genres: string[];
   status: SongStatus;
+  /** Length of the audio, reported by whoever uploaded it. */
+  duration_ms: number | null;
+  likes_count: number;
+  /** Plays long enough to count toward discovery. */
+  plays_count: number;
+  /** Whether the signed-in listener has liked this song. */
+  is_liked: boolean;
   created_at: string;
   published_at: string | null;
   audio_url: string | null;
@@ -60,6 +67,10 @@ export interface Artist {
   banner_url?: string | null;
   published_song_count?: number;
   follower_count?: number;
+  plays_count?: number;
+  likes_count?: number;
+  /** The signed-in listener follows this artist. */
+  is_followed?: boolean;
 }
 
 export interface Genre {
@@ -76,6 +87,9 @@ export interface Release {
   published_at: string | null;
   song_ids: number[];
   songs?: Song[];
+  song_count?: number;
+  /** The first track's artwork; a release has none of its own. */
+  cover_url?: string | null;
 }
 
 export interface ReleaseDetail {
@@ -96,6 +110,9 @@ export interface Playlist {
   owner_id: number;
   song_count?: number;
   created_at?: string;
+  cover_url?: string | null;
+  song_ids?: number[];
+  owner?: { handle: string; display_name: string } | null;
   songs?: (Song & { position: number })[];
 }
 

@@ -68,7 +68,10 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
             binding.typeLabel.setText("Song");
             binding.titleText.setText(song.title);
             binding.subtitleText.setText(song.artistLabel());
-            binding.metaText.setText(song.genreLabel());
+            String length = song.durationLabel();
+            String genres = song.genreLabel();
+            binding.metaText.setText(length.isEmpty() ? genres
+                    : genres.isEmpty() ? length : length + " · " + genres);
             binding.playButton.setVisibility(View.VISIBLE);
             binding.getRoot().setOnClickListener(v -> {
                 Intent i = new Intent(binding.getRoot().getContext(),

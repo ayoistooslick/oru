@@ -77,7 +77,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        // Toolbar title can be updated per destination via the listener above.
+        // Settings and the account live behind the toolbar's overflow.
+        binding.toolbar.inflateMenu(R.menu.main_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_settings) {
+                startActivity(new Intent(this,
+                        com.oru.app.ui.settings.SettingsActivity.class));
+                return true;
+            }
+            return false;
+        });
     }
 
     @Override

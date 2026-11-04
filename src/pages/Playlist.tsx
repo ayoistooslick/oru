@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Globe2, Lock, Play, Plus, Search, X } from "../components/icons";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Globe2, Lock, Play, Plus, Search, Trash2, X } from "../components/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Paginated, Playlist, Song } from "../lib/types";
@@ -28,6 +28,7 @@ export function PlaylistPage() {
   const playlist = detail.data?.playlist ?? null;
   const songs = useMemo(() => playlist?.songs ?? [], [playlist]);
   const isOwner = Boolean(playlist && user && playlist.owner_id === user.id);
+  const navigate = useNavigate();
 
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
@@ -96,6 +97,21 @@ export function PlaylistPage() {
       detail.reload();
     } catch (error) {
       toasts.error("Could not save it", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePlaylist = async () => {
+    if (!playlist) return;
+    if (!window.confirm(`Delete “${playlist.title}”? The songs stay in your library.`)) return;
+    setSaving(true);
+    try {
+      await request(`/playlists/${playlist.id}`, { method: "DELETE" });
+      toasts.info("Playlist deleted", playlist.title);
+      navigate("/library");
+    } catch (error) {
+      toasts.error("Could not delete it", error instanceof Error ? error.message : "Try again.");
     } finally {
       setSaving(false);
     }
@@ -196,6 +212,14 @@ export function PlaylistPage() {
                 {saving ? "Saving" : "Save"}
               </Button>
             </div>
+            <button
+              type="button"
+              onClick={() => void deletePlaylist()}
+              disabled={saving}
+              className="mt-4 inline-flex items-center gap-2 text-[13.5px] font-semibold text-flame-ink transition hover:underline disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" /> Delete this playlist
+            </button>
           </form>
         ) : null}
 

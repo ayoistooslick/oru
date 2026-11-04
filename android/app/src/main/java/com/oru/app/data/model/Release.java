@@ -34,6 +34,13 @@ public class Release {
     @SerializedName("songs")
     public List<Song> songs;
 
+    @SerializedName("song_count")
+    public int songCount;
+
+    /** The first track's artwork, since a release has none of its own. */
+    @SerializedName("cover_url")
+    public String coverUrl;
+
     /** A release is out once it has a publication date; list items carry only
      * that, not the status. */
     public boolean isPublished() {

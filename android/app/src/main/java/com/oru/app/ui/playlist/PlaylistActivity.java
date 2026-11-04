@@ -36,6 +36,7 @@ public class PlaylistActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         trackAdapter = new TrackAdapter();
+        trackAdapter.setListener(this::askRemove);
 
         binding.tracksRecyclerView.setLayoutManager(
                 new LinearLayoutManager(this));
@@ -82,17 +83,9 @@ public class PlaylistActivity extends AppCompatActivity {
             public void onSuccess(Playlist p) {
                 playlist = p;
                 populateHeader(p);
-                // Playlists carry no artwork; the first track stands in for it.
-                loadCover(p.songs != null && !p.songs.isEmpty()
-                        ? com.oru.app.util.MediaUrl.of(p.songs.get(0).coverUrl)
-                        : null);
-                // Then load tracks if the playlist includes songs.
-                if (p.songs != null && !p.songs.isEmpty()) {
-                    populateTracks(p.songs);
-                } else {
-                    // Load songs separately if not embedded.
-                    // songs embedded in playlist response
-                }
+                loadCover(com.oru.app.util.MediaUrl.of(p.coverUrl));
+                populateTracks(p.songs != null ? p.songs
+                        : new java.util.ArrayList<>());
             }
 
             @Override
@@ -106,7 +99,10 @@ public class PlaylistActivity extends AppCompatActivity {
         binding.collapsingToolbar.setTitle(p.title);
         binding.titleText.setText(p.title);
         binding.songCountText.setText(p.songCount() + " songs");
-        binding.ownerText.setText(p.isPublic ? "Public" : "Private");
+        binding.ownerText.setText(p.owner != null
+                && p.owner.displayName != null
+                        ? "by " + p.owner.displayName
+                        : (p.isPublic ? "Public" : "Private"));
     }
 
     private void loadCover(String coverUrl) {
@@ -125,26 +121,54 @@ public class PlaylistActivity extends AppCompatActivity {
         trackAdapter.submitList(songs);
         binding.tracksRecyclerView.setVisibility(View.VISIBLE);
         binding.progressBar.setVisibility(View.GONE);
+        binding.playerBar.setVisibility(songs.isEmpty() ? View.GONE : View.VISIBLE);
+        if (!songs.isEmpty()) {
+            Song first = songs.get(0);
+            binding.playerTitle.setText(first.title);
+            binding.playerArtist.setText(first.artistLabel());
+            com.bumptech.glide.Glide.with(this)
+                    .load(com.oru.app.util.MediaUrl.of(first.coverUrl))
+                    .placeholder(R.drawable.ic_library)
+                    .into(binding.playerArtwork);
+        }
     }
 
+    /** Play all: open the player on the first track. */
     private void togglePlay() {
         if (playlist == null || playlist.songs == null
                 || playlist.songs.isEmpty()) {
             return;
         }
-        Song first = playlist.songs.get(0);
         android.content.Intent intent = new android.content.Intent(this,
-                PlayerService.class);
-        intent.setAction("com.oru.app.PLAY");
-        startService(intent);
-        binding.playerBar.setVisibility(View.VISIBLE);
-        binding.playerTitle.setText(first.title);
-        binding.playerArtist.setText(first.artistLabel());
-        com.bumptech.glide.Glide.with(this)
-                .load(com.oru.app.util.MediaUrl.of(first.coverUrl))
-                .placeholder(R.drawable.ic_library)
-                .into(binding.playerArtwork);
-        binding.playerPlayButton.setImageResource(com.oru.app.R.drawable.ic_play);
+                com.oru.app.ui.player.PlayerActivity.class);
+        intent.putExtra("songId", playlist.songs.get(0).id);
+        startActivity(intent);
+    }
+
+    private void askRemove(Song song) {
+        if (playlist == null) {
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Remove " + song.title + "?")
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Remove", (dialog, which) ->
+                        communityRepo.removeSongFromPlaylist(playlist.id,
+                                song.id, new Callback<Void>() {
+                                    @Override
+                                    public void onSuccess(Void ignored) {
+                                        loadPlaylist();
+                                    }
+
+                                    @Override
+                                    public void onFailure(Throwable error) {
+                                        binding.errorView.getRoot()
+                                                .setVisibility(View.VISIBLE);
+                                        binding.errorView.errorMessage
+                                                .setText(describe(error));
+                                    }
+                                }))
+                .show();
     }
 
     private void onFailure(Throwable error) {

@@ -58,12 +58,10 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
 
         void bind(Song song) {
             binding.titleText.setText(song.title);
-            binding.durationText.setText(
-                    song.genres != null && !song.genres.isEmpty()
-                            ? song.genres.get(0)
-                            : "");
-            binding.likesText.setText(
-                    song.isPublished() ? "Published" : "Pending");
+            binding.durationText.setText(song.durationLabel());
+            binding.likesText.setText(song.isPublished()
+                    ? song.likesCount + " likes"
+                    : "Draft");
             binding.getRoot().setOnClickListener(v -> {
                 android.content.Intent i = new android.content.Intent(
                         binding.getRoot().getContext(),

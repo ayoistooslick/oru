@@ -25,10 +25,31 @@ public class Playlist {
     @SerializedName("songs")
     public List<Song> songs;
 
+    @SerializedName("song_count")
+    public int totalSongs;
+
+    /** The first track's artwork, since a playlist has none of its own. */
+    @SerializedName("cover_url")
+    public String coverUrl;
+
+    @SerializedName("owner")
+    public Owner owner;
+
     public int songCount() {
         if (songs != null) {
             return songs.size();
         }
-        return songIds != null ? songIds.size() : 0;
+        if (songIds != null) {
+            return songIds.size();
+        }
+        return totalSongs;
+    }
+
+    public static class Owner {
+        @SerializedName("handle")
+        public String handle;
+
+        @SerializedName("display_name")
+        public String displayName;
     }
 }
