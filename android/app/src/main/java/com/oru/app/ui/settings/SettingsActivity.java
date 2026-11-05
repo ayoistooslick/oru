@@ -41,13 +41,19 @@ public class SettingsActivity extends AppCompatActivity {
 
     private User user;
 
-    private final ActivityResultLauncher<String> pickAvatar =
-            registerForActivityResult(new ActivityResultContracts.GetContent(),
+    /** The system photo picker needs no storage permission at all. */
+    private final ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickAvatar =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(),
                     uri -> uploadImage(uri, true));
 
-    private final ActivityResultLauncher<String> pickBanner =
-            registerForActivityResult(new ActivityResultContracts.GetContent(),
+    private final ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickBanner =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(),
                     uri -> uploadImage(uri, false));
+
+    private static final androidx.activity.result.PickVisualMediaRequest PICK_IMAGE =
+            new androidx.activity.result.PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    .build();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,8 +67,17 @@ public class SettingsActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.editProfileButton.setOnClickListener(v -> editProfile());
-        binding.editAvatarButton.setOnClickListener(v -> pickAvatar.launch("image/*"));
-        binding.bannerButton.setOnClickListener(v -> pickBanner.launch("image/*"));
+        binding.studioButton.setOnClickListener(v -> openTab(R.id.studioFragment));
+        binding.reportsButton.setOnClickListener(v -> startActivity(
+                new Intent(this, com.oru.app.ui.moderation.ModerationActivity.class)));
+        binding.downloadsButton.setOnClickListener(v -> startActivity(
+                new Intent(this, com.oru.app.ui.downloads.DownloadsActivity.class)));
+        binding.removePictureButton.setOnClickListener(v -> removePicture());
+        binding.removeBannerButton.setOnClickListener(v -> removeBanner());
+        binding.permissionButton.setOnClickListener(v -> openAppSettings());
+        binding.versionText.setText("Oru " + versionName());
+        binding.editAvatarButton.setOnClickListener(v -> pickAvatar.launch(PICK_IMAGE));
+        binding.bannerButton.setOnClickListener(v -> pickBanner.launch(PICK_IMAGE));
         binding.aboutButton.setOnClickListener(v -> startActivity(
                 new Intent(this, AboutActivity.class)));
         binding.signOutButton.setOnClickListener(v -> signOut());
@@ -89,9 +104,7 @@ public class SettingsActivity extends AppCompatActivity {
             public void onSuccess(User current) {
                 runOnUiThread(() -> {
                     user = current;
-                    showAvatar();
-                    binding.bannerButton.setVisibility(
-                            current.isArtist() ? View.VISIBLE : View.GONE);
+                    showIdentity();
                 });
             }
 
@@ -104,16 +117,124 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private void showAvatar() {
-        String avatar = MediaUrl.of(user != null ? user.avatarUrl : null);
-        if (avatar != null) {
-            com.bumptech.glide.Glide.with(this)
-                    .load(avatar)
-                    .placeholder(R.drawable.ic_artist)
-                    .into(binding.avatarImage);
-        } else {
-            binding.avatarImage.setImageResource(R.drawable.ic_artist);
+    /** Everything the account card and its sections show. */
+    private void showIdentity() {
+        if (binding == null) {
+            return;
         }
+        boolean signedIn = user != null;
+        binding.accountName.setText(signedIn
+                ? (user.displayName != null ? user.displayName : user.handle)
+                : "");
+        StringBuilder meta = new StringBuilder();
+        if (signedIn) {
+            if (user.handle != null) {
+                meta.append('@').append(user.handle);
+            }
+            String role = roleLabel(user.role);
+            if (!role.isEmpty()) {
+                if (meta.length() > 0) {
+                    meta.append(" · ");
+                }
+                meta.append(role);
+            }
+        }
+        binding.accountMeta.setText(meta);
+        binding.accountEmail.setText(signedIn && user.email != null
+                ? user.email
+                : "");
+        boolean hasBio = signedIn && user.bio != null && !user.bio.trim().isEmpty();
+        binding.accountBio.setText(hasBio ? user.bio.trim() : "");
+        binding.accountBio.setVisibility(hasBio ? View.VISIBLE : View.GONE);
+
+        binding.profileSummary.setText(hasBio ? user.bio.trim()
+                : "Add a line about you");
+
+        showAvatar();
+
+        boolean artist = signedIn && user.isArtist();
+        binding.bannerCard.setVisibility(artist ? View.VISIBLE : View.GONE);
+        binding.studioSummary.setText(artist
+                ? "Upload songs, publish them and make releases."
+                : "Upload your own songs and publish them.");
+        if (artist) {
+            com.oru.app.ui.components.Covers.load(binding.bannerImage,
+                    bannerPath(user), R.drawable.ic_music);
+            binding.removeBannerButton.setVisibility(hasBanner(user)
+                    ? View.VISIBLE
+                    : View.GONE);
+        }
+
+        binding.reportsButton.setVisibility("admin".equals(user != null
+                ? user.role : null) ? View.VISIBLE : View.GONE);
+        binding.removePictureButton.setVisibility(signedIn
+                && user.avatarUrl != null ? View.VISIBLE : View.GONE);
+        binding.permissionSummary.setText(notificationsAllowed()
+                ? "Notifications are on, so playback controls show up."
+                : "Turn on notifications to see playback controls.");
+    }
+
+    private String bannerPath(User user) {
+        if (user == null) {
+            return null;
+        }
+        if (user.artistProfile != null && user.artistProfile.bannerUrl != null) {
+            return user.artistProfile.bannerUrl;
+        }
+        return user.bannerUrl;
+    }
+
+    private boolean hasBanner(User user) {
+        return bannerPath(user) != null;
+    }
+
+    private static String roleLabel(String role) {
+        if ("admin".equals(role)) {
+            return "Moderator";
+        }
+        if ("artist".equals(role)) {
+            return "Artist";
+        }
+        return role == null ? "" : "Listener";
+    }
+
+    private boolean notificationsAllowed() {
+        if (android.os.Build.VERSION.SDK_INT < 33) {
+            return true;
+        }
+        return androidx.core.content.ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.POST_NOTIFICATIONS)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Android hides the notification switch deep in settings; take them there. */
+    private void openAppSettings() {
+        Intent intent = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+        try {
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException error) {
+            startActivity(new Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:" + getPackageName())));
+        }
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0)
+                    .versionName;
+        } catch (android.content.pm.PackageManager.NameNotFoundException error) {
+            return "1.0";
+        }
+    }
+
+    private void showAvatar() {
+        if (binding == null) {
+            return;
+        }
+        com.oru.app.ui.components.Covers.loadAvatar(binding.avatarImage,
+                user != null ? user.avatarUrl : null);
     }
 
     private void removePicture() {
@@ -122,7 +243,7 @@ public class SettingsActivity extends AppCompatActivity {
             public void onSuccess(User updated) {
                 runOnUiThread(() -> {
                     user = updated;
-                    showAvatar();
+                    showIdentity();
                     Toast.makeText(SettingsActivity.this,
                             "Picture removed", Toast.LENGTH_SHORT).show();
                 });
@@ -141,8 +262,11 @@ public class SettingsActivity extends AppCompatActivity {
         authRepo.deleteBanner(new Callback<Artist>() {
             @Override
             public void onSuccess(Artist updated) {
-                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
-                        "Banner removed", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    loadUser();
+                    Toast.makeText(SettingsActivity.this,
+                            "Banner removed", Toast.LENGTH_SHORT).show();
+                });
             }
 
             @Override
@@ -162,7 +286,7 @@ public class SettingsActivity extends AppCompatActivity {
                 Toast.LENGTH_SHORT).show();
         io.execute(() -> {
             try {
-                PickedFile picked = PickedFile.copy(this, uri);
+                PickedFile picked = PickedFile.copyImage(this, uri);
                 if (avatar) {
                     authRepo.uploadAvatar(picked.file, picked.mime,
                             new Callback<User>() {
@@ -170,7 +294,7 @@ public class SettingsActivity extends AppCompatActivity {
                                 public void onSuccess(User updated) {
                                     runOnUiThread(() -> {
                                         user = updated;
-                                        showAvatar();
+                                        showIdentity();
                                         Toast.makeText(SettingsActivity.this,
                                                 "Picture updated",
                                                 Toast.LENGTH_SHORT).show();
@@ -191,10 +315,12 @@ public class SettingsActivity extends AppCompatActivity {
                             new Callback<Artist>() {
                                 @Override
                                 public void onSuccess(Artist updated) {
-                                    runOnUiThread(() -> Toast.makeText(
-                                            SettingsActivity.this,
-                                            "Banner updated",
-                                            Toast.LENGTH_SHORT).show());
+                                    runOnUiThread(() -> {
+                                        loadUser();
+                                        Toast.makeText(SettingsActivity.this,
+                                                "Banner updated",
+                                                Toast.LENGTH_SHORT).show();
+                                    });
                                 }
 
                                 @Override
@@ -208,8 +334,13 @@ public class SettingsActivity extends AppCompatActivity {
                             });
                 }
             } catch (IOException | RuntimeException error) {
+                // Say what actually went wrong; "couldn't read" hid the cause.
+                String reason = error.getMessage();
                 runOnUiThread(() -> Toast.makeText(this,
-                        "Couldn't read that picture", Toast.LENGTH_LONG).show());
+                        reason != null && !reason.isEmpty()
+                                ? reason
+                                : "Couldn't read that picture",
+                        Toast.LENGTH_LONG).show());
             }
         });
     }
@@ -253,7 +384,7 @@ public class SettingsActivity extends AppCompatActivity {
             public void onSuccess(User updated) {
                 runOnUiThread(() -> {
                     user = updated;
-                    showAvatar();
+                    showIdentity();
                     Toast.makeText(SettingsActivity.this, "Profile saved",
                             Toast.LENGTH_SHORT).show();
                 });
@@ -266,6 +397,15 @@ public class SettingsActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show());
             }
         });
+    }
+
+    /** Brings the main screen forward on one of its tabs. */
+    private void openTab(int tabId) {
+        Intent intent = new Intent(this, com.oru.app.ui.MainActivity.class);
+        intent.putExtra("tab", tabId);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
     }
 
     private void signOut() {

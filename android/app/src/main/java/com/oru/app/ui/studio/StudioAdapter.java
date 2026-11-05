@@ -71,6 +71,8 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
         }
 
         void bind(Song song) {
+            com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
+                    song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.statusText.setText(song.isPublished() ? "Published" : "Unpublished");
             binding.statusText.setTextColor(

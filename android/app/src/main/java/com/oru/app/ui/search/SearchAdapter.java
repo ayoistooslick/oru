@@ -69,6 +69,13 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
         }
 
         void bind(SearchResult item) {
+            if (item.isPerson()) {
+                com.oru.app.ui.components.Covers.loadAvatar(binding.artworkImage,
+                        item.coverPath());
+            } else {
+                com.oru.app.ui.components.Covers.load(binding.artworkImage,
+                        item.coverPath());
+            }
             binding.typeLabel.setText(item.type.name().toLowerCase());
             binding.titleText.setText(item.title);
             binding.subtitleText.setText(item.subtitle);

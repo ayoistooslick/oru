@@ -60,6 +60,8 @@ public class SharesAdapter extends ListAdapter<Song, SharesAdapter.VH> {
         }
 
         void bind(Song song) {
+            com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
+                    song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.artistText.setText(song.artistLabel());
             binding.statusText.setText(

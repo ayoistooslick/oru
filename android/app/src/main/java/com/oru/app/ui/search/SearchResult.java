@@ -15,6 +15,22 @@ public class SearchResult {
     public final String subtitle;
     public final String meta;
 
+    /** The artwork this result shows, whatever kind it is. */
+    public String coverPath() {
+        if (song != null) {
+            return song.coverUrl;
+        }
+        if (artist != null) {
+            return artist.avatarUrl;
+        }
+        return playlist != null ? playlist.coverUrl : null;
+    }
+
+    /** Artists show a face, songs and playlists show a cover. */
+    public boolean isPerson() {
+        return artist != null;
+    }
+
     public SearchResult(Song song, Type type) {
         this.type = type;
         this.song = song;

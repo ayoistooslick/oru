@@ -64,6 +64,7 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
         }
 
         void bind(Song song) {
+            Covers.loadSongCover(binding.artworkImage, song.id, song.coverUrl);
             binding.typeIcon.setImageResource(R.drawable.ic_music);
             binding.typeLabel.setText("Song");
             binding.titleText.setText(song.title);

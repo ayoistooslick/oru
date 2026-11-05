@@ -11,18 +11,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Audio recording (artist upload) -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-    <!-- Files / media for upload -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
-        android:minSdkVersion="33" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
-        android:minSdkVersion="33" />
+    <!-- Uploads go through the system photo picker and document picker, which
+         grant per-file access, so no storage permission is requested. -->
 
     <!-- Notification -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -80,16 +71,6 @@
             android:theme="@style/Theme.Oru" />
 
         <activity
-            android:name=".ui.library.LibraryActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Oru" />
-
-        <activity
-            android:name=".ui.studio.StudioActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Oru" />
-
-        <activity
             android:name=".ui.studio.UploadActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
@@ -107,13 +88,15 @@
             android:theme="@style/Theme.Oru" />
 
         <activity
-            android:name=".ui.shares.SharesActivity"
+            android:name=".ui.moderation.ModerationActivity"
             android:exported="false"
             android:theme="@style/Theme.Oru" />
 
         <activity
-            android:name=".ui.moderation.ModerationActivity"
+            android:name=".ui.player.PlayerActivity"
             android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:theme="@style/Theme.Oru" />
 
         <activity

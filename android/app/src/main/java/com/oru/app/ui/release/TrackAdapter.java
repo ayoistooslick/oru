@@ -74,6 +74,8 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
 
         void bind(int trackNumber, Song song, Listener listener) {
             binding.trackNumberText.setText(String.valueOf(trackNumber));
+            com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
+                    song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.durationText.setText(song.durationLabel());
             binding.getRoot().setOnClickListener(v -> {

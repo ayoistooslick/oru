@@ -159,6 +159,8 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         void bind(Song song) {
+            com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
+                    song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.artistText.setText(song.artistLabel());
             binding.likesText.setText(song.durationLabel());
