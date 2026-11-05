@@ -73,7 +73,11 @@ public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.VH> {
                     : song.artistLabel() + " · " + length);
             binding.likesText.setVisibility(View.GONE);
             binding.playButton.setImageResource(R.drawable.ic_play);
-            String cover = MediaUrl.of(song.coverUrl);
+            Object cover = com.oru.app.data.offline.Downloads.localCover(
+                    binding.getRoot().getContext(), song.id);
+            if (cover == null) {
+                cover = MediaUrl.of(song.coverUrl);
+            }
             if (cover != null) {
                 Glide.with(binding.getRoot()).load(cover)
                         .placeholder(R.drawable.ic_library)
