@@ -29,9 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *  - When signed out, show sign-in form.
  *  - Tapping "No account? Sign up" swaps to the registration form
  *    (adds handle + display name fields).
- *  - Google sign-in placeholder: the backend supports Google OAuth, but the
- *    Android client doesn't embed the Google SDK here; the user can sign in
- *    with email/password for now.
+ *  - Google sign-in goes through Credential Manager with the web client ID the
+ *    server publishes; the button only appears when the server has it enabled.
  */
 public class AuthActivity extends AppCompatActivity {
 
@@ -40,6 +39,8 @@ public class AuthActivity extends AppCompatActivity {
     private AuthRepository authRepo;
     private boolean isSignUp = false;
     private final AtomicBoolean busy = new AtomicBoolean(false);
+    private String googleClientId = null;
+    private int minPasswordLength = 10;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +59,40 @@ public class AuthActivity extends AppCompatActivity {
         setupFields();
         setupButtons();
         updateUiForMode();
+        loadConfig();
+    }
+
+    /** The server decides whether Google sign-in is offered at all. */
+    private void loadConfig() {
+        binding.googleButton.setVisibility(View.GONE);
+        if (authRepo == null) {
+            authRepo = new AuthRepository(LazySession.getApiService(), session,
+                    LazySession.getGson());
+        }
+        authRepo.getAuthConfig(new Callback<com.oru.app.data.model.AuthConfig>() {
+            @Override
+            public void onSuccess(com.oru.app.data.model.AuthConfig config) {
+                runOnUiThread(() -> {
+                    if (config == null) {
+                        return;
+                    }
+                    if (config.minPasswordLength > 0) {
+                        minPasswordLength = config.minPasswordLength;
+                    }
+                    if (config.googleEnabled && config.googleClientId != null
+                            && !config.googleClientId.isEmpty()) {
+                        googleClientId = config.googleClientId;
+                        binding.googleButton.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                // Email and password still work without the config.
+                runOnUiThread(() -> binding.googleButton.setVisibility(View.GONE));
+            }
+        });
     }
 
     private void setupFields() {
@@ -103,18 +138,96 @@ public class AuthActivity extends AppCompatActivity {
         }
         binding.primaryButton.setOnClickListener(v -> submit());
         binding.secondaryButton.setOnClickListener(v -> toggleMode());
-        binding.googleButton.setOnClickListener(v -> {
-            Snackbar.make(binding.getRoot(),
-                    "Google sign-in coming soon", Snackbar.LENGTH_SHORT).show();
-        });
+        binding.googleButton.setOnClickListener(v -> signInWithGoogle());
     }
 
     private void setupButtons() {
         binding.primaryButton.setOnClickListener(v -> submit());
         binding.secondaryButton.setOnClickListener(v -> toggleMode());
-        binding.googleButton.setOnClickListener(v ->
-                Snackbar.make(binding.getRoot(), "Google sign-in coming soon",
-                        Snackbar.LENGTH_SHORT).show());
+        binding.googleButton.setOnClickListener(v -> signInWithGoogle());
+    }
+
+    /**
+     * Asks Google for an ID token through Credential Manager. The server's web
+     * client ID is the audience, which is what the backend verifies.
+     */
+    private void signInWithGoogle() {
+        if (googleClientId == null) {
+            Snackbar.make(binding.getRoot(),
+                    "Google sign-in is not available right now",
+                    Snackbar.LENGTH_SHORT).show();
+            return;
+        }
+        binding.progressBar.setVisibility(View.VISIBLE);
+        androidx.credentials.CredentialManager manager =
+                androidx.credentials.CredentialManager.create(this);
+        com.google.android.libraries.identity.googleid.GetGoogleIdOption option =
+                new com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setAutoSelectEnabled(false)
+                        .setServerClientId(googleClientId)
+                        .build();
+        androidx.credentials.GetCredentialRequest request =
+                new androidx.credentials.GetCredentialRequest.Builder()
+                        .addCredentialOption(option)
+                        .build();
+
+        manager.getCredentialAsync(this, request, null,
+                androidx.core.content.ContextCompat.getMainExecutor(this),
+                new androidx.credentials.CredentialManagerCallback<androidx.credentials.GetCredentialResponse,
+                        androidx.credentials.exceptions.GetCredentialException>() {
+                    @Override
+                    public void onResult(androidx.credentials.GetCredentialResponse result) {
+                        String idToken = googleIdToken(result);
+                        if (idToken == null) {
+                            binding.progressBar.setVisibility(View.GONE);
+                            setError("Google did not return a usable account");
+                            return;
+                        }
+                        sendGoogleToken(idToken);
+                    }
+
+                    @Override
+                    public void onError(@NonNull androidx.credentials.exceptions.GetCredentialException error) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        // A dismissed sheet is not an error worth shouting about.
+                        String message = error.getMessage();
+                        if (message != null && message.contains("cancel")) {
+                            return;
+                        }
+                        setError("Google sign-in failed. Try another way.");
+                    }
+                });
+    }
+
+    private String googleIdToken(androidx.credentials.GetCredentialResponse result) {
+        try {
+            com.google.android.libraries.identity.googleid.GoogleIdTokenCredential credential =
+                    com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+                            .createFrom(result.getCredential().getData());
+            return credential.getIdToken();
+        } catch (com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+                | RuntimeException error) {
+            return null;
+        }
+    }
+
+    private void sendGoogleToken(String idToken) {
+        if (authRepo == null) {
+            authRepo = new AuthRepository(LazySession.getApiService(), session,
+                    LazySession.getGson());
+        }
+        authRepo.googleLogin(idToken, new Callback<TokenResponse>() {
+            @Override
+            public void onSuccess(TokenResponse token) {
+                finishAuth(token);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                onAuthFailure(error);
+            }
+        });
     }
 
     private void toggleMode() {
@@ -178,8 +291,9 @@ public class AuthActivity extends AppCompatActivity {
         }
         // The API refuses a shorter password on sign-up (min_length=10), so say
         // so here rather than after a round trip.
-        if (isSignUp && password.length() < 10) {
-            binding.passwordLayout.setError("Use at least 10 characters");
+        if (isSignUp && password.length() < minPasswordLength) {
+            binding.passwordLayout.setError(
+                    "Use at least " + minPasswordLength + " characters");
             return;
         }
 
