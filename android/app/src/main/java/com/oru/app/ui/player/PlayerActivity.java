@@ -60,6 +60,19 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         @Override
+        public void onPlayerError(@NonNull androidx.media3.common.PlaybackException error) {
+            // A broken stream used to fail silently; say what happened.
+            if (binding == null) {
+                return;
+            }
+            Toast.makeText(PlayerActivity.this,
+                    "This song couldn't play (" + error.getErrorCodeName()
+                            + "). Try again.",
+                    Toast.LENGTH_LONG).show();
+            updatePlayPauseButtons();
+        }
+
+        @Override
         public void onRepeatModeChanged(int repeatMode) {
             updateModeButtons();
         }
@@ -145,8 +158,15 @@ public class PlayerActivity extends AppCompatActivity {
                     }
                 });
 
+        askForNotifications();
+
         Intent intent = new Intent(this, PlayerService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        try {
+            bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        } catch (SecurityException error) {
+            // Playback still works without the background service.
+            serviceBound.set(false);
+        }
 
         int songId = getIntent().getIntExtra("songId", -1);
         if (songId > 0) {
@@ -187,6 +207,20 @@ public class PlayerActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    /** Android 13+ hides the media notification until this is granted. */
+    private void askForNotifications() {
+        if (android.os.Build.VERSION.SDK_INT < 33) {
+            return;
+        }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.POST_NOTIFICATIONS)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        androidx.core.app.ActivityCompat.requestPermissions(this,
+                new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 41);
     }
 
     /** Saves the song to the device, or forgets the saved copy. */

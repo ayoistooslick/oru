@@ -77,7 +77,9 @@ public class UploadActivity extends AppCompatActivity {
         setBusy(true, "Reading the file…");
         io.execute(() -> {
             try {
-                PickedFile picked = PickedFile.copy(this, uri);
+                PickedFile picked = isAudio
+                        ? PickedFile.copy(this, uri)
+                        : PickedFile.copyImage(this, uri);
                 runOnUiThread(() -> {
                     if (binding == null) {
                         return;
@@ -104,7 +106,10 @@ public class UploadActivity extends AppCompatActivity {
                         return;
                     }
                     setBusy(false, null);
-                    Toast.makeText(this, "Couldn't read that file",
+                    String reason = error.getMessage();
+                    Toast.makeText(this,
+                            reason != null && !reason.isEmpty() ? reason
+                                    : "Couldn't read that file",
                             Toast.LENGTH_LONG).show();
                 });
             }

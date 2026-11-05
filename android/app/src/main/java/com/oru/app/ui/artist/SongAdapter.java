@@ -57,6 +57,8 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
         }
 
         void bind(Song song) {
+            com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
+                    song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.durationText.setText(song.durationLabel());
             binding.likesText.setText(song.isPublished()

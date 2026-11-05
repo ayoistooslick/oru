@@ -45,6 +45,25 @@ public class MainActivity extends AppCompatActivity {
 
         setupBottomNavigation();
         setupToolbar();
+        openRequestedTab(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openRequestedTab(intent);
+    }
+
+    /** Another screen can ask for a tab, e.g. Settings opening the studio. */
+    private void openRequestedTab(Intent intent) {
+        if (intent == null || navController == null) {
+            return;
+        }
+        int tab = intent.getIntExtra("tab", 0);
+        if (tab != 0) {
+            navController.navigate(tab);
+        }
     }
 
     private void setupBottomNavigation() {
