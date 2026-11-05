@@ -25,13 +25,99 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerView"
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="80dp"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+            android:paddingBottom="96dp"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/statsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_soft"
+                    android:visibility="gone" />
+
+                <TextView
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    android:text="Releases"
+                    android:textAllCaps="true"
+                    android:textColor="@color/ink_faint" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/releasesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    android:id="@+id/releasesEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginVertical="6dp"
+                    android:text="No releases yet. Group your tracks into a single, EP or album."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_faint" />
+
+                <TextView
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:text="Your posts"
+                    android:textAllCaps="true"
+                    android:textColor="@color/ink_faint" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/postsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    android:id="@+id/postsEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginVertical="6dp"
+                    android:text="Say something to your listeners from the menu above."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_faint" />
+
+                <TextView
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:text="Your tracks"
+                    android:textAllCaps="true"
+                    android:textColor="@color/ink_faint" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+            </LinearLayout>
+
+        </androidx.core.widget.NestedScrollView>
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/uploadButton"

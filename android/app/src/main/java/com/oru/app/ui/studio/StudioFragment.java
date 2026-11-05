@@ -1,42 +1,59 @@
 package com.oru.app.ui.studio;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
+import com.oru.app.data.model.ArtistPost;
+import com.oru.app.data.model.Release;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.MusicRepository;
 import com.oru.app.databinding.FragmentStudioBinding;
 import com.oru.app.ui.components.UiErrors;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Studio tab: my unreleased/pending songs for an artist.
+ * Studio tab: releases, posts and my unreleased/pending songs for an artist.
  * Mirrors the web app studio page.
  */
 public class StudioFragment extends Fragment {
 
     private FragmentStudioBinding binding;
     private StudioAdapter adapter;
+    private MyReleaseAdapter releaseAdapter;
+    private PostAdapter postAdapter;
     private MusicRepository musicRepo;
+
+    private List<Song> mySongs = new ArrayList<>();
+    private boolean songsEmpty = true;
+    private boolean releasesEmpty = true;
 
     private final androidx.activity.result.ActivityResultLauncher<Intent> uploadLauncher =
             registerForActivityResult(
                     new androidx.activity.result.contract.ActivityResultContracts
                             .StartActivityForResult(),
-                    result -> loadSongs(false));
+                    result -> loadAll(false));
 
     @Nullable
     @Override
@@ -68,15 +85,13 @@ public class StudioFragment extends Fragment {
                 musicRepo.deleteSong(song.id, new Callback<Void>() {
                     @Override
                     public void onSuccess(Void ignored) {
-                        loadSongs(false);
+                        loadAll(false);
                     }
 
                     @Override
                     public void onFailure(Throwable error) {
                         binding.progressBar.setVisibility(View.GONE);
-                        Toast.makeText(requireContext(),
-                                UiErrors.message(requireContext(), error),
-                                Toast.LENGTH_LONG).show();
+                        toast(error);
                     }
                 });
             }
@@ -85,12 +100,36 @@ public class StudioFragment extends Fragment {
                 new LinearLayoutManager(requireContext()));
         binding.recyclerView.setAdapter(adapter);
 
+        releaseAdapter = new MyReleaseAdapter();
+        releaseAdapter.setListener(release -> publishRelease(release));
+        binding.releasesRecyclerView.setLayoutManager(
+                new LinearLayoutManager(requireContext()));
+        binding.releasesRecyclerView.setAdapter(releaseAdapter);
+
+        postAdapter = new PostAdapter();
+        binding.postsRecyclerView.setLayoutManager(
+                new LinearLayoutManager(requireContext()));
+        binding.postsRecyclerView.setAdapter(postAdapter);
+
         binding.uploadButton.setOnClickListener(v -> uploadLauncher.launch(
                 new Intent(requireContext(), UploadActivity.class)));
 
+        binding.toolbar.inflateMenu(R.menu.studio_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_new_release) {
+                showReleaseDialog();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_new_post) {
+                showPostDialog();
+                return true;
+            }
+            return false;
+        });
+
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
-            loadSongs(true);
+            loadAll(true);
         });
 
         if (musicRepo == null) {
@@ -99,7 +138,7 @@ public class StudioFragment extends Fragment {
                     com.oru.app.util.LazySession.getGson());
         }
 
-        loadSongs(false);
+        loadAll(false);
     }
 
     /** Publishes or pulls a track back to draft. */
@@ -108,15 +147,13 @@ public class StudioFragment extends Fragment {
         Callback<Song> done = new Callback<Song>() {
             @Override
             public void onSuccess(Song updated) {
-                loadSongs(false);
+                loadAll(false);
             }
 
             @Override
             public void onFailure(Throwable error) {
                 binding.progressBar.setVisibility(View.GONE);
-                Toast.makeText(requireContext(),
-                        UiErrors.message(requireContext(), error),
-                        Toast.LENGTH_LONG).show();
+                toast(error);
             }
         };
         if (publish) {
@@ -126,39 +163,337 @@ public class StudioFragment extends Fragment {
         }
     }
 
-    private void loadSongs(boolean refresh) {
+    private void publishRelease(Release release) {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        musicRepo.publishRelease(release.id, new Callback<Release>() {
+            @Override
+            public void onSuccess(Release updated) {
+                loadAll(false);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                binding.progressBar.setVisibility(View.GONE);
+                toast(error);
+            }
+        });
+    }
+
+    /**
+     * Groups my songs into a release. The dialog asks for a title, the kind and
+     * the songs, since all three are required by the API.
+     */
+    private void showReleaseDialog() {
+        if (musicRepo == null) {
+            return;
+        }
+        if (mySongs.isEmpty()) {
+            toastMessage("Upload a song first.");
+            return;
+        }
+        Context context = requireContext();
+        float density = getResources().getDisplayMetrics().density;
+        int pad = (int) (20 * density);
+
+        LinearLayout box = new LinearLayout(context);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, pad, pad, 0);
+
+        EditText title = new EditText(context);
+        title.setHint("Release title");
+        title.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        box.addView(title);
+
+        RadioGroup kinds = new RadioGroup(context);
+        kinds.setOrientation(RadioGroup.HORIZONTAL);
+        String[] labels = {"Single", "EP", "Album"};
+        String[] values = {"single", "ep", "album"};
+        for (int i = 0; i < labels.length; i++) {
+            RadioButton option = new RadioButton(context);
+            option.setId(View.generateViewId());
+            option.setTag(values[i]);
+            option.setText(labels[i]);
+            option.setChecked(i == 0);
+            kinds.addView(option);
+        }
+        box.addView(kinds);
+
+        ScrollView scroller = new ScrollView(context);
+        scroller.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (200 * density)));
+        LinearLayout songsBox = new LinearLayout(context);
+        songsBox.setOrientation(LinearLayout.VERTICAL);
+        List<CheckBox> pickers = new ArrayList<>();
+        for (Song song : mySongs) {
+            CheckBox pick = new CheckBox(context);
+            pick.setTag(song.id);
+            pick.setText(song.title + (song.isPublished() ? "" : " · draft"));
+            pickers.add(pick);
+            songsBox.addView(pick);
+        }
+        scroller.addView(songsBox);
+        box.addView(scroller);
+
+        AlertDialog dialog = new AlertDialog.Builder(context)
+                .setTitle("New release")
+                .setView(box)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Create", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = title.getText().toString().trim();
+            if (name.isEmpty()) {
+                title.setError("Give it a title");
+                return;
+            }
+            String kind = values[0];
+            int limit = 1;
+            for (int i = 0; i < kinds.getChildCount(); i++) {
+                RadioButton option = (RadioButton) kinds.getChildAt(i);
+                if (option.isChecked()) {
+                    kind = String.valueOf(option.getTag());
+                    limit = "single".equals(kind) ? 1 : "ep".equals(kind) ? 6 : 40;
+                }
+            }
+            List<Integer> picked = new ArrayList<>();
+            for (CheckBox pick : pickers) {
+                if (pick.isChecked()) {
+                    picked.add((Integer) pick.getTag());
+                }
+            }
+            if (picked.isEmpty()) {
+                toastMessage("Pick at least one song.");
+                return;
+            }
+            if (picked.size() > limit) {
+                toastMessage("A " + kind + " holds up to " + limit + " songs.");
+                return;
+            }
+            dialog.dismiss();
+            createRelease(name, kind, picked);
+        }));
+        dialog.show();
+    }
+
+    private void createRelease(String title, String kind, List<Integer> songIds) {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        musicRepo.createRelease(title, kind, songIds, new Callback<Release>() {
+            @Override
+            public void onSuccess(Release release) {
+                binding.progressBar.setVisibility(View.GONE);
+                toastMessage("Release created. Publish it when you are ready.");
+                loadAll(false);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                binding.progressBar.setVisibility(View.GONE);
+                toast(error);
+            }
+        });
+    }
+
+    /** Writes a short post to my artist profile. */
+    private void showPostDialog() {
+        if (musicRepo == null) {
+            return;
+        }
+        Context context = requireContext();
+        float density = getResources().getDisplayMetrics().density;
+        int pad = (int) (20 * density);
+
+        EditText body = new EditText(context);
+        body.setHint("What do you want to say?");
+        body.setMinLines(3);
+        body.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        body.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        LinearLayout box = new LinearLayout(context);
+        box.setPadding(pad, pad, pad, 0);
+        box.addView(body);
+
+        AlertDialog dialog = new AlertDialog.Builder(context)
+                .setTitle("New post")
+                .setView(box)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Post", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String text = body.getText().toString().trim();
+            if (text.isEmpty()) {
+                body.setError("Write something first");
+                return;
+            }
+            dialog.dismiss();
+            musicRepo.createPost(text, new Callback<ArtistPost>() {
+                @Override
+                public void onSuccess(ArtistPost post) {
+                    toastMessage("Posted.");
+                    loadAll(false);
+                }
+
+                @Override
+                public void onFailure(Throwable error) {
+                    toast(error);
+                }
+            });
+        }));
+        dialog.show();
+    }
+
+    private void loadAll(boolean refresh) {
         if (binding == null) {
             return;
         }
         binding.swipeRefresh.setRefreshing(refresh);
         binding.progressBar.setVisibility(View.VISIBLE);
-        binding.recyclerView.setVisibility(View.GONE);
-        binding.emptyView.getRoot().setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
+        loadSongs();
+        loadReleases();
+        loadPosts();
+        loadStats();
+    }
 
-        musicRepo.getMySongs(new Callback<List<Song>>() {
+    /** The artist's own numbers, shown above the lists. */
+    private void loadStats() {
+        musicRepo.getArtistStats(new Callback<com.oru.app.data.model.ArtistStats>() {
             @Override
-            public void onSuccess(List<Song> songs) {
-                binding.swipeRefresh.setRefreshing(false);
-                binding.progressBar.setVisibility(View.GONE);
-                if (songs == null || songs.isEmpty()) {
-                    binding.emptyView.getRoot().setVisibility(View.VISIBLE);
-                } else {
-                    adapter.submitList(songs);
-                    binding.recyclerView.setVisibility(View.VISIBLE);
+            public void onSuccess(com.oru.app.data.model.ArtistStats stats) {
+                if (binding == null || stats == null) {
+                    return;
                 }
+                String top = stats.weeklyTopSong != null
+                        && stats.weeklyTopSong.title != null
+                                ? " · top: " + stats.weeklyTopSong.title
+                                : "";
+                binding.statsText.setText(stats.publishedSongs + " published · "
+                        + stats.likes + " likes · " + stats.qualifiedListens
+                        + " plays · " + stats.weeklyPlays + " plays this week"
+                        + top);
+                binding.statsText.setVisibility(View.VISIBLE);
             }
 
             @Override
             public void onFailure(Throwable error) {
+                if (binding == null) {
+                    return;
+                }
+                binding.statsText.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    private void loadSongs() {
+        musicRepo.getMySongs(new Callback<List<Song>>() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                if (binding == null) {
+                    return;
+                }
+                binding.swipeRefresh.setRefreshing(false);
+                binding.progressBar.setVisibility(View.GONE);
+                mySongs = songs != null ? songs : new ArrayList<>();
+                songsEmpty = mySongs.isEmpty();
+                if (!songsEmpty) {
+                    adapter.submitList(mySongs);
+                }
+                binding.recyclerView.setVisibility(
+                        songsEmpty ? View.GONE : View.VISIBLE);
+                updateEmpty();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                if (binding == null) {
+                    return;
+                }
                 binding.swipeRefresh.setRefreshing(false);
                 binding.progressBar.setVisibility(View.GONE);
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
-                        com.oru.app.ui.components.UiErrors
-                                .message(requireContext(), error));
+                        UiErrors.message(requireContext(), error));
             }
         });
+    }
+
+    private void loadReleases() {
+        musicRepo.getMyReleases(new Callback<List<Release>>() {
+            @Override
+            public void onSuccess(List<Release> releases) {
+                if (binding == null) {
+                    return;
+                }
+                releasesEmpty = releases == null || releases.isEmpty();
+                if (!releasesEmpty) {
+                    releaseAdapter.submitList(releases);
+                }
+                binding.releasesRecyclerView.setVisibility(
+                        releasesEmpty ? View.GONE : View.VISIBLE);
+                binding.releasesEmptyText.setVisibility(
+                        releasesEmpty ? View.VISIBLE : View.GONE);
+                updateEmpty();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                if (binding == null) {
+                    return;
+                }
+                binding.releasesEmptyText.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void loadPosts() {
+        musicRepo.getMyPosts(new Callback<List<ArtistPost>>() {
+            @Override
+            public void onSuccess(List<ArtistPost> posts) {
+                if (binding == null) {
+                    return;
+                }
+                boolean empty = posts == null || posts.isEmpty();
+                if (!empty) {
+                    postAdapter.submitList(posts);
+                }
+                binding.postsRecyclerView.setVisibility(
+                        empty ? View.GONE : View.VISIBLE);
+                binding.postsEmptyText.setVisibility(
+                        empty ? View.VISIBLE : View.GONE);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                if (binding == null) {
+                    return;
+                }
+                binding.postsEmptyText.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void updateEmpty() {
+        if (binding == null) {
+            return;
+        }
+        binding.emptyView.getRoot().setVisibility(
+                songsEmpty && releasesEmpty ? View.VISIBLE : View.GONE);
+    }
+
+    private void toast(Throwable error) {
+        toastMessage(UiErrors.message(requireContext(), error));
+    }
+
+    private void toastMessage(String message) {
+        if (binding == null) {
+            return;
+        }
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
     }
 
     @Override

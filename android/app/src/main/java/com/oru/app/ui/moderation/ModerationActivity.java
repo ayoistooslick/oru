@@ -36,6 +36,7 @@ public class ModerationActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         adapter = new ReportAdapter();
+        adapter.setListener(this::decide);
         binding.recyclerView.setLayoutManager(
                 new LinearLayoutManager(this));
         binding.recyclerView.setAdapter(adapter);
@@ -53,6 +54,81 @@ public class ModerationActivity extends AppCompatActivity {
         }
 
         loadReports(false);
+    }
+
+    /**
+     * A decision needs both what should happen and the reason it was taken, so
+     * the dialog asks for the action, then the reason.
+     */
+    private void decide(Report report) {
+        String[] actions = {"hide", "restore", "dismiss"};
+        String[] labels = {"Take it down", "Put it back", "Nothing wrong"};
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(report.targetType + " #" + report.targetId)
+                .setItems(labels, (dialog, which) -> askReason(report, actions[which]))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void askReason(Report report, String action) {
+        float density = getResources().getDisplayMetrics().density;
+        int pad = (int) (20 * density);
+
+        android.widget.EditText reason = new android.widget.EditText(this);
+        reason.setHint("Why (at least a few words)");
+        reason.setMinLines(2);
+        reason.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        reason.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setPadding(pad, pad, pad, 0);
+        box.addView(reason);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Why")
+                .setView(box)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Save decision", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    String text = reason.getText().toString().trim();
+                    if (text.length() < 5) {
+                        reason.setError("Write at least a few words");
+                        return;
+                    }
+                    dialog.dismiss();
+                    save(report, action, text);
+                }));
+        dialog.show();
+    }
+
+    private void save(Report report, String action, String reason) {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        modRepo.moderationDecision(report.id, action, reason,
+                new Callback<Void>() {
+                    @Override
+                    public void onSuccess(Void ignored) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        android.widget.Toast.makeText(ModerationActivity.this,
+                                "Decision saved.", android.widget.Toast.LENGTH_LONG)
+                                .show();
+                        loadReports(false);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        android.widget.Toast.makeText(ModerationActivity.this,
+                                com.oru.app.ui.components.UiErrors
+                                        .message(ModerationActivity.this, error),
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private void loadReports(boolean refresh) {

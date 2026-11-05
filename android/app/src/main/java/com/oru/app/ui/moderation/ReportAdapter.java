@@ -13,8 +13,18 @@ import com.oru.app.databinding.ItemReportBinding;
 
 public class ReportAdapter extends ListAdapter<Report, ReportAdapter.VH> {
 
+    public interface Listener {
+        void onDecide(Report report);
+    }
+
+    private Listener listener;
+
     public ReportAdapter() {
         super(DIFF_CALLBACK);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     private static final DiffUtil.ItemCallback<Report> DIFF_CALLBACK =
@@ -64,8 +74,12 @@ public class ReportAdapter extends ListAdapter<Report, ReportAdapter.VH> {
                             report.status.equals("resolved")
                                     ? com.oru.app.R.color.ink_faint
                                     : com.oru.app.R.color.flame));
+            binding.decideButton.setText(
+                    "open".equals(report.status) ? "Decide" : "Change decision");
             binding.decideButton.setOnClickListener(v -> {
-                // Placeholder decision dialog.
+                if (listener != null) {
+                    listener.onDecide(report);
+                }
             });
         }
     }

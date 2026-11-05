@@ -67,6 +67,19 @@ public class SettingsActivity extends AppCompatActivity {
                 new Intent(this, AboutActivity.class)));
         binding.signOutButton.setOnClickListener(v -> signOut());
 
+        binding.toolbar.inflateMenu(R.menu.settings_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_remove_picture) {
+                removePicture();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_remove_banner) {
+                removeBanner();
+                return true;
+            }
+            return false;
+        });
+
         loadUser();
     }
 
@@ -98,7 +111,47 @@ public class SettingsActivity extends AppCompatActivity {
                     .load(avatar)
                     .placeholder(R.drawable.ic_artist)
                     .into(binding.avatarImage);
+        } else {
+            binding.avatarImage.setImageResource(R.drawable.ic_artist);
         }
+    }
+
+    private void removePicture() {
+        authRepo.deleteAvatar(new Callback<User>() {
+            @Override
+            public void onSuccess(User updated) {
+                runOnUiThread(() -> {
+                    user = updated;
+                    showAvatar();
+                    Toast.makeText(SettingsActivity.this,
+                            "Picture removed", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                        UiErrors.message(SettingsActivity.this, error),
+                        Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void removeBanner() {
+        authRepo.deleteBanner(new Callback<Artist>() {
+            @Override
+            public void onSuccess(Artist updated) {
+                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                        "Banner removed", Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
+                        UiErrors.message(SettingsActivity.this, error),
+                        Toast.LENGTH_LONG).show());
+            }
+        });
     }
 
     private void uploadImage(Uri uri, boolean avatar) {

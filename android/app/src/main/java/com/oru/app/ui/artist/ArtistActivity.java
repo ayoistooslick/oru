@@ -12,9 +12,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.snackbar.Snackbar;
 import com.oru.app.R;
 import com.oru.app.data.model.Artist;
+import com.oru.app.data.model.ArtistPost;
 import com.oru.app.data.model.Release;
 import com.oru.app.data.model.Song;
 import com.oru.app.ui.artist.SongAdapter;
+import com.oru.app.ui.studio.PostAdapter;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
 import com.oru.app.data.repository.MusicRepository;
@@ -28,7 +30,9 @@ public class ArtistActivity extends AppCompatActivity {
 
     private ActivityArtistBinding binding;
     private SongAdapter songAdapter;
+    private SongAdapter featureAdapter;
     private ReleaseAdapter releaseAdapter;
+    private PostAdapter postAdapter;
     private MusicRepository musicRepo;
     private CommunityRepository communityRepo;
     private Artist artist;
@@ -41,7 +45,9 @@ public class ArtistActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         songAdapter = new SongAdapter();
+        featureAdapter = new SongAdapter();
         releaseAdapter = new ReleaseAdapter();
+        postAdapter = new PostAdapter();
 
         binding.songsRecyclerView.setLayoutManager(
                 new LinearLayoutManager(this));
@@ -50,6 +56,14 @@ public class ArtistActivity extends AppCompatActivity {
         binding.releasesRecyclerView.setLayoutManager(
                 new LinearLayoutManager(this));
         binding.releasesRecyclerView.setAdapter(releaseAdapter);
+
+        binding.postsRecyclerView.setLayoutManager(
+                new LinearLayoutManager(this));
+        binding.postsRecyclerView.setAdapter(postAdapter);
+
+        binding.appearsOnRecyclerView.setLayoutManager(
+                new LinearLayoutManager(this));
+        binding.appearsOnRecyclerView.setAdapter(featureAdapter);
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.followButton.setOnClickListener(v -> toggleFollow());
@@ -131,6 +145,46 @@ public class ArtistActivity extends AppCompatActivity {
             @Override
             public void onFailure(Throwable error) {
                 binding.songsRecyclerView.setVisibility(View.GONE);
+            }
+        });
+
+        musicRepo.getPostsByArtist(artistId, new Callback<List<ArtistPost>>() {
+            @Override
+            public void onSuccess(List<ArtistPost> posts) {
+                boolean empty = posts == null || posts.isEmpty();
+                if (!empty) {
+                    postAdapter.submitList(posts);
+                }
+                binding.postsHeader.setVisibility(
+                        empty ? View.GONE : View.VISIBLE);
+                binding.postsRecyclerView.setVisibility(
+                        empty ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                binding.postsHeader.setVisibility(View.GONE);
+                binding.postsRecyclerView.setVisibility(View.GONE);
+            }
+        });
+
+        musicRepo.getAppearsOn(artistId, new Callback<List<Song>>() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                boolean empty = songs == null || songs.isEmpty();
+                if (!empty) {
+                    featureAdapter.submitList(songs);
+                }
+                binding.appearsOnHeader.setVisibility(
+                        empty ? View.GONE : View.VISIBLE);
+                binding.appearsOnRecyclerView.setVisibility(
+                        empty ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                binding.appearsOnHeader.setVisibility(View.GONE);
+                binding.appearsOnRecyclerView.setVisibility(View.GONE);
             }
         });
 

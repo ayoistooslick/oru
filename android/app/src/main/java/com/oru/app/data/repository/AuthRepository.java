@@ -244,6 +244,17 @@ public class AuthRepository {
                 gson, "Couldn't upload that banner", cb);
     }
 
+    /** Drops the profile picture, bringing back the initials. */
+    public void deleteAvatar(Callback<User> cb) {
+        ApiCall.enqueue(api.deleteAvatar(), gson,
+                "Couldn't remove your picture", cb);
+    }
+
+    public void deleteBanner(Callback<Artist> cb) {
+        ApiCall.enqueue(api.deleteBanner(), gson,
+                "Couldn't remove that banner", cb);
+    }
+
     public void createArtistProfile(String stageName, Callback<Artist> cb) {
         ArtistProfileCreate body = new ArtistProfileCreate(stageName);
         api.createArtistProfile(body).enqueue(new retrofit2.Callback<ApiResponse<Artist>>() {
