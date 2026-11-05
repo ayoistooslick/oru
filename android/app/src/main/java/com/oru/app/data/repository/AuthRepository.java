@@ -129,6 +129,30 @@ public class AuthRepository {
         });
     }
 
+    /** What the server offers: Google sign-in and the password rules. */
+    public void getAuthConfig(Callback<AuthConfig> cb) {
+        api.authConfig().enqueue(new retrofit2.Callback<AuthConfig>() {
+            @Override
+            public void onResponse(retrofit2.Call<AuthConfig> call,
+                    retrofit2.Response<AuthConfig> response) {
+                try {
+                    if (!response.isSuccessful() || response.body() == null) {
+                        cb.onFailure(failure(response));
+                        return;
+                    }
+                    cb.onSuccess(response.body());
+                } catch (Exception e) {
+                    cb.onFailure(e);
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<AuthConfig> call, Throwable t) {
+                cb.onFailure(t);
+            }
+        });
+    }
+
     public void googleLogin(String idToken, Callback<TokenResponse> cb) {
         GoogleLoginRequest body = new GoogleLoginRequest(idToken);
         api.googleLogin(body).enqueue(new retrofit2.Callback<TokenResponse>() {
