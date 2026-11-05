@@ -366,6 +366,13 @@ public class PlayerActivity extends AppCompatActivity {
                     .placeholder(R.drawable.ic_library)
                     .into(binding.miniArtwork);
         }
+        if (queueIds != null && queueIds.length > 1 && queueIndex >= 0) {
+            binding.queueText.setText("Track " + (queueIndex + 1) + " of "
+                    + queueIds.length);
+            binding.queueText.setVisibility(View.VISIBLE);
+        } else {
+            binding.queueText.setVisibility(View.GONE);
+        }
         binding.miniTitle.setText(song.title);
         binding.miniArtist.setText(song.artistLabel());
         updatePlayPauseButtons();

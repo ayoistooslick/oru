@@ -22,6 +22,8 @@
 
         <ImageView
             android:id="@+id/artworkImage"
+            android:background="@drawable/artwork_rounded"
+            android:clipToOutline="true"
             android:layout_width="@dimen/artwork_md"
             android:layout_height="@dimen/artwork_md"
             android:scaleType="centerCrop"

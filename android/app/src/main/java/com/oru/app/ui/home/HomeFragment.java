@@ -91,6 +91,9 @@ public class HomeFragment extends Fragment {
                     loadDiscoverInstead();
                 } else {
                     feedAdapter.submitList(items);
+                    binding.homeGreeting.setText("Listen");
+                    binding.homeSubtitle.setText(
+                            "Fresh from the artists you follow.");
                     binding.feedRecyclerView.setVisibility(View.VISIBLE);
                 }
             }
@@ -117,6 +120,9 @@ public class HomeFragment extends Fragment {
                         if (result != null && result.songs != null
                                 && !result.songs.isEmpty()) {
                             feedAdapter.submitList(result.songs);
+                            binding.homeGreeting.setText("Discover");
+                            binding.homeSubtitle.setText(
+                                    "Follow an artist and their new songs land here first.");
                             binding.feedRecyclerView
                                     .setVisibility(View.VISIBLE);
                         } else {

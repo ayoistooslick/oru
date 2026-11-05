@@ -38,6 +38,8 @@
             <!-- Artwork -->
             <ImageView
                 android:id="@+id/coverImage"
+                android:background="@drawable/artwork_rounded"
+                android:clipToOutline="true"
                 android:layout_width="@dimen/artwork_xl"
                 android:layout_height="@dimen/artwork_xl"
                 android:scaleType="centerCrop"
@@ -66,6 +68,16 @@
                     android:textAppearance="@style/TextAppearance.Oru.Body"
                     android:textColor="@color/ink_soft"
                     android:textAlignment="center" />
+
+                <TextView
+                    android:id="@+id/queueText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Oru.Label"
+                    android:textColor="@color/flame_ink"
+                    android:textAlignment="center"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/albumText"
@@ -238,6 +250,8 @@
 
         <ImageView
             android:id="@+id/miniArtwork"
+                android:background="@drawable/artwork_rounded"
+                android:clipToOutline="true"
             android:layout_width="@dimen/player_bar_artwork"
             android:layout_height="@dimen/player_bar_artwork"
             android:scaleType="centerCrop"
