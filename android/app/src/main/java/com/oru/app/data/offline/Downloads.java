@@ -84,6 +84,17 @@ public final class Downloads {
         return new File(folder(context), songId + ".bin");
     }
 
+    /** Saved artwork, so the offline lists are not blank. */
+    public static File coverFile(Context context, int songId) {
+        return new File(folder(context), songId + ".cover");
+    }
+
+    /** A local cover for Glide, or null when none was saved. */
+    public static File localCover(Context context, int songId) {
+        File cover = coverFile(context, songId);
+        return cover.exists() && cover.length() > 0 ? cover : null;
+    }
+
     public static boolean isDownloaded(Context context, int songId) {
         File file = audioFile(context, songId);
         return file.exists() && file.length() > 0;
@@ -131,7 +142,8 @@ public final class Downloads {
         File[] files = folder(context).listFiles();
         if (files != null) {
             for (File file : files) {
-                if (file.getName().endsWith(".bin")) {
+                if (file.getName().endsWith(".bin")
+                        || file.getName().endsWith(".cover")) {
                     total += file.length();
                 }
             }
@@ -144,6 +156,11 @@ public final class Downloads {
         if (file.exists()) {
             //noinspection ResultOfMethodCallIgnored
             file.delete();
+        }
+        File cover = coverFile(context, songId);
+        if (cover.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            cover.delete();
         }
         Index index = read(context);
         List<Song> kept = new ArrayList<>();
@@ -228,6 +245,7 @@ public final class Downloads {
                 if (!part.renameTo(target)) {
                     throw new IOException("Couldn't finish the file");
                 }
+                saveCover(app, song);
                 Index index = read(app);
                 index.songs.removeIf(existing -> existing == null
                         || existing.id == song.id);
@@ -247,6 +265,36 @@ public final class Downloads {
                 active.remove(song.id);
             }
         });
+    }
+
+    /** Best effort: a missing cover still leaves a playable song. */
+    private static void saveCover(Context context, Song song) {
+        String url = MediaUrl.of(song.coverUrl);
+        if (url == null) {
+            return;
+        }
+        File target = coverFile(context, song.id);
+        if (target.exists() && target.length() > 0) {
+            return;
+        }
+        try {
+            OkHttpClient client = ApiClient.getOkHttpClient();
+            if (client == null) {
+                client = new OkHttpClient();
+            }
+            Request request = new Request.Builder().url(url).build();
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    return;
+                }
+                try (FileOutputStream out = new FileOutputStream(target)) {
+                    out.write(response.body().bytes());
+                }
+            }
+        } catch (Exception ignored) {
+            //noinspection ResultOfMethodCallIgnored
+            target.delete();
+        }
     }
 
     /** Strips parameters such as "; charset=utf-8". */

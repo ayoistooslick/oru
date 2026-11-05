@@ -261,7 +261,10 @@ public class PlayerActivity extends AppCompatActivity {
         binding.albumText.setText(length.isEmpty() ? genres
                 : genres.isEmpty() ? length : length + " · " + genres);
         binding.totalTimeText.setText(length.isEmpty() ? "0:00" : length);
-        String cover = com.oru.app.util.MediaUrl.of(song.coverUrl);
+        Object cover = Downloads.localCover(this, song.id);
+        if (cover == null) {
+            cover = com.oru.app.util.MediaUrl.of(song.coverUrl);
+        }
         if (cover != null) {
             com.bumptech.glide.Glide.with(this)
                     .load(cover)
