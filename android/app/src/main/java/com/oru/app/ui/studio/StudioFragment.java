@@ -415,11 +415,95 @@ public class StudioFragment extends Fragment {
                 }
                 binding.swipeRefresh.setRefreshing(false);
                 binding.progressBar.setVisibility(View.GONE);
+                // A listener has no studio yet; offer to open one instead of
+                // showing a dead error screen.
+                if (isArtistProfileMissing(error)) {
+                    binding.errorView.getRoot().setVisibility(View.GONE);
+                    askForArtistProfile();
+                    return;
+                }
                 binding.errorView.getRoot().setVisibility(View.VISIBLE);
                 binding.errorView.errorMessage.setText(
                         UiErrors.message(requireContext(), error));
             }
         });
+    }
+
+    private boolean isArtistProfileMissing(Throwable error) {
+        if (!(error instanceof com.oru.app.data.model.ApiResponse.ApiException)) {
+            return false;
+        }
+        String code = ((com.oru.app.data.model.ApiResponse.ApiException) error).code;
+        return "artist_only".equals(code)
+                || "artist_profile_required".equals(code);
+    }
+
+    /** Asks for the stage name and opens the artist profile. */
+    private void askForArtistProfile() {
+        if (binding == null || getContext() == null) {
+            return;
+        }
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        android.widget.LinearLayout form = new android.widget.LinearLayout(requireContext());
+        form.setOrientation(android.widget.LinearLayout.VERTICAL);
+        form.setPadding(pad, pad, pad, 0);
+
+        android.widget.TextView help = new android.widget.TextView(requireContext());
+        help.setText("Your songs appear under this name. You can change it later.");
+        help.setTextAppearance(com.oru.app.R.style.TextAppearance_Oru_BodySoft);
+        form.addView(help);
+
+        final android.widget.EditText name = new android.widget.EditText(requireContext());
+        name.setHint("Stage name");
+        name.setSingleLine(true);
+        form.addView(name);
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Open your studio")
+                .setView(form)
+                .setNegativeButton("Not now", null)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String stageName = name.getText().toString().trim();
+                    if (stageName.length() < 2) {
+                        toast(new IllegalArgumentException(
+                                "Use at least 2 characters for your stage name"));
+                        return;
+                    }
+                    createArtistProfile(stageName);
+                })
+                .show();
+    }
+
+    private void createArtistProfile(String stageName) {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        new com.oru.app.data.repository.AuthRepository(
+                com.oru.app.util.LazySession.getApiService(),
+                new com.oru.app.data.session.SessionManager(requireContext()),
+                com.oru.app.util.LazySession.getGson())
+                .createArtistProfile(stageName,
+                        new Callback<com.oru.app.data.model.Artist>() {
+                            @Override
+                            public void onSuccess(
+                                    com.oru.app.data.model.Artist artist) {
+                                if (binding == null) {
+                                    return;
+                                }
+                                binding.progressBar.setVisibility(View.GONE);
+                                android.widget.Toast.makeText(requireContext(),
+                                        "Your studio is open",
+                                        android.widget.Toast.LENGTH_SHORT).show();
+                                loadAll(true);
+                            }
+
+                            @Override
+                            public void onFailure(Throwable error) {
+                                if (binding == null) {
+                                    return;
+                                }
+                                binding.progressBar.setVisibility(View.GONE);
+                                toast(error);
+                            }
+                        });
     }
 
     private void loadReleases() {
