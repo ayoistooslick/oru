@@ -71,6 +71,51 @@ public class MusicRepository {
                 "Couldn't load this release", cb);
     }
 
+    /** Groups my songs into a single, EP or album. It starts out as a draft. */
+    public void createRelease(String title, String kind, List<Integer> songIds,
+            Callback<Release> cb) {
+        ApiCall.enqueue(api.createRelease(new ReleaseCreate(title, kind, songIds)),
+                gson, "Couldn't create this release", cb);
+    }
+
+    public void publishRelease(int releaseId, Callback<Release> cb) {
+        ApiCall.enqueue(api.publishRelease(releaseId), gson,
+                "Couldn't publish this release", cb);
+    }
+
+    public void getMyReleases(Callback<List<Release>> cb) {
+        ApiCall.enqueue(api.getMyReleases(), gson,
+                "Couldn't load your releases", cb);
+    }
+
+    /** Songs where this artist is only a feature. */
+    public void getAppearsOn(int artistId, Callback<List<Song>> cb) {
+        ApiCall.enqueue(api.getArtistAppearsOn(artistId), gson,
+                "Couldn't load this artist's features", cb);
+    }
+
+    /** My own numbers: published songs, likes and qualified listens. */
+    public void getArtistStats(Callback<ArtistStats> cb) {
+        ApiCall.enqueue(api.getArtistStats(), gson,
+                "Couldn't load your numbers", cb);
+    }
+
+    /** A short post on my artist profile, shown to listeners. */
+    public void createPost(String body, Callback<ArtistPost> cb) {
+        ApiCall.enqueue(api.createArtistPost(new ArtistPostCreate(body)), gson,
+                "Couldn't publish that post", cb);
+    }
+
+    public void getMyPosts(Callback<List<ArtistPost>> cb) {
+        ApiCall.enqueue(api.getMyPosts(), gson,
+                "Couldn't load your posts", cb);
+    }
+
+    public void getPostsByArtist(int artistId, Callback<List<ArtistPost>> cb) {
+        ApiCall.enqueue(api.getArtistPosts(artistId), gson,
+                "Couldn't load this artist's posts", cb);
+    }
+
     /** Songs by the artists the signed-in listener follows, newest first. */
     public void getFeedFollowing(Callback<List<Song>> cb) {
         ApiCall.enqueue(api.feedFollowing(), gson,

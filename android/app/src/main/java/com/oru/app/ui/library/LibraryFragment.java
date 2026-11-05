@@ -70,6 +70,14 @@ public class LibraryFragment extends Fragment {
             public void onPlaylistLongPress(Playlist playlist) {
                 playlistActions(playlist);
             }
+
+            @Override
+            public void onArtist(com.oru.app.data.model.Artist artist) {
+                Intent intent = new Intent(requireContext(),
+                        com.oru.app.ui.artist.ArtistActivity.class);
+                intent.putExtra("artistId", artist.artistId());
+                startActivity(intent);
+            }
         });
 
         binding.recyclerView.setLayoutManager(
@@ -139,19 +147,34 @@ public class LibraryFragment extends Fragment {
         musicRepo.getMySongs(new Callback<List<Song>>() {
             @Override
             public void onSuccess(List<Song> uploads) {
-                show(likes, playlists, uploads);
+                loadFollowing(likes, playlists, uploads);
             }
 
             @Override
             public void onFailure(Throwable error) {
                 // Listeners have no artist profile; that is not a failure here.
-                show(likes, playlists, null);
+                loadFollowing(likes, playlists, null);
+            }
+        });
+    }
+
+    private void loadFollowing(List<Song> likes, List<Playlist> playlists,
+            List<Song> uploads) {
+        communityRepo.getFollowing(new Callback<List<com.oru.app.data.model.Artist>>() {
+            @Override
+            public void onSuccess(List<com.oru.app.data.model.Artist> following) {
+                show(likes, playlists, uploads, following);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                show(likes, playlists, uploads, null);
             }
         });
     }
 
     private void show(List<Song> likes, List<Playlist> playlists,
-            List<Song> uploads) {
+            List<Song> uploads, List<com.oru.app.data.model.Artist> following) {
         if (binding == null) {
             return;
         }
@@ -178,6 +201,13 @@ public class LibraryFragment extends Fragment {
                     playlists.size() + " playlists"));
             for (Playlist playlist : playlists) {
                 rows.add(LibraryAdapter.Row.playlist(playlist));
+            }
+        }
+        if (following != null && !following.isEmpty()) {
+            rows.add(LibraryAdapter.Row.header("Following",
+                    following.size() + " artists"));
+            for (com.oru.app.data.model.Artist artist : following) {
+                rows.add(LibraryAdapter.Row.artist(artist));
             }
         }
 

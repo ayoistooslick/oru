@@ -25,13 +25,91 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerView"
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="80dp"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+            android:paddingBottom="96dp"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/requestsHeader"
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    android:text="Waiting for your decision"
+                    android:textAllCaps="true"
+                    android:textColor="@color/flame"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/requestsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:text="Songs you shared"
+                    android:textAllCaps="true"
+                    android:textColor="@color/ink_faint" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    android:id="@+id/songsEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginVertical="6dp"
+                    android:text="Nothing shared yet."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_faint" />
+
+                <TextView
+                    style="@style/TextAppearance.Oru.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:text="Links you shared"
+                    android:textAllCaps="true"
+                    android:textColor="@color/ink_faint" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/externalRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    android:id="@+id/externalEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginVertical="6dp"
+                    android:text="No links shared yet. Use Share to send a song from somewhere else."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_faint" />
+
+            </LinearLayout>
+
+        </androidx.core.widget.NestedScrollView>
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/shareSongButton"

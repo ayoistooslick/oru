@@ -263,6 +263,25 @@
             android:textColor="@color/ink_faint" />
 </LinearLayout>
 
+            <!-- Posts section -->
+            <TextView
+                android:id="@+id/postsHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Posts"
+                android:textAppearance="@style/TextAppearance.Oru.Title"
+                android:textColor="@color/ink"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/postsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone" />
+
             <!-- Section header + tabs -->
             <TextView
                 android:id="@+id/songsHeader"
@@ -321,6 +340,25 @@
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
                 android:layout_marginTop="8dp" />
+
+            <!-- Features section -->
+            <TextView
+                android:id="@+id/appearsOnHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Appears on"
+                android:textAppearance="@style/TextAppearance.Oru.Title"
+                android:textColor="@color/ink"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/appearsOnRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone" />
 
             <View
                 android:layout_width="match_parent"

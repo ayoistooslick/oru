@@ -8,10 +8,12 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
+import com.oru.app.data.model.Artist;
 import com.oru.app.data.model.Playlist;
 import com.oru.app.data.model.Song;
 import com.oru.app.databinding.ItemLibrarySectionBinding;
 import com.oru.app.databinding.ItemLibrarySongBinding;
+import com.oru.app.databinding.ItemShareBinding;
 import com.oru.app.ui.player.PlayerActivity;
 import com.oru.app.util.MediaUrl;
 
@@ -29,38 +31,47 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onPlaylist(Playlist playlist);
 
         void onPlaylistLongPress(Playlist playlist);
+
+        void onArtist(Artist artist);
     }
 
     public static final class Row {
         public static final int HEADER = 0;
         public static final int SONG = 1;
         public static final int PLAYLIST = 2;
+        public static final int ARTIST = 3;
 
         public final int type;
         public final String title;
         public final String count;
         public final Song song;
         public final Playlist playlist;
+        public final Artist artist;
 
         private Row(int type, String title, String count, Song song,
-                Playlist playlist) {
+                Playlist playlist, Artist artist) {
             this.type = type;
             this.title = title;
             this.count = count;
             this.song = song;
             this.playlist = playlist;
+            this.artist = artist;
         }
 
         public static Row header(String title, String count) {
-            return new Row(HEADER, title, count, null, null);
+            return new Row(HEADER, title, count, null, null, null);
         }
 
         public static Row song(Song song) {
-            return new Row(SONG, null, null, song, null);
+            return new Row(SONG, null, null, song, null, null);
         }
 
         public static Row playlist(Playlist playlist) {
-            return new Row(PLAYLIST, null, null, null, playlist);
+            return new Row(PLAYLIST, null, null, null, playlist, null);
+        }
+
+        public static Row artist(Artist artist) {
+            return new Row(ARTIST, null, null, null, null, artist);
         }
     }
 
@@ -92,6 +103,10 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             return new SongVH(ItemLibrarySongBinding.inflate(inflater, parent,
                     false));
         }
+        if (viewType == Row.ARTIST) {
+            return new ArtistVH(ItemShareBinding.inflate(inflater, parent,
+                    false));
+        }
         return new PlaylistVH((com.google.android.material.card.MaterialCardView)
                 inflater.inflate(R.layout.item_playlist_card, parent, false));
     }
@@ -106,6 +121,8 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             ((SongVH) holder).bind(row.song);
         } else if (holder instanceof PlaylistVH) {
             ((PlaylistVH) holder).bind(row.playlist);
+        } else if (holder instanceof ArtistVH) {
+            ((ArtistVH) holder).bind(row.artist);
         }
     }
 
@@ -163,6 +180,30 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     PlayerActivity.class);
             intent.putExtra("songId", song.id);
             binding.getRoot().getContext().startActivity(intent);
+        }
+    }
+
+    /** An artist I follow, opening their profile. */
+    private final class ArtistVH extends RecyclerView.ViewHolder {
+        private final ItemShareBinding binding;
+
+        ArtistVH(ItemShareBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+
+        void bind(Artist artist) {
+            binding.artworkImage.setVisibility(android.view.View.GONE);
+            binding.titleText.setText(artist.stageName != null
+                    ? artist.stageName
+                    : artist.handle);
+            binding.artistText.setText("@" + artist.handle);
+            binding.statusText.setText(artist.followerCount + " followers");
+            binding.getRoot().setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onArtist(artist);
+                }
+            });
         }
     }
 

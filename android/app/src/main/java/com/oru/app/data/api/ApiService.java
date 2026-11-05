@@ -98,6 +98,9 @@ public interface ApiService {
     Call<ApiResponse<List<ArtistPost>>> getArtistPosts(
             @Path("artistId") int artistId);
 
+    @GET("api/v1/artists/me/posts")
+    Call<ApiResponse<List<ArtistPost>>> getMyPosts();
+
     @POST("api/v1/artists/me/posts")
     Call<ApiResponse<ArtistPost>> createArtistPost(@Body ArtistPostCreate body);
 
