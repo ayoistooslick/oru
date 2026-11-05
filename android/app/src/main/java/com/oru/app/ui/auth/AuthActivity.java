@@ -206,8 +206,8 @@ public class AuthActivity extends AppCompatActivity {
                     com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
                             .createFrom(result.getCredential().getData());
             return credential.getIdToken();
-        } catch (com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-                | RuntimeException error) {
+        } catch (RuntimeException error) {
+            // A credential that is not a Google ID token is not usable here.
             return null;
         }
     }
