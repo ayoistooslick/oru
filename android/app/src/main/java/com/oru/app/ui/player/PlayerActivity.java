@@ -181,9 +181,12 @@ public class PlayerActivity extends AppCompatActivity {
 
         Intent intent = new Intent(this, PlayerService.class);
         try {
+            // Started as well as bound, so the music keeps playing when the
+            // listener leaves the player screen.
+            startService(intent);
             bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        } catch (SecurityException error) {
-            // Playback still works without the background service.
+        } catch (RuntimeException error) {
+            // Playback still works inside the player without the service.
             serviceBound.set(false);
         }
 
