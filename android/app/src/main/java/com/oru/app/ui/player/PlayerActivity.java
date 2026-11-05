@@ -19,6 +19,7 @@ import androidx.media3.common.Player;
 
 import com.google.android.material.slider.Slider;
 import com.oru.app.R;
+import com.oru.app.data.offline.Downloads;
 import com.oru.app.data.model.LikeResult;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
@@ -114,6 +115,10 @@ public class PlayerActivity extends AppCompatActivity {
 
         binding.toolbar.inflateMenu(R.menu.player_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_download) {
+                toggleDownload();
+                return true;
+            }
             if (item.getItemId() == R.id.action_report) {
                 askReportReason();
                 return true;
@@ -168,10 +173,84 @@ public class PlayerActivity extends AppCompatActivity {
             public void onFailure(Throwable error) {
                 runOnUiThread(() -> {
                     binding.progressBar.setVisibility(View.GONE);
+                    // With no connection the saved copy still plays.
+                    Song saved = Downloads.song(PlayerActivity.this, songId);
+                    if (saved != null) {
+                        currentSong = saved;
+                        populateUI(saved);
+                        if (serviceBound.get() && player != null) {
+                            loadSong(saved);
+                        }
+                        return;
+                    }
                     showError(error);
                 });
             }
         });
+    }
+
+    /** Saves the song to the device, or forgets the saved copy. */
+    private void toggleDownload() {
+        if (currentSong == null) {
+            return;
+        }
+        final Song song = currentSong;
+        if (Downloads.isDownloaded(this, song.id)) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Remove download?")
+                    .setMessage("\"" + song.title
+                            + "\" will be deleted from this device.")
+                    .setNegativeButton("Keep", null)
+                    .setPositiveButton("Remove", (dialog, which) -> {
+                        Downloads.remove(this, song.id);
+                        refreshDownloadMenu();
+                    })
+                    .show();
+            return;
+        }
+        Toast.makeText(this, "Saving for offline…", Toast.LENGTH_SHORT).show();
+        Downloads.download(this, song, percent -> {
+            if (binding == null) {
+                return;
+            }
+            android.view.MenuItem item = binding.toolbar.getMenu()
+                    .findItem(R.id.action_download);
+            if (item != null) {
+                item.setTitle("Saving " + percent + "%");
+            }
+        }, (ok, message) -> {
+            if (binding == null) {
+                return;
+            }
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            refreshDownloadMenu();
+        });
+        refreshDownloadMenu();
+    }
+
+    private void refreshDownloadMenu() {
+        if (binding == null) {
+            return;
+        }
+        android.view.MenuItem item = binding.toolbar.getMenu()
+                .findItem(R.id.action_download);
+        if (item == null) {
+            return;
+        }
+        if (currentSong == null) {
+            item.setVisible(false);
+            return;
+        }
+        boolean saving = Downloads.isDownloading(currentSong.id);
+        item.setVisible(true);
+        item.setEnabled(!saving);
+        if (saving) {
+            item.setTitle("Saving…");
+        } else if (Downloads.isDownloaded(this, currentSong.id)) {
+            item.setTitle("Remove download");
+        } else {
+            item.setTitle("Save for offline");
+        }
     }
 
     private void populateUI(Song song) {
@@ -198,13 +277,14 @@ public class PlayerActivity extends AppCompatActivity {
         updatePlayPauseButtons();
         updateLikeButtons();
         updateModeButtons();
+        refreshDownloadMenu();
     }
 
     private void loadSong(Song song) {
         if (player == null) {
             return;
         }
-        MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(
+        MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(this,
                 com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
                 song.title, song.artistLabel(),
                 com.oru.app.util.MediaUrl.of(song.coverUrl));
