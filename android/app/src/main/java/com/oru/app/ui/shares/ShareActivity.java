@@ -134,7 +134,9 @@ public class ShareActivity extends AppCompatActivity {
         setBusy(true, "Reading the file…");
         io.execute(() -> {
             try {
-                PickedFile picked = PickedFile.copy(this, uri);
+                PickedFile picked = isAudio
+                        ? PickedFile.copy(this, uri)
+                        : PickedFile.copyImage(this, uri);
                 runOnUiThread(() -> {
                     setBusy(false, null);
                     if (isAudio) {

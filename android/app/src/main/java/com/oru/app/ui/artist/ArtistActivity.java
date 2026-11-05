@@ -111,7 +111,7 @@ public class ArtistActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Throwable error) {
-                onFailure(error);
+                ArtistActivity.this.onFailure(error);
             }
         });
     }

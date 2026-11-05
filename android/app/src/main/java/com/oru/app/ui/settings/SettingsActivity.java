@@ -3,6 +3,7 @@ package com.oru.app.ui.settings;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -348,6 +349,7 @@ public class SettingsActivity extends AppCompatActivity {
         final EditText name = new EditText(this);
         name.setHint("Display name");
         name.setSingleLine(true);
+        name.setFilters(new InputFilter[] {new InputFilter.LengthFilter(80)});
         if (user != null && user.displayName != null) {
             name.setText(user.displayName);
         }
@@ -357,19 +359,30 @@ public class SettingsActivity extends AppCompatActivity {
         bio.setHint("Bio");
         bio.setMinLines(2);
         bio.setMaxLines(4);
+        bio.setFilters(new InputFilter[] {new InputFilter.LengthFilter(1000)});
         if (user != null && user.bio != null) {
             bio.setText(user.bio);
         }
         form.addView(bio);
 
-        new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Edit profile")
                 .setView(form)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.save, (dialog, which) -> saveProfile(
-                        name.getText().toString().trim(),
-                        bio.getText().toString().trim()))
-                .show();
+                .setPositiveButton(R.string.save, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    String displayName = name.getText().toString().trim();
+                    if (displayName.isEmpty()) {
+                        name.setError("Display name cannot be empty");
+                        return;
+                    }
+                    dialog.dismiss();
+                    saveProfile(displayName,
+                            bio.getText().toString().trim());
+                }));
+        dialog.show();
     }
 
     private void saveProfile(String displayName, String bio) {

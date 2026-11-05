@@ -90,7 +90,7 @@ public class PlaylistActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Throwable error) {
-                onFailure(error);
+                PlaylistActivity.this.onFailure(error);
             }
         });
     }
