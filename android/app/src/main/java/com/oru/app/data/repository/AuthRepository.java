@@ -281,34 +281,7 @@ public class AuthRepository {
 
     public void createArtistProfile(String stageName, Callback<Artist> cb) {
         ArtistProfileCreate body = new ArtistProfileCreate(stageName);
-        api.createArtistProfile(body).enqueue(new retrofit2.Callback<ApiResponse<Artist>>() {
-            @Override
-            public void onResponse(retrofit2.Call<ApiResponse<Artist>> call,
-                    retrofit2.Response<ApiResponse<Artist>> response) {
-                try {
-                    if (!response.isSuccessful()) {
-                        cb.onFailure(new IOException(
-                                "create artist profile failed: " + response.code()));
-                        return;
-                    }
-                    ApiResponse<Artist> bodyRes = response.body();
-                    if (bodyRes == null || !bodyRes.isSuccess()) {
-                        cb.onFailure(new IOException(
-                                bodyRes != null ? bodyRes.error.message
-                                        : "create artist profile failed"));
-                        return;
-                    }
-                    cb.onSuccess(bodyRes.data);
-                } catch (Exception e) {
-                    cb.onFailure(e);
-                }
-            }
-
-            @Override
-            public void onFailure(retrofit2.Call<ApiResponse<Artist>> call,
-                    Throwable t) {
-                cb.onFailure(t);
-            }
-        });
+        ApiCall.enqueue(api.createArtistProfile(body), gson,
+                "Couldn't create your artist profile", cb);
     }
 }

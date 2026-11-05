@@ -79,18 +79,19 @@ public final class ApiCall {
                                 && err.details.get(0).message != null) {
                             message = err.details.get(0).message;
                         }
-                        return new ApiResponse.ApiException(err.code, message);
+                        return new ApiResponse.ApiException(err.code, message,
+                                response.code());
                     }
                 }
                 if (json.has("detail") && json.get("detail").isJsonPrimitive()) {
                     return new ApiResponse.ApiException("http_" + response.code(),
-                            json.get("detail").getAsString());
+                            json.get("detail").getAsString(), response.code());
                 }
             } catch (RuntimeException ignored) {
                 // Not the envelope we know; the status code is still useful.
             }
         }
         return new ApiResponse.ApiException("http_" + response.code(),
-                "The server answered " + response.code() + ".");
+                "The server answered " + response.code() + ".", response.code());
     }
 }
