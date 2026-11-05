@@ -433,8 +433,11 @@ public class StudioFragment extends Fragment {
         if (!(error instanceof com.oru.app.data.model.ApiResponse.ApiException)) {
             return false;
         }
-        String code = ((com.oru.app.data.model.ApiResponse.ApiException) error).code;
-        return "artist_only".equals(code)
+        com.oru.app.data.model.ApiResponse.ApiException apiError =
+                (com.oru.app.data.model.ApiResponse.ApiException) error;
+        String code = apiError.code;
+        return apiError.statusCode == 403
+                || "artist_only".equals(code)
                 || "artist_profile_required".equals(code);
     }
 

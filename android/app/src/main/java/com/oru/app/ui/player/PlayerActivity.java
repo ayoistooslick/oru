@@ -40,6 +40,7 @@ public class PlayerActivity extends AppCompatActivity {
     private androidx.media3.session.MediaSession mediaSession;
     private AtomicBoolean serviceBound = new AtomicBoolean(false);
     private Song currentSong;
+    private int songLoadGeneration;
     /** The list this song came from, as ids, so next/previous walk it. */
     private int[] queueIds;
     private int queueIndex = -1;
@@ -190,15 +191,29 @@ public class PlayerActivity extends AppCompatActivity {
             serviceBound.set(false);
         }
 
-        queueIds = getIntent().getIntArrayExtra("songIds");
-        queueIndex = getIntent().getIntExtra("songIndex", -1);
-        int songId = getIntent().getIntExtra("songId", -1);
+        openPlaybackIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openPlaybackIntent(intent);
+    }
+
+    private void openPlaybackIntent(Intent intent) {
+        queueIds = intent.getIntArrayExtra("songIds");
+        queueIndex = intent.getIntExtra("songIndex", -1);
+        int songId = intent.getIntExtra("songId", -1);
         if (songId <= 0 && queueIds != null && queueIndex >= 0
                 && queueIndex < queueIds.length) {
             songId = queueIds[queueIndex];
         }
         if (songId > 0) {
             loadSongById(songId);
+        } else {
+            showError(new IllegalArgumentException(
+                    "Choose a song with playable audio to start listening."));
         }
     }
 
@@ -227,12 +242,22 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void loadSongById(int songId) {
+        final int generation = ++songLoadGeneration;
         binding.progressBar.setVisibility(View.VISIBLE);
         musicRepo.getSong(songId, new Callback<Song>() {
             @Override
             public void onSuccess(Song song) {
                 runOnUiThread(() -> {
+                    if (binding == null || isFinishing()
+                            || generation != songLoadGeneration) {
+                        return;
+                    }
                     binding.progressBar.setVisibility(View.GONE);
+                    if (song == null) {
+                        showError(new IllegalStateException(
+                                "The song details were empty. Please try again."));
+                        return;
+                    }
                     currentSong = song;
                     if (queueIds != null) {
                         for (int i = 0; i < queueIds.length; i++) {
@@ -252,6 +277,10 @@ public class PlayerActivity extends AppCompatActivity {
             @Override
             public void onFailure(Throwable error) {
                 runOnUiThread(() -> {
+                    if (binding == null || isFinishing()
+                            || generation != songLoadGeneration) {
+                        return;
+                    }
                     binding.progressBar.setVisibility(View.GONE);
                     // With no connection the saved copy still plays.
                     Song saved = Downloads.song(PlayerActivity.this, songId);
@@ -385,20 +414,24 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void loadSong(Song song) {
-        if (player == null) {
+        if (player == null || song == null || binding == null) {
             return;
         }
-        MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(this,
-                com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
-                song.title, song.artistLabel(),
-                com.oru.app.util.MediaUrl.of(song.coverUrl));
-        player.setMediaItem(mediaItem);
-        player.prepare();
-        player.play();
-        updatePlayPauseButtons();
-        binding.miniPlayerBar.setVisibility(View.VISIBLE);
-        ticker.removeCallbacks(tick);
-        ticker.post(tick);
+        try {
+            MediaItem mediaItem = com.oru.app.media.MediaItemBuilder.create(this,
+                    com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
+                    song.title, song.artistLabel(),
+                    com.oru.app.util.MediaUrl.of(song.coverUrl));
+            player.setMediaItem(mediaItem);
+            player.prepare();
+            player.play();
+            updatePlayPauseButtons();
+            binding.miniPlayerBar.setVisibility(View.VISIBLE);
+            ticker.removeCallbacks(tick);
+            ticker.post(tick);
+        } catch (RuntimeException error) {
+            showError(error);
+        }
     }
 
     private void togglePlay() {
@@ -628,6 +661,9 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         ticker.removeCallbacks(tick);
+        if (player != null) {
+            player.removeListener(playerListener);
+        }
         try {
             unbindService(connection);
         } catch (IllegalArgumentException ignored) {

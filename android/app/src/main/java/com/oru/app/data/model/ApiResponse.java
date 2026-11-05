@@ -49,10 +49,16 @@ public class ApiResponse<T> {
 
     public static class ApiException extends Exception {
         public final String code;
+        public final int statusCode;
 
         public ApiException(String code, String message) {
+            this(code, message, 0);
+        }
+
+        public ApiException(String code, String message, int statusCode) {
             super(message);
             this.code = code;
+            this.statusCode = statusCode;
         }
     }
 }

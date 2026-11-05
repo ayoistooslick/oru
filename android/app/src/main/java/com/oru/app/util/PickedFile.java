@@ -4,9 +4,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageDecoder;
 import android.graphics.Matrix;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.OpenableColumns;
 
 import androidx.exifinterface.media.ExifInterface;
@@ -132,47 +134,112 @@ public final class PickedFile {
      * under the size limit.
      */
     public static PickedFile copyImage(Context context, Uri uri) throws IOException {
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        InputStream probe = context.getContentResolver().openInputStream(uri);
-        if (probe == null) {
-            throw new IOException("Couldn't open that picture");
-        }
-        try {
-            BitmapFactory.decodeStream(probe, null, bounds);
-        } finally {
-            close(probe);
-        }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            throw new IOException("That file isn't a picture the app can read");
-        }
-
-        Bitmap bitmap = decodeScaled(context, uri, bounds);
-        if (bitmap == null) {
-            throw new IOException("That picture couldn't be decoded");
-        }
-        bitmap = upright(context, uri, bitmap);
-
         File dir = new File(context.getCacheDir(), "uploads");
         if (!dir.exists() && !dir.mkdirs()) {
             throw new IOException("Couldn't prepare the upload");
         }
-        File target = new File(dir, System.currentTimeMillis() + "-picture.jpg");
-        FileOutputStream out = new FileOutputStream(target);
+        File source = File.createTempFile("picked-", ".image", dir);
+        Bitmap bitmap = null;
         try {
-            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
-                throw new IOException("That picture couldn't be saved");
+            InputStream input = context.getContentResolver().openInputStream(uri);
+            if (input == null) {
+                throw new IOException("Couldn't open that picture");
             }
+            try (InputStream in = input; FileOutputStream out =
+                    new FileOutputStream(source)) {
+                byte[] buffer = new byte[16 * 1024];
+                int count;
+                long total = 0;
+                while ((count = in.read(buffer)) != -1) {
+                    total += count;
+                    if (total > 100L * 1024 * 1024) {
+                        throw new IOException("That picture file is too large to read");
+                    }
+                    out.write(buffer, 0, count);
+                }
+            }
+            if (source.length() == 0) {
+                throw new IOException("That picture file is empty");
+            }
+            bitmap = decodeImageFile(source);
+            if (bitmap == null) {
+                throw new IOException("That picture couldn't be decoded. Choose a JPEG, PNG, or WebP image.");
+            }
+            if (Build.VERSION.SDK_INT < 28) {
+                bitmap = upright(context, Uri.fromFile(source), bitmap);
+            }
+            File target = new File(dir,
+                    System.currentTimeMillis() + "-picture.jpg");
+            try (FileOutputStream out = new FileOutputStream(target)) {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
+                    throw new IOException("That picture couldn't be saved");
+                }
+                out.flush();
+            }
+            if (target.length() == 0) {
+                //noinspection ResultOfMethodCallIgnored
+                target.delete();
+                throw new IOException("That picture came out empty");
+            }
+            return new PickedFile(target, "picture.jpg", "image/jpeg", 0);
+        } catch (SecurityException error) {
+            throw new IOException("Android could not read the selected picture. Please pick it again.", error);
+        } catch (RuntimeException error) {
+            throw new IOException("That picture could not be opened or decoded. Please choose another image.", error);
         } finally {
-            close(out);
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
+            //noinspection ResultOfMethodCallIgnored
+            source.delete();
+        }
+    }
+
+    private static Bitmap decodeImageFile(File file) throws IOException {
+        if (Build.VERSION.SDK_INT >= 28) {
+            return ImageDecoder.decodeBitmap(ImageDecoder.createSource(file),
+                    (decoder, info, source) -> {
+                        decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+                        int width = info.getSize().getWidth();
+                        int height = info.getSize().getHeight();
+                        int longest = Math.max(width, height);
+                        if (longest > MAX_IMAGE_EDGE) {
+                            float scale = MAX_IMAGE_EDGE / (float) longest;
+                            decoder.setTargetSize(
+                                    Math.max(1, Math.round(width * scale)),
+                                    Math.max(1, Math.round(height * scale)));
+                        }
+                    });
+        }
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            return null;
+        }
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        int sample = 1;
+        int longest = Math.max(bounds.outWidth, bounds.outHeight);
+        while (longest / sample > MAX_IMAGE_EDGE * 2) {
+            sample *= 2;
+        }
+        options.inSampleSize = sample;
+        Bitmap bitmap = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+        if (bitmap == null) {
+            return null;
+        }
+        int edge = Math.max(bitmap.getWidth(), bitmap.getHeight());
+        if (edge <= MAX_IMAGE_EDGE) {
+            return bitmap;
+        }
+        float scale = MAX_IMAGE_EDGE / (float) edge;
+        Bitmap scaled = Bitmap.createScaledBitmap(bitmap,
+                Math.max(1, Math.round(bitmap.getWidth() * scale)),
+                Math.max(1, Math.round(bitmap.getHeight() * scale)), true);
+        if (scaled != bitmap) {
             bitmap.recycle();
         }
-        if (target.length() == 0) {
-            //noinspection ResultOfMethodCallIgnored
-            target.delete();
-            throw new IOException("That picture came out empty");
-        }
-        return new PickedFile(target, "picture.jpg", "image/jpeg", 0);
+        return scaled;
     }
 
     /** Bounds the longest edge at {@link #MAX_IMAGE_EDGE} pixels. */

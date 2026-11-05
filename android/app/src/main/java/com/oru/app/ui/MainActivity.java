@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
@@ -26,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
     private NavController navController;
+    private boolean keyboardVisible;
+    private boolean mainDestination = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +46,12 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {
+            keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            updateBottomNavigationVisibility();
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(binding.getRoot());
 
         setupBottomNavigation();
         setupToolbar();
@@ -81,18 +91,22 @@ public class MainActivity extends AppCompatActivity {
         // Preserve the selected tab when returning from sub-activities.
         navController.addOnDestinationChangedListener(
                 (controller, destination, arguments) -> {
-                    if (destination.getId() == R.id.homeFragment
+                    mainDestination = destination.getId() == R.id.homeFragment
                             || destination.getId() == R.id.searchFragment
                             || destination.getId() == R.id.libraryFragment
                             || destination.getId() == R.id.sharesFragment
-                            || destination.getId() == R.id.studioFragment) {
-                        binding.bottomNavigation.setVisibility(
-                                android.view.View.VISIBLE);
-                    } else {
-                        binding.bottomNavigation.setVisibility(
-                                android.view.View.GONE);
-                    }
+                            || destination.getId() == R.id.studioFragment;
+                    updateBottomNavigationVisibility();
                 });
+    }
+
+    private void updateBottomNavigationVisibility() {
+        if (binding != null) {
+            binding.bottomNavigation.setVisibility(
+                    mainDestination && !keyboardVisible
+                            ? android.view.View.VISIBLE
+                            : android.view.View.GONE);
+        }
     }
 
     private void setupToolbar() {

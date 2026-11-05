@@ -17,10 +17,23 @@ import com.oru.app.data.offline.Downloads;
  */
 public class MediaItemBuilder {
 
+    private static Uri audioUri(String audioUrl) {
+        if (audioUrl == null || audioUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "This song does not have a playable audio file.");
+        }
+        Uri uri = Uri.parse(audioUrl.trim());
+        if (uri.getScheme() == null) {
+            throw new IllegalArgumentException(
+                    "This song has an invalid audio address.");
+        }
+        return uri;
+    }
+
     /** Simple variant: audio URI + mediaId (uri is set via setUri). */
     public static MediaItem create(String audioUrl, long id) {
         return new MediaItem.Builder()
-                .setUri(Uri.parse(audioUrl))
+                .setUri(audioUri(audioUrl))
                 .setMediaId(String.valueOf(id))
                 .build();
     }
@@ -30,7 +43,7 @@ public class MediaItemBuilder {
             @Nullable String title, @Nullable String artist,
             @Nullable String coverUrl) {
         MediaItem.Builder builder = new MediaItem.Builder()
-                .setUri(Uri.parse(audioUrl))
+                .setUri(audioUri(audioUrl))
                 .setMediaId(String.valueOf(id));
 
         if (title != null || artist != null) {
