@@ -55,7 +55,7 @@ public class ReportAdapter extends ListAdapter<Report, ReportAdapter.VH> {
         holder.bind(getItem(position));
     }
 
-    static class VH extends RecyclerView.ViewHolder {
+    class VH extends RecyclerView.ViewHolder {
         private final ItemReportBinding binding;
 
         VH(ItemReportBinding binding) {
