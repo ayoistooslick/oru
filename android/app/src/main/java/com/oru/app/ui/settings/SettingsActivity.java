@@ -175,13 +175,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private String bannerPath(User user) {
-        if (user == null) {
-            return null;
-        }
-        if (user.artistProfile != null && user.artistProfile.bannerUrl != null) {
-            return user.artistProfile.bannerUrl;
-        }
-        return user.bannerUrl;
+        return user != null ? user.artistBannerUrl() : null;
     }
 
     private boolean hasBanner(User user) {

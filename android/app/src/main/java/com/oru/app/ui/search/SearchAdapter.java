@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
+import com.oru.app.data.model.Song;
 import com.oru.app.databinding.ItemSearchResultBinding;
 import android.content.Context;
 import android.content.Intent;
@@ -57,7 +58,21 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        // The queue is every song in the results, in order.
+        java.util.List<Song> songs = new java.util.ArrayList<>();
+        int songIndex = 0;
+        java.util.List<SearchResult> all = getCurrentList();
+        for (int i = 0; i < all.size(); i++) {
+            SearchResult result = all.get(i);
+            if (result.song == null) {
+                continue;
+            }
+            if (i == position) {
+                songIndex = songs.size();
+            }
+            songs.add(result.song);
+        }
+        holder.bind(getItem(position), songs, songIndex);
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -68,7 +83,7 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(SearchResult item) {
+        void bind(SearchResult item, java.util.List<Song> songs, int songIndex) {
             if (item.isPerson()) {
                 com.oru.app.ui.components.Covers.loadAvatar(binding.artworkImage,
                         item.coverPath());
@@ -84,18 +99,7 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
             binding.getRoot().setOnClickListener(v -> {
                 Context ctx = binding.getRoot().getContext();
                 if (item.song != null) {
-                    // The queue is every song in the results, in order.
-                    java.util.List<Song> songs = new java.util.ArrayList<>();
-                    int index = 0;
-                    for (SearchResult result : getCurrentList()) {
-                        if (result.song != null) {
-                            if (result == item) {
-                                index = songs.size();
-                            }
-                            songs.add(result.song);
-                        }
-                    }
-                    com.oru.app.ui.player.Playback.start(ctx, songs, index);
+                    com.oru.app.ui.player.Playback.start(ctx, songs, songIndex);
                 } else if (item.artist != null) {
                     Intent i = new Intent(ctx, com.oru.app.ui.artist.ArtistActivity.class);
                     i.putExtra("artistId", item.artist.artistId());

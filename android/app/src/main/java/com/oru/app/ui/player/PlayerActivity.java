@@ -63,7 +63,6 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         @Override
-        @Override
         public void onPlaybackStateChanged(int state) {
             if (state == Player.STATE_ENDED) {
                 onTrackEnded();

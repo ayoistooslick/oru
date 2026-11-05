@@ -43,9 +43,14 @@ public class User {
 
     @SerializedName("artist_profile")
     public ArtistProfile artistProfile;
+
+    /** The banner to show for this account, if it has one. */
+    public String artistBannerUrl() {
+        return artistProfile != null ? artistProfile.bannerUrl : bannerUrl;
+    }
 }
 
-public class ArtistProfile {
+class ArtistProfile {
     @SerializedName("id")
     public int id;
 
