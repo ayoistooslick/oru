@@ -41,19 +41,19 @@ public class SettingsActivity extends AppCompatActivity {
 
     private User user;
 
-    /** The system photo picker needs no storage permission at all. */
-    private final ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickAvatar =
-            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(),
+    /**
+     * The system document picker hands back a readable URI, so no storage
+     * permission is needed and the app never asks for one.
+     */
+    private final ActivityResultLauncher<String> pickAvatar =
+            registerForActivityResult(new ActivityResultContracts.GetContent(),
                     uri -> uploadImage(uri, true));
 
-    private final ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickBanner =
-            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(),
+    private final ActivityResultLauncher<String> pickBanner =
+            registerForActivityResult(new ActivityResultContracts.GetContent(),
                     uri -> uploadImage(uri, false));
 
-    private static final androidx.activity.result.PickVisualMediaRequest PICK_IMAGE =
-            new androidx.activity.result.PickVisualMediaRequest.Builder()
-                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    .build();
+    private static final String IMAGE_MIME = "image/*";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,8 +76,8 @@ public class SettingsActivity extends AppCompatActivity {
         binding.removeBannerButton.setOnClickListener(v -> removeBanner());
         binding.permissionButton.setOnClickListener(v -> openAppSettings());
         binding.versionText.setText("Oru " + versionName());
-        binding.editAvatarButton.setOnClickListener(v -> pickAvatar.launch(PICK_IMAGE));
-        binding.bannerButton.setOnClickListener(v -> pickBanner.launch(PICK_IMAGE));
+        binding.editAvatarButton.setOnClickListener(v -> pickAvatar.launch(IMAGE_MIME));
+        binding.bannerButton.setOnClickListener(v -> pickBanner.launch(IMAGE_MIME));
         binding.aboutButton.setOnClickListener(v -> startActivity(
                 new Intent(this, AboutActivity.class)));
         binding.signOutButton.setOnClickListener(v -> signOut());

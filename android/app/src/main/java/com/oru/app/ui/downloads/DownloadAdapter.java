@@ -49,7 +49,7 @@ public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(items.get(position));
+        holder.bind(items.get(position), position);
     }
 
     @Override
@@ -65,7 +65,7 @@ public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(Song song) {
+        void bind(Song song, int index) {
             binding.titleText.setText(song.title);
             String length = song.durationLabel();
             binding.artistText.setText(length.isEmpty()
@@ -85,8 +85,12 @@ public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.VH> {
             } else {
                 binding.artworkImage.setImageResource(R.drawable.ic_library);
             }
-            binding.getRoot().setOnClickListener(v -> listener.onPlay(song));
-            binding.playButton.setOnClickListener(v -> listener.onPlay(song));
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), items, index));
+            binding.playButton.setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), items, index));
             binding.getRoot().setOnLongClickListener(v -> {
                 listener.onRemove(song);
                 return true;

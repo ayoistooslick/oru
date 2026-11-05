@@ -48,7 +48,7 @@ public class SharesAdapter extends ListAdapter<Song, SharesAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), getCurrentList(), position);
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -59,19 +59,16 @@ public class SharesAdapter extends ListAdapter<Song, SharesAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(Song song) {
+        void bind(Song song, java.util.List<Song> queue, int index) {
             com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
                     song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.artistText.setText(song.artistLabel());
             binding.statusText.setText(
                     song.status != null ? song.status : "");
-            binding.getRoot().setOnClickListener(v -> {
-                Intent i = new Intent(binding.getRoot().getContext(),
-                        PlayerActivity.class);
-                i.putExtra("songId", song.id);
-                binding.getRoot().getContext().startActivity(i);
-            });
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
         }
     }
 }

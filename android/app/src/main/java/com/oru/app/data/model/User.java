@@ -45,7 +45,7 @@ public class User {
     public ArtistProfile artistProfile;
 }
 
-class ArtistProfile {
+public class ArtistProfile {
     @SerializedName("id")
     public int id;
 

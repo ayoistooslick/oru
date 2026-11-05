@@ -30,10 +30,16 @@ public class DownloadsActivity extends AppCompatActivity {
         adapter = new DownloadAdapter(new DownloadAdapter.Listener() {
             @Override
             public void onPlay(Song song) {
-                Intent intent = new Intent(DownloadsActivity.this,
-                        PlayerActivity.class);
-                intent.putExtra("songId", song.id);
-                startActivity(intent);
+                java.util.List<Song> saved = Downloads.songs(DownloadsActivity.this);
+                int index = 0;
+                for (int i = 0; i < saved.size(); i++) {
+                    if (saved.get(i).id == song.id) {
+                        index = i;
+                        break;
+                    }
+                }
+                com.oru.app.ui.player.Playback.start(DownloadsActivity.this,
+                        saved, index);
             }
 
             @Override

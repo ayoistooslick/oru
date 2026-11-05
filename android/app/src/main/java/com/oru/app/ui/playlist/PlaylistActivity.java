@@ -139,10 +139,7 @@ public class PlaylistActivity extends AppCompatActivity {
                 || playlist.songs.isEmpty()) {
             return;
         }
-        android.content.Intent intent = new android.content.Intent(this,
-                com.oru.app.ui.player.PlayerActivity.class);
-        intent.putExtra("songId", playlist.songs.get(0).id);
-        startActivity(intent);
+        com.oru.app.ui.player.Playback.start(this, playlist.songs, 0);
     }
 
     private void askRemove(Song song) {
