@@ -76,12 +76,20 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     private final List<Row> rows = new ArrayList<>();
+    /** Every song row, in order, so the player can walk the library. */
+    private final List<Song> songs = new ArrayList<>();
     private Listener listener;
 
     public void setRows(List<Row> next) {
         rows.clear();
+        songs.clear();
         if (next != null) {
             rows.addAll(next);
+            for (Row row : next) {
+                if (row.type == Row.SONG && row.song != null) {
+                    songs.add(row.song);
+                }
+            }
         }
         notifyDataSetChanged();
     }
@@ -178,10 +186,9 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             if (listener != null) {
                 listener.onSong(song);
             }
-            Intent intent = new Intent(binding.getRoot().getContext(),
-                    PlayerActivity.class);
-            intent.putExtra("songId", song.id);
-            binding.getRoot().getContext().startActivity(intent);
+            com.oru.app.ui.player.Playback.start(
+                    binding.getRoot().getContext(), songs,
+                    Math.max(0, songs.indexOf(song)));
         }
     }
 

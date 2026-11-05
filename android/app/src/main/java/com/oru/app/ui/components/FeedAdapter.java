@@ -52,7 +52,7 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), getCurrentList(), position);
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -63,7 +63,7 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(Song song) {
+        void bind(Song song, java.util.List<Song> queue, int index) {
             Covers.loadSongCover(binding.artworkImage, song.id, song.coverUrl);
             binding.typeIcon.setImageResource(R.drawable.ic_music);
             binding.typeLabel.setText("Song");
@@ -74,12 +74,12 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
             binding.metaText.setText(length.isEmpty() ? genres
                     : genres.isEmpty() ? length : length + " · " + genres);
             binding.playButton.setVisibility(View.VISIBLE);
-            binding.getRoot().setOnClickListener(v -> {
-                Intent i = new Intent(binding.getRoot().getContext(),
-                        PlayerActivity.class);
-                i.putExtra("songId", song.id);
-                binding.getRoot().getContext().startActivity(i);
-            });
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
+            binding.playButton.setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
         }
     }
 }

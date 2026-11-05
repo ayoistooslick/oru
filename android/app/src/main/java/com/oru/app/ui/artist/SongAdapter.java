@@ -45,7 +45,7 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), getCurrentList(), position);
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -56,7 +56,7 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(Song song) {
+        void bind(Song song, java.util.List<Song> queue, int index) {
             com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
                     song.id, song.coverUrl);
             binding.titleText.setText(song.title);
@@ -64,13 +64,9 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.VH> {
             binding.likesText.setText(song.isPublished()
                     ? song.likesCount + " likes"
                     : "Draft");
-            binding.getRoot().setOnClickListener(v -> {
-                android.content.Intent i = new android.content.Intent(
-                        binding.getRoot().getContext(),
-                        com.oru.app.ui.player.PlayerActivity.class);
-                i.putExtra("songId", song.id);
-                binding.getRoot().getContext().startActivity(i);
-            });
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
         }
 
         private String formatDuration(int ms) {

@@ -59,7 +59,7 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), getCurrentList(), position);
     }
 
     class VH extends RecyclerView.ViewHolder {
@@ -70,7 +70,7 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(Song song) {
+        void bind(Song song, java.util.List<Song> queue, int index) {
             com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
                     song.id, song.coverUrl);
             binding.titleText.setText(song.title);
@@ -78,13 +78,9 @@ public class StudioAdapter extends ListAdapter<Song, StudioAdapter.VH> {
             binding.statusText.setTextColor(
                     binding.getRoot().getContext().getColor(
                             song.isPublished() ? R.color.ink_faint : R.color.flame));
-            binding.getRoot().setOnClickListener(v -> {
-                android.content.Intent i = new android.content.Intent(
-                        binding.getRoot().getContext(),
-                        com.oru.app.ui.player.PlayerActivity.class);
-                i.putExtra("songId", song.id);
-                binding.getRoot().getContext().startActivity(i);
-            });
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
             binding.getRoot().setOnLongClickListener(v -> {
                 showActions(song);
                 return true;

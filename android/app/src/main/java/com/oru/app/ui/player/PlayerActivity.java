@@ -40,6 +40,9 @@ public class PlayerActivity extends AppCompatActivity {
     private androidx.media3.session.MediaSession mediaSession;
     private AtomicBoolean serviceBound = new AtomicBoolean(false);
     private Song currentSong;
+    /** The list this song came from, as ids, so next/previous walk it. */
+    private int[] queueIds;
+    private int queueIndex = -1;
 
     private MusicRepository musicRepo;
     private CommunityRepository communityRepo;
@@ -57,6 +60,14 @@ public class PlayerActivity extends AppCompatActivity {
         @Override
         public void onIsPlayingChanged(boolean isPlaying) {
             updatePlayPauseButtons();
+        }
+
+        @Override
+        @Override
+        public void onPlaybackStateChanged(int state) {
+            if (state == Player.STATE_ENDED) {
+                onTrackEnded();
+            }
         }
 
         @Override
@@ -118,8 +129,17 @@ public class PlayerActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playButton.setOnClickListener(v -> togglePlay());
         binding.miniPlayPauseButton.setOnClickListener(v -> togglePlay());
-        binding.previousButton.setOnClickListener(v -> jump(-1));
-        binding.nextButton.setOnClickListener(v -> jump(1));
+        binding.previousButton.setOnClickListener(v -> skip(-1));
+        binding.nextButton.setOnClickListener(v -> skip(1));
+        // Holding a skip button still nudges 15 seconds, like the web player.
+        binding.previousButton.setOnLongClickListener(v -> {
+            jump(-1);
+            return true;
+        });
+        binding.nextButton.setOnLongClickListener(v -> {
+            jump(1);
+            return true;
+        });
         binding.shuffleButton.setOnClickListener(v -> toggleShuffle());
         binding.repeatButton.setOnClickListener(v -> cycleRepeat());
         binding.likeButton.setOnClickListener(v -> toggleLike());
@@ -168,9 +188,39 @@ public class PlayerActivity extends AppCompatActivity {
             serviceBound.set(false);
         }
 
+        queueIds = getIntent().getIntArrayExtra("songIds");
+        queueIndex = getIntent().getIntExtra("songIndex", -1);
         int songId = getIntent().getIntExtra("songId", -1);
+        if (songId <= 0 && queueIds != null && queueIndex >= 0
+                && queueIndex < queueIds.length) {
+            songId = queueIds[queueIndex];
+        }
         if (songId > 0) {
             loadSongById(songId);
+        }
+    }
+
+    /** Next or previous track in the list that opened the player. */
+    private void skip(int direction) {
+        if (queueIds == null || queueIds.length == 0 || queueIndex < 0) {
+            jump(direction);
+            return;
+        }
+        int next = queueIndex + direction;
+        if (next < 0 || next >= queueIds.length) {
+            Toast.makeText(this,
+                    direction > 0 ? "That's the last song" : "That's the first song",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        queueIndex = next;
+        loadSongById(queueIds[next]);
+    }
+
+    private void onTrackEnded() {
+        if (queueIds != null && queueIndex >= 0
+                && queueIndex + 1 < queueIds.length) {
+            skip(1);
         }
     }
 
@@ -182,6 +232,14 @@ public class PlayerActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     binding.progressBar.setVisibility(View.GONE);
                     currentSong = song;
+                    if (queueIds != null) {
+                        for (int i = 0; i < queueIds.length; i++) {
+                            if (queueIds[i] == song.id) {
+                                queueIndex = i;
+                                break;
+                            }
+                        }
+                    }
                     populateUI(song);
                     if (serviceBound.get() && player != null) {
                         loadSong(song);

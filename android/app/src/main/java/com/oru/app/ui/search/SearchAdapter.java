@@ -84,9 +84,18 @@ public class SearchAdapter extends ListAdapter<SearchResult, SearchAdapter.VH> {
             binding.getRoot().setOnClickListener(v -> {
                 Context ctx = binding.getRoot().getContext();
                 if (item.song != null) {
-                    Intent i = new Intent(ctx, com.oru.app.ui.player.PlayerActivity.class);
-                    i.putExtra("songId", item.song.id);
-                    ctx.startActivity(i);
+                    // The queue is every song in the results, in order.
+                    java.util.List<Song> songs = new java.util.ArrayList<>();
+                    int index = 0;
+                    for (SearchResult result : getCurrentList()) {
+                        if (result.song != null) {
+                            if (result == item) {
+                                index = songs.size();
+                            }
+                            songs.add(result.song);
+                        }
+                    }
+                    com.oru.app.ui.player.Playback.start(ctx, songs, index);
                 } else if (item.artist != null) {
                     Intent i = new Intent(ctx, com.oru.app.ui.artist.ArtistActivity.class);
                     i.putExtra("artistId", item.artist.artistId());

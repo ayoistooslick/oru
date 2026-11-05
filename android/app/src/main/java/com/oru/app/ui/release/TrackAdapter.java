@@ -57,7 +57,7 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Song song = getItem(position);
-        holder.bind(position + 1, song, listener);
+        holder.bind(position + 1, song, listener, getCurrentList(), position);
     }
 
     public void setTracks(java.util.List<Song> songs) {
@@ -72,19 +72,19 @@ public class TrackAdapter extends ListAdapter<Song, TrackAdapter.VH> {
             this.binding = binding;
         }
 
-        void bind(int trackNumber, Song song, Listener listener) {
+        void bind(int trackNumber, Song song, Listener listener,
+                java.util.List<Song> queue, int index) {
             binding.trackNumberText.setText(String.valueOf(trackNumber));
             com.oru.app.ui.components.Covers.loadSongCover(binding.artworkImage,
                     song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.durationText.setText(song.durationLabel());
-            binding.getRoot().setOnClickListener(v -> {
-                android.content.Intent i = new android.content.Intent(
-                        binding.getRoot().getContext(),
-                        com.oru.app.ui.player.PlayerActivity.class);
-                i.putExtra("songId", song.id);
-                binding.getRoot().getContext().startActivity(i);
-            });
+            binding.getRoot().setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
+            binding.playButton.setOnClickListener(v ->
+                    com.oru.app.ui.player.Playback.start(
+                            binding.getRoot().getContext(), queue, index));
             binding.getRoot().setOnLongClickListener(v -> {
                 if (listener != null) {
                     listener.onLongPress(song);
