@@ -117,6 +117,11 @@
             android:theme="@style/Theme.Oru" />
 
         <activity
+            android:name=".ui.downloads.DownloadsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Oru" />
+
+        <activity
             android:name=".ui.about.AboutActivity"
             android:exported="false"
             android:theme="@style/Theme.Oru" />

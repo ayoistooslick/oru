@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.oru.app.R;
 import com.oru.app.data.model.Playlist;
+import com.oru.app.data.offline.Downloads;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
@@ -58,7 +59,7 @@ public class LibraryFragment extends Fragment {
 
             @Override
             public void onSongLongPress(Song song) {
-                PlaylistPicker.addTo(requireContext(), song);
+                songActions(song);
             }
 
             @Override
@@ -83,6 +84,16 @@ public class LibraryFragment extends Fragment {
         binding.recyclerView.setLayoutManager(
                 new LinearLayoutManager(requireContext()));
         binding.recyclerView.setAdapter(adapter);
+
+        binding.toolbar.inflateMenu(R.menu.library_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_downloads) {
+                startActivity(new Intent(requireContext(),
+                        com.oru.app.ui.downloads.DownloadsActivity.class));
+                return true;
+            }
+            return false;
+        });
 
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
@@ -171,6 +182,37 @@ public class LibraryFragment extends Fragment {
                 show(likes, playlists, uploads, null);
             }
         });
+    }
+
+    /** Long press on a song: queue it up or keep it on the device. */
+    private void songActions(Song song) {
+        boolean saved = Downloads.isDownloaded(requireContext(), song.id);
+        String[] options = {
+                "Add to playlist",
+                saved ? "Remove download" : "Save for offline"
+        };
+        new AlertDialog.Builder(requireContext())
+                .setTitle(song.title)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        PlaylistPicker.addTo(requireContext(), song);
+                    } else if (saved) {
+                        Downloads.remove(requireContext(), song.id);
+                        Toast.makeText(requireContext(), "Download removed",
+                                Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(requireContext(), "Saving for offline…",
+                                Toast.LENGTH_SHORT).show();
+                        Downloads.download(requireContext(), song, percent -> {
+                        }, (ok, message) -> {
+                            if (isAdded()) {
+                                Toast.makeText(requireContext(), message,
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                })
+                .show();
     }
 
     private void show(List<Song> likes, List<Playlist> playlists,

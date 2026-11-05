@@ -3,6 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_download"
+        android:title="Save for offline"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_report"
         android:title="Report this song"
         app:showAsAction="never" />

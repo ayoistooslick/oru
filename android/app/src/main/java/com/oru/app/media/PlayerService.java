@@ -44,7 +44,8 @@ public class PlayerService extends MediaSessionService {
     public void loadMedia(String audioUrl, String title, String artist,
             String coverUrl, long id) {
         if (player == null) return;
-        player.setMediaItem(MediaItemBuilder.create(
+        // The saved copy wins when the song is downloaded.
+        player.setMediaItem(MediaItemBuilder.create(this,
                 audioUrl, id, title, artist, coverUrl));
         player.prepare();
         player.play();
