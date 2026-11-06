@@ -1,14 +1,27 @@
 package com.oru.app.ui;
 
+import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
+
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.Player;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.oru.app.R;
@@ -30,6 +43,30 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController;
     private boolean keyboardVisible;
     private boolean mainDestination = true;
+
+    private MediaController controller;
+    private ListenableFuture<MediaController> controllerFuture;
+
+    /**
+     * The web keeps a player bar on every page; this keeps the same controls on
+     * the main screen, driven by the same media session as the notification.
+     */
+    private final Player.Listener miniListener = new Player.Listener() {
+        @Override
+        public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
+            updateMiniPlayer();
+        }
+
+        @Override
+        public void onIsPlayingChanged(boolean isPlaying) {
+            updateMiniPlayer();
+        }
+
+        @Override
+        public void onPlaybackStateChanged(int state) {
+            updateMiniPlayer();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +92,96 @@ public class MainActivity extends AppCompatActivity {
 
         setupBottomNavigation();
         setupToolbar();
+        setupMiniPlayer();
+        askForNotifications();
         openRequestedTab(getIntent());
+    }
+
+    private void setupMiniPlayer() {
+        binding.miniPlayerBar.setOnClickListener(v -> startActivity(
+                new Intent(this, com.oru.app.ui.player.PlayerActivity.class)));
+        binding.miniPlayPause.setOnClickListener(v -> {
+            if (controller == null) {
+                return;
+            }
+            if (controller.isPlaying()) {
+                controller.pause();
+            } else {
+                controller.play();
+            }
+        });
+        binding.miniNext.setOnClickListener(v -> {
+            if (controller != null) {
+                controller.seekToNextMediaItem();
+            }
+        });
+
+        SessionToken token = new SessionToken(this,
+                new ComponentName(this, com.oru.app.media.PlayerService.class));
+        controllerFuture = new MediaController.Builder(this, token).buildAsync();
+        controllerFuture.addListener(() -> {
+            try {
+                controller = controllerFuture.get();
+            } catch (Exception error) {
+                return;
+            }
+            runOnUiThread(() -> {
+                if (binding == null) {
+                    return;
+                }
+                controller.addListener(miniListener);
+                updateMiniPlayer();
+            });
+        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+    }
+
+    private void updateMiniPlayer() {
+        if (binding == null) {
+            return;
+        }
+        MediaItem item = controller != null ? controller.getCurrentMediaItem() : null;
+        boolean playingSomething = item != null && controller != null
+                && controller.getPlaybackState() != Player.STATE_IDLE
+                && controller.getPlaybackState() != Player.STATE_ENDED;
+        binding.miniPlayerBar.setVisibility(
+                playingSomething ? View.VISIBLE : View.GONE);
+        if (!playingSomething) {
+            return;
+        }
+        MediaMetadata metadata = item.mediaMetadata;
+        binding.miniTitle.setText(metadata.title);
+        binding.miniArtist.setText(metadata.artist);
+        com.oru.app.ui.components.Covers.load(binding.miniCover,
+                metadata.artworkUri != null ? metadata.artworkUri.toString() : null,
+                R.drawable.ic_music);
+        binding.miniPlayPause.setImageResource(controller.isPlaying()
+                ? R.drawable.ic_pause : R.drawable.ic_play);
+    }
+
+    /** Android 13+ hides the media notification until this is granted. */
+    private void askForNotifications() {
+        if (android.os.Build.VERSION.SDK_INT < 33) {
+            return;
+        }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(this,
+                Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 41);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (controller != null) {
+            controller.removeListener(miniListener);
+            controller = null;
+        }
+        if (controllerFuture != null) {
+            MediaController.releaseFuture(controllerFuture);
+            controllerFuture = null;
+        }
+        super.onDestroy();
     }
 
     @Override

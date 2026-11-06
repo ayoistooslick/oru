@@ -15,7 +15,7 @@
         <ImageView
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@drawable/ic_library"
+            android:src="@drawable/ic_cloud_off"
             android:tint="@color/flame"
             android:contentDescription="@null" />
 

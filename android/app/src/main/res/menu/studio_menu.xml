@@ -4,11 +4,13 @@
 
     <item
         android:id="@+id/action_new_release"
+        android:icon="@drawable/ic_playlist"
         android:title="New release"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_new_post"
+        android:icon="@drawable/ic_edit"
         android:title="New post"
         app:showAsAction="never" />
 

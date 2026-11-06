@@ -192,7 +192,7 @@
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_library"
+                    android:src="@drawable/ic_image"
                     android:tint="@color/ink_soft" />
 
                 <TextView

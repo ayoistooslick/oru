@@ -14,7 +14,7 @@
         android:title="@string/nav_library" />
     <item
         android:id="@+id/sharesFragment"
-        android:icon="@drawable/ic_share"
+        android:icon="@drawable/ic_inbox"
         android:title="@string/nav_share" />
     <item
         android:id="@+id/studioFragment"
