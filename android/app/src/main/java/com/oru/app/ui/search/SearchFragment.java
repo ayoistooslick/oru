@@ -14,8 +14,14 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
+
+import com.google.android.material.chip.Chip;
 import com.oru.app.R;
 import com.oru.app.data.model.Artist;
+import com.oru.app.data.model.Genre;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.MusicRepository;
@@ -28,6 +34,9 @@ import java.util.List;
 public class SearchFragment extends Fragment {
 
     private static final long SEARCH_DELAY_MS = 280L;
+    private static final String PREFS = "oru";
+    private static final String RECENT_KEY = "recent-searches";
+    private static final int RECENT_LIMIT = 5;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable pendingSearch = this::performSearch;
     private FragmentSearchBinding binding;
@@ -64,12 +73,14 @@ public class SearchFragment extends Fragment {
             @Override public void onTextChanged(CharSequence s, int start,
                     int before, int count) { }
             @Override public void afterTextChanged(Editable s) {
+                refreshChips();
                 onSearchChanged();
             }
         });
         binding.searchEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
                 handler.removeCallbacks(pendingSearch);
+                saveRecent(binding.searchEditText.getText().toString());
                 performSearch();
                 return true;
             }
@@ -80,7 +91,105 @@ public class SearchFragment extends Fragment {
         musicRepo = new MusicRepository(
                 com.oru.app.util.LazySession.getApiService(),
                 com.oru.app.util.LazySession.getGson());
+        loadGenres();
+        refreshChips();
         loadDiscover();
+    }
+
+    /** The genre shortcuts the web shows above an empty search box. */
+    private void loadGenres() {
+        musicRepo.listGenres(new Callback<List<Genre>>() {
+            @Override
+            public void onSuccess(List<Genre> genres) {
+                if (binding == null || genres == null) return;
+                binding.genreChipGroup.removeAllViews();
+                for (Genre genre : genres) {
+                    if (genre.name == null || genre.name.trim().isEmpty()) continue;
+                    Chip chip = chip(genre.name);
+                    chip.setOnClickListener(v -> setQuery(genre.name));
+                    binding.genreChipGroup.addView(chip);
+                }
+                refreshChips();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                // The box below still searches; no need to shout about chips.
+            }
+        });
+    }
+
+    private Chip chip(String label) {
+        Chip chip = new Chip(requireContext());
+        chip.setText(label);
+        chip.setCheckable(false);
+        chip.setClickable(true);
+        chip.setChipBackgroundColor(ColorStateList.valueOf(
+                requireContext().getColor(R.color.card_hi)));
+        chip.setTextColor(requireContext().getColor(R.color.ink_soft));
+        chip.setChipStrokeWidth(0f);
+        return chip;
+    }
+
+    private void setQuery(String term) {
+        if (binding == null) return;
+        binding.searchEditText.setText(term);
+        binding.searchEditText.setSelection(term.length());
+    }
+
+    /**
+     * Recent terms, saved the way the web saves them: five at most, newest
+     * first, case-insensitive duplicates collapsed.
+     */
+    private List<String> recentTerms() {
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String stored = prefs.getString(RECENT_KEY, "");
+        List<String> terms = new ArrayList<>();
+        if (stored != null && !stored.isEmpty()) {
+            for (String term : stored.split("\n")) {
+                if (!term.trim().isEmpty()) terms.add(term);
+            }
+        }
+        return terms;
+    }
+
+    private void saveRecent(String term) {
+        String clean = term.trim();
+        if (clean.isEmpty()) return;
+        List<String> next = new ArrayList<>();
+        next.add(clean);
+        for (String old : recentTerms()) {
+            if (!old.equalsIgnoreCase(clean) && next.size() < RECENT_LIMIT) {
+                next.add(old);
+            }
+        }
+        requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(RECENT_KEY,
+                        android.text.TextUtils.join("\n", next.toArray(new String[0])))
+                .apply();
+        refreshChips();
+    }
+
+    /** Genres and recents belong to an empty box; scope chips to a query. */
+    private void refreshChips() {
+        if (binding == null) return;
+        boolean empty = binding.searchEditText.getText().toString().trim().isEmpty();
+        binding.genreScroll.setVisibility(empty
+                && binding.genreChipGroup.getChildCount() > 0
+                        ? View.VISIBLE : View.GONE);
+        binding.filterChipGroup.setVisibility(empty ? View.GONE : View.VISIBLE);
+
+        binding.recentChipGroup.removeAllViews();
+        List<String> recent = recentTerms();
+        boolean showRecent = empty && !recent.isEmpty();
+        for (String term : recent) {
+            Chip chip = chip(term);
+            chip.setOnClickListener(v -> setQuery(term));
+            binding.recentChipGroup.addView(chip);
+        }
+        binding.recentGroup.setVisibility(showRecent ? View.VISIBLE : View.GONE);
     }
 
     private void onSearchChanged() {

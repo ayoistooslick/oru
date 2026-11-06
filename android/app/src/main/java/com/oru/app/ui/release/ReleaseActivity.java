@@ -40,6 +40,25 @@ public class ReleaseActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
 
+        binding.toolbar.inflateMenu(R.menu.release_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (release == null) {
+                return false;
+            }
+            if (item.getItemId() == R.id.action_share) {
+                com.oru.app.ui.components.Actions.share(this,
+                        "Listen to " + release.title + " on ORU",
+                        "https://oru.freebuff.app/release/" + release.id);
+                return true;
+            }
+            if (item.getItemId() == R.id.action_report) {
+                com.oru.app.ui.components.Actions.report(this, "artist",
+                        release.artistId, release.title);
+                return true;
+            }
+            return false;
+        });
+
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             loadRelease();
