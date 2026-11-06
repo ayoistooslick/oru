@@ -4,11 +4,13 @@
 
     <item
         android:id="@+id/action_remove_picture"
+        android:icon="@drawable/ic_delete"
         android:title="Remove picture"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_remove_banner"
+        android:icon="@drawable/ic_delete"
         android:title="Remove banner"
         app:showAsAction="never" />
 

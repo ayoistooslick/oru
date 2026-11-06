@@ -8,31 +8,32 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.oru.app.R;
+import com.oru.app.data.model.DiscoverResult;
+import com.oru.app.data.model.RankingEntry;
 import com.oru.app.data.model.Song;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.MusicRepository;
-import com.oru.app.data.repository.CommunityRepository;
 import com.oru.app.databinding.FragmentHomeBinding;
 import com.oru.app.ui.components.FeedAdapter;
 
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 /**
- * Home feed: following feed + discover placeholder. Matches the web app's
- * listen/home tab.
+ * Home, laid out like the web's Listen page: this week's chart, songs from the
+ * artists you follow, then everything new.
  */
 public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
-    private FeedAdapter feedAdapter;
+    private final FeedAdapter feedAdapter = new FeedAdapter();
     private MusicRepository musicRepo;
-    private CommunityRepository communityRepo;
 
     @Nullable
     @Override
@@ -46,102 +47,134 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        feedAdapter = new FeedAdapter();
         binding.feedRecyclerView.setLayoutManager(
                 new LinearLayoutManager(requireContext()));
         binding.feedRecyclerView.setAdapter(feedAdapter);
 
         binding.swipeRefresh.setColorSchemeResources(R.color.flame);
+        binding.swipeRefresh.setOnRefreshListener(() -> loadHome(true));
 
-        binding.swipeRefresh.setOnRefreshListener(() -> loadFeed(true));
-
-        // Wire the error view retry.
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
-            loadFeed(true);
+            loadHome(true);
         });
 
         if (musicRepo == null) {
             musicRepo = new MusicRepository(
                     com.oru.app.util.LazySession.getApiService(),
                     com.oru.app.util.LazySession.getGson());
-            communityRepo = new CommunityRepository(
-                    com.oru.app.util.LazySession.getApiService(),
-                    com.oru.app.util.LazySession.getGson());
         }
 
-        loadFeed(false);
+        loadHome(false);
     }
 
-    private void loadFeed(boolean refresh) {
+    private void loadHome(boolean refresh) {
         binding.swipeRefresh.setRefreshing(refresh);
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.feedRecyclerView.setVisibility(View.GONE);
         binding.emptyView.getRoot().setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
+        binding.homeGreeting.setText(greeting());
+        binding.homeSubtitle.setText("Songs from who you follow, and what's new.");
 
-        musicRepo.getFeedFollowing(new Callback<List<Song>>() {
+        musicRepo.weeklyRankings(new Callback<List<RankingEntry>>() {
             @Override
-            public void onSuccess(List<Song> items) {
-                binding.swipeRefresh.setRefreshing(false);
-                binding.progressBar.setVisibility(View.GONE);
-                if (items == null || items.isEmpty()) {
-                    // Following nobody leaves the feed empty; show what the API
-                    // picks for this listener instead of a dead page.
-                    loadDiscoverInstead();
-                } else {
-                    feedAdapter.submitList(items);
-                    binding.homeGreeting.setText("Listen");
-                    binding.homeSubtitle.setText(
-                            "Fresh from the artists you follow.");
-                    binding.feedRecyclerView.setVisibility(View.VISIBLE);
-                }
+            public void onSuccess(List<RankingEntry> rankings) {
+                loadFollowing(rankings);
             }
 
             @Override
             public void onFailure(Throwable error) {
-                binding.swipeRefresh.setRefreshing(false);
-                binding.progressBar.setVisibility(View.GONE);
-                binding.errorView.getRoot().setVisibility(View.VISIBLE);
-                binding.errorView.errorMessage.setText(
-                        describe(error));
+                loadFollowing(null);
             }
         });
     }
 
-    private void loadDiscoverInstead() {
-        musicRepo.getDiscover(
-                new com.oru.app.data.repository.Callback<
-                        com.oru.app.data.model.DiscoverResult>() {
-                    @Override
-                    public void onSuccess(
-                            com.oru.app.data.model.DiscoverResult result) {
-                        binding.progressBar.setVisibility(View.GONE);
-                        if (result != null && result.songs != null
-                                && !result.songs.isEmpty()) {
-                            feedAdapter.submitList(result.songs);
-                            binding.homeGreeting.setText("Discover");
-                            binding.homeSubtitle.setText(
-                                    "Follow an artist and their new songs land here first.");
-                            binding.feedRecyclerView
-                                    .setVisibility(View.VISIBLE);
-                        } else {
-                            binding.emptyView.getRoot()
-                                    .setVisibility(View.VISIBLE);
-                        }
-                    }
+    private void loadFollowing(List<RankingEntry> rankings) {
+        musicRepo.getFeedFollowing(new Callback<List<Song>>() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                loadNew(rankings, songs);
+            }
 
-                    @Override
-                    public void onFailure(Throwable error) {
-                        binding.progressBar.setVisibility(View.GONE);
-                        binding.emptyView.getRoot().setVisibility(View.VISIBLE);
-                    }
-                });
+            @Override
+            public void onFailure(Throwable error) {
+                loadNew(rankings, null);
+            }
+        });
     }
 
-    private String describe(Throwable error) {
-        return com.oru.app.ui.components.UiErrors
-                .message(requireContext(), error);
+    private void loadNew(List<RankingEntry> rankings, List<Song> following) {
+        musicRepo.getDiscover(new Callback<DiscoverResult>() {
+            @Override
+            public void onSuccess(DiscoverResult result) {
+                render(rankings, following, result != null ? result.songs : null);
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                if ((rankings == null || rankings.isEmpty())
+                        && (following == null || following.isEmpty())) {
+                    if (binding == null) {
+                        return;
+                    }
+                    binding.progressBar.setVisibility(View.GONE);
+                    binding.errorView.getRoot().setVisibility(View.VISIBLE);
+                    binding.errorView.errorMessage.setText(
+                            com.oru.app.ui.components.UiErrors
+                                    .message(requireContext(), error));
+                    return;
+                }
+                render(rankings, following, null);
+            }
+        });
+    }
+
+    private void render(List<RankingEntry> rankings, List<Song> following,
+            List<Song> discover) {
+        if (binding == null) {
+            return;
+        }
+        binding.swipeRefresh.setRefreshing(false);
+        binding.progressBar.setVisibility(View.GONE);
+
+        List<RecyclerView.Adapter<? extends RecyclerView.ViewHolder>> parts =
+                new ArrayList<>();
+        if (rankings != null && !rankings.isEmpty()) {
+            parts.add(new SectionAdapter("This week", "Most played"));
+            parts.add(new RankAdapter(rankings));
+        }
+        if (following != null && !following.isEmpty()) {
+            parts.add(new SectionAdapter("From artists you follow",
+                    "New songs by the artists you follow."));
+            FeedAdapter rows = new FeedAdapter();
+            parts.add(rows);
+            rows.submitList(following);
+        }
+        if (discover != null && !discover.isEmpty()) {
+            parts.add(new SectionAdapter("New songs", "Everything published lately."));
+            FeedAdapter rows = new FeedAdapter();
+            parts.add(rows);
+            rows.submitList(discover);
+        }
+
+        if (parts.isEmpty()) {
+            binding.emptyView.getRoot().setVisibility(View.VISIBLE);
+            return;
+        }
+        binding.feedRecyclerView.setAdapter(new ConcatAdapter(parts));
+        binding.feedRecyclerView.setVisibility(View.VISIBLE);
+    }
+
+    private String greeting() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour < 12) {
+            return "Good morning";
+        }
+        if (hour < 18) {
+            return "Good afternoon";
+        }
+        return "Good evening";
     }
 
     @Override

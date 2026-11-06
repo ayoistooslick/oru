@@ -1,20 +1,32 @@
 package com.oru.app.ui.components;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.oru.app.R;
+import com.oru.app.data.model.LikeResult;
 import com.oru.app.data.model.Song;
+import com.oru.app.data.offline.Downloads;
+import com.oru.app.data.repository.Callback;
+import com.oru.app.data.repository.CommunityRepository;
+import com.oru.app.data.repository.ModerationRepository;
 import com.oru.app.databinding.ItemFeedBinding;
-import com.oru.app.ui.player.PlayerActivity;
+import com.oru.app.ui.components.UiErrors;
+import com.oru.app.util.LazySession;
 
+import java.util.List;
 import java.util.Objects;
 
 /** The following feed: songs from the artists you follow, newest first. */
@@ -80,6 +92,154 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
             binding.playButton.setOnClickListener(v ->
                     com.oru.app.ui.player.Playback.start(
                             binding.getRoot().getContext(), queue, index));
+
+            binding.getRoot().setOnLongClickListener(v -> {
+                showActions(song);
+                return true;
+            });
+
+            int tint = song.isLiked ? R.color.flame : R.color.ink_faint;
+            Context context = binding.getRoot().getContext();
+            binding.likeButton.setImageTintList(ColorStateList.valueOf(
+                    context.getColor(tint)));
+            binding.likeButton.setOnClickListener(v -> toggleLike(song));
+        }
+
+        /** The heart in every row works exactly like the web one. */
+        private void toggleLike(Song song) {
+            Context context = binding.getRoot().getContext();
+            boolean liked = song.isLiked;
+            CommunityRepository repo = new CommunityRepository(
+                    LazySession.getApiService(), LazySession.getGson());
+            Callback<LikeResult> done = new Callback<LikeResult>() {
+                @Override
+                public void onSuccess(LikeResult result) {
+                    song.isLiked = result != null ? result.liked : !liked;
+                    if (result != null) {
+                        song.likesCount = result.likesCount;
+                    }
+                    refreshRow(getBindingAdapterPosition());
+                }
+
+                @Override
+                public void onFailure(Throwable error) {
+                    Toast.makeText(context,
+                            UiErrors.message(context, error),
+                            Toast.LENGTH_LONG).show();
+                }
+            };
+            if (liked) {
+                repo.unlikeSong(song.id, done);
+            } else {
+                repo.likeSong(song.id, done);
+            }
+        }
+
+        private void refreshRow(int position) {
+            if (position != RecyclerView.NO_POSITION) {
+                getBindingAdapter().notifyItemChanged(position);
+            }
+        }
+
+        /** Long press: the row's extra actions, same set as the web row menu. */
+        private void showActions(Song song) {
+            Context context = binding.getRoot().getContext();
+            boolean saved = Downloads.isDownloaded(context, song.id);
+            String[] options = {
+                    "Add to playlist",
+                    saved ? "Remove download" : "Save for offline",
+                    "Share",
+                    "Report",
+                    "Go to artist"
+            };
+            new AlertDialog.Builder(context)
+                    .setTitle(song.title)
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            PlaylistPicker.addTo(context, song);
+                        } else if (which == 1) {
+                            if (saved) {
+                                Downloads.remove(context, song.id);
+                                Toast.makeText(context, "Download removed",
+                                        Toast.LENGTH_SHORT).show();
+                            } else {
+                                Downloads.download(context, song, percent -> {
+                                }, (ok, message) -> Toast.makeText(context,
+                                        message, Toast.LENGTH_SHORT).show());
+                            }
+                        } else if (which == 2) {
+                            share(context, song);
+                        } else if (which == 3) {
+                            report(context, song);
+                        } else if (which == 4 && song.artistId > 0) {
+                            Intent intent = new Intent(context,
+                                    com.oru.app.ui.artist.ArtistActivity.class);
+                            intent.putExtra("artistId", song.artistId);
+                            context.startActivity(intent);
+                        }
+                    })
+                    .show();
+        }
+
+        private void share(Context context, Song song) {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_SUBJECT, song.title);
+            send.putExtra(Intent.EXTRA_TEXT, song.title + " by "
+                    + song.artistLabel() + " on ORU — https://oru.freebuff.app");
+            context.startActivity(Intent.createChooser(send, "Share this song"));
+        }
+
+        private void report(Context context, Song song) {
+            final String[] reasons = {"copyright", "harassment", "spam",
+                    "impersonation", "other"};
+            new AlertDialog.Builder(context)
+                    .setTitle("Report " + song.title)
+                    .setItems(reasons, (dialog, which) -> {
+                        EditText details = new EditText(context);
+                        details.setHint("Anything that helps us look");
+                        details.setMinLines(2);
+                        new AlertDialog.Builder(context)
+                                .setTitle("Report as " + reasons[which])
+                                .setView(details)
+                                .setNegativeButton(R.string.cancel, null)
+                                .setPositiveButton("Send", (d, w) ->
+                                        new ModerationRepository(
+                                                LazySession.getApiService(),
+                                                LazySession.getGson())
+                                                .createReport("song", song.id,
+                                                        reasons[which],
+                                                        details.getText()
+                                                                .toString()
+                                                                .trim(),
+                                                        new Callback<
+                                                                com.oru.app.data.model.Report>() {
+                                                            @Override
+                                                            public void onSuccess(
+                                                                    com.oru.app.data.model.Report report) {
+                                                                Toast.makeText(
+                                                                        context,
+                                                                        "Report sent — thank you",
+                                                                        Toast.LENGTH_LONG)
+                                                                        .show();
+                                                            }
+
+                                                            @Override
+                                                            public void onFailure(
+                                                                    Throwable error) {
+                                                                Toast.makeText(
+                                                                        context,
+                                                                        UiErrors.message(
+                                                                                context,
+                                                                                error),
+                                                                        Toast.LENGTH_LONG)
+                                                                        .show();
+                                                            }
+                                                        }))
+                                .show();
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
         }
     }
 }

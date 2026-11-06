@@ -1,12 +1,9 @@
 package com.oru.app.ui.player;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
@@ -16,6 +13,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
+import androidx.media3.session.MediaController;
+import androidx.media3.session.SessionToken;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 import com.google.android.material.slider.Slider;
 import com.oru.app.R;
@@ -30,15 +31,13 @@ import com.oru.app.media.PlayerService;
 import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /** The full player: transport, scrubbing, like and share. */
 public class PlayerActivity extends AppCompatActivity {
 
     private ActivityPlayerBinding binding;
-    private androidx.media3.exoplayer.ExoPlayer player;
-    private androidx.media3.session.MediaSession mediaSession;
-    private AtomicBoolean serviceBound = new AtomicBoolean(false);
+    private Player player;
+    private MediaController controller;
+    private ListenableFuture<MediaController> controllerFuture;
     private Song currentSong;
     private int songLoadGeneration;
     /** The list this song came from, as ids, so next/previous walk it. */
@@ -94,26 +93,58 @@ public class PlayerActivity extends AppCompatActivity {
         }
     };
 
-    private final ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            PlayerService.LocalBinder binder = (PlayerService.LocalBinder) service;
-            player = binder.getPlayer();
-            mediaSession = binder.getMediaSession();
-            serviceBound.set(true);
-            player.addListener(playerListener);
-            if (currentSong != null) {
-                loadSong(currentSong);
+    /**
+     * Connects through a MediaController rather than a local binder, because the
+     * media notification and the lock screen controls are only published for a
+     * session the system can see.
+     */
+    private void connectPlayer() {
+        SessionToken token = new SessionToken(this,
+                new ComponentName(this, PlayerService.class));
+        controllerFuture = new MediaController.Builder(this, token).buildAsync();
+        controllerFuture.addListener(() -> {
+            MediaController connected;
+            try {
+                connected = controllerFuture.get();
+            } catch (Exception error) {
+                runOnUiThread(() -> showError(new IllegalStateException(
+                        "The player could not start (" + error
+                                + "). Reopen the song to try again.")));
+                return;
             }
-        }
+            runOnUiThread(() -> {
+                if (binding == null) {
+                    return;
+                }
+                controller = connected;
+                player = connected;
+                player.addListener(playerListener);
+                if (currentSong != null) {
+                    loadSong(currentSong);
+                } else {
+                    resumeCurrentTrack();
+                }
+                updatePlayPauseButtons();
+                updateModeButtons();
+            });
+        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+    }
 
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            serviceBound.set(false);
-            player = null;
-            mediaSession = null;
+    /** Opened from the notification: pick up whatever the service is playing. */
+    private void resumeCurrentTrack() {
+        MediaItem item = player != null ? player.getCurrentMediaItem() : null;
+        if (item == null || item.mediaId == null) {
+            showError(new IllegalArgumentException(
+                    "Choose a song with playable audio to start listening."));
+            return;
         }
-    };
+        try {
+            loadSongById(Integer.parseInt(item.mediaId));
+        } catch (NumberFormatException error) {
+            showError(new IllegalArgumentException(
+                    "The player lost track of this song. Pick it again."));
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -180,17 +211,7 @@ public class PlayerActivity extends AppCompatActivity {
 
         askForNotifications();
 
-        Intent intent = new Intent(this, PlayerService.class);
-        try {
-            // Started as well as bound, so the music keeps playing when the
-            // listener leaves the player screen.
-            startService(intent);
-            bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        } catch (RuntimeException error) {
-            // Playback still works inside the player without the service.
-            serviceBound.set(false);
-        }
-
+        connectPlayer();
         openPlaybackIntent(getIntent());
     }
 
@@ -211,9 +232,10 @@ public class PlayerActivity extends AppCompatActivity {
         }
         if (songId > 0) {
             loadSongById(songId);
+        } else if (player == null) {
+            // The controller is still connecting; it resumes the current track.
         } else {
-            showError(new IllegalArgumentException(
-                    "Choose a song with playable audio to start listening."));
+            resumeCurrentTrack();
         }
     }
 
@@ -268,7 +290,7 @@ public class PlayerActivity extends AppCompatActivity {
                         }
                     }
                     populateUI(song);
-                    if (serviceBound.get() && player != null) {
+                    if (player != null) {
                         loadSong(song);
                     }
                 });
@@ -287,7 +309,7 @@ public class PlayerActivity extends AppCompatActivity {
                     if (saved != null) {
                         currentSong = saved;
                         populateUI(saved);
-                        if (serviceBound.get() && player != null) {
+                        if (player != null) {
                             loadSong(saved);
                         }
                         return;
@@ -664,11 +686,11 @@ public class PlayerActivity extends AppCompatActivity {
         if (player != null) {
             player.removeListener(playerListener);
         }
-        try {
-            unbindService(connection);
-        } catch (IllegalArgumentException ignored) {
-            // Never bound, nothing to release.
+        player = null;
+        controller = null;
+        if (controllerFuture != null) {
+            MediaController.releaseFuture(controllerFuture);
+            controllerFuture = null;
         }
-        serviceBound.set(false);
     }
 }
