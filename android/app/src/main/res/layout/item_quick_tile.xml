@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One of the six quick picks at the top of home: cover, title, play. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="3dp"
+    android:background="@drawable/tile_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/tileCover"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/artwork_rounded"
+        android:clipToOutline="true"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_music" />
+
+    <TextView
+        android:id="@+id/tileTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.Oru.Body"
+        android:textColor="@color/ink" />
+
+    <ImageView
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="6dp"
+        android:contentDescription="@string/play"
+        android:src="@drawable/ic_play" />
+
+</LinearLayout>

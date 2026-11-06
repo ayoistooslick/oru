@@ -140,6 +140,10 @@ public class HomeFragment extends Fragment {
 
         List<RecyclerView.Adapter<? extends RecyclerView.ViewHolder>> parts =
                 new ArrayList<>();
+        if (discover != null && !discover.isEmpty()) {
+            parts.add(new QuickGridAdapter(
+                    discover.subList(0, Math.min(6, discover.size()))));
+        }
         if (rankings != null && !rankings.isEmpty()) {
             parts.add(new SectionAdapter("This week", "Most played"));
             parts.add(new RankAdapter(rankings));

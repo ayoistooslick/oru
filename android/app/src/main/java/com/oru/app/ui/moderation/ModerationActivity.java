@@ -28,6 +28,8 @@ public class ModerationActivity extends AppCompatActivity {
     private ActivityModerationBinding binding;
     private ReportAdapter adapter;
     private ModerationRepository modRepo;
+    /** Which kind of reports to list; the web's tabs. */
+    private String status = "open";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +44,13 @@ public class ModerationActivity extends AppCompatActivity {
         binding.recyclerView.setAdapter(adapter);
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.statusChipGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    status = checkedIds.contains(R.id.chipReviewed) ? "reviewed"
+                            : checkedIds.contains(R.id.chipActioned) ? "actioned"
+                                    : "open";
+                    loadReports(false);
+                });
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             loadReports(true);
@@ -138,7 +147,7 @@ public class ModerationActivity extends AppCompatActivity {
         binding.emptyView.getRoot().setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
 
-        modRepo.listReports(new Callback<List<Report>>() {
+        modRepo.listReports(status, new Callback<List<Report>>() {
             @Override
             public void onSuccess(List<Report> reports) {
                 binding.swipeRefresh.setRefreshing(false);
