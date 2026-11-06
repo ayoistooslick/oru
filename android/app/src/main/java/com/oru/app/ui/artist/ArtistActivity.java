@@ -68,6 +68,25 @@ public class ArtistActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.followButton.setOnClickListener(v -> toggleFollow());
 
+        binding.toolbar.inflateMenu(R.menu.artist_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (artist == null) {
+                return false;
+            }
+            if (item.getItemId() == R.id.action_share) {
+                com.oru.app.ui.components.Actions.share(this,
+                        artist.stageName + " on ORU",
+                        "https://oru.freebuff.app/artist/" + artist.artistId());
+                return true;
+            }
+            if (item.getItemId() == R.id.action_report) {
+                com.oru.app.ui.components.Actions.report(this, "artist",
+                        artist.artistId(), artist.stageName);
+                return true;
+            }
+            return false;
+        });
+
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             loadArtist();

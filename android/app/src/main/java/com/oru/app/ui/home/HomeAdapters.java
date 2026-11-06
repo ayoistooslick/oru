@@ -9,13 +9,101 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.oru.app.R;
 import com.oru.app.data.model.RankingEntry;
 import com.oru.app.data.model.Song;
+import androidx.recyclerview.widget.LinearLayoutManager;
+
+import com.oru.app.databinding.ItemRailBinding;
 import com.oru.app.databinding.ItemRankBinding;
 import com.oru.app.databinding.ItemSectionBinding;
+import com.oru.app.databinding.ItemSongCardBinding;
 import com.oru.app.ui.components.Covers;
 import com.oru.app.ui.player.Playback;
 
 import java.util.ArrayList;
 import java.util.List;
+
+/** A horizontally scrolling rail of song cards, like the web's "New songs". */
+class RailAdapter extends RecyclerView.Adapter<RailAdapter.VH> {
+
+    private final List<Song> songs;
+
+    RailAdapter(List<Song> songs) {
+        this.songs = songs;
+    }
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        return new VH(ItemRailBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false));
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        if (holder.binding.railRecyclerView.getAdapter() != null) {
+            return;
+        }
+        CardAdapter cards = new CardAdapter(songs);
+        holder.binding.railRecyclerView.setLayoutManager(
+                new LinearLayoutManager(holder.itemView.getContext(),
+                        RecyclerView.HORIZONTAL, false));
+        holder.binding.railRecyclerView.setAdapter(cards);
+    }
+
+    @Override
+    public int getItemCount() {
+        return 1;
+    }
+
+    static class VH extends RecyclerView.ViewHolder {
+        final ItemRailBinding binding;
+
+        VH(ItemRailBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+    }
+
+    /** The cards inside a rail; playing one walks the whole rail. */
+    private static class CardAdapter extends RecyclerView.Adapter<CardAdapter.VH> {
+
+        private final List<Song> songs;
+
+        CardAdapter(List<Song> songs) {
+            this.songs = songs;
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new VH(ItemSongCardBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            Song song = songs.get(position);
+            holder.binding.cardTitle.setText(song.title);
+            holder.binding.cardArtist.setText(song.artistLabel());
+            Covers.loadSongCover(holder.binding.cardCover, song.id, song.coverUrl);
+            holder.binding.getRoot().setOnClickListener(v -> Playback.start(
+                    holder.binding.getRoot().getContext(), songs, position));
+        }
+
+        @Override
+        public int getItemCount() {
+            return songs.size();
+        }
+
+        static class VH extends RecyclerView.ViewHolder {
+            final ItemSongCardBinding binding;
+
+            VH(ItemSongCardBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
+            }
+        }
+    }
+}
 
 /** A home section heading: "This week", "New songs"… */
 class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.VH> {

@@ -144,6 +144,11 @@ public class HomeFragment extends Fragment {
             parts.add(new SectionAdapter("This week", "Most played"));
             parts.add(new RankAdapter(rankings));
         }
+        if (discover != null && !discover.isEmpty()) {
+            parts.add(new SectionAdapter("New songs", "Everything published lately."));
+            parts.add(new RailAdapter(
+                    discover.subList(0, Math.min(10, discover.size()))));
+        }
         if (following != null && !following.isEmpty()) {
             parts.add(new SectionAdapter("From artists you follow",
                     "New songs by the artists you follow."));
@@ -152,7 +157,7 @@ public class HomeFragment extends Fragment {
             rows.submitList(following);
         }
         if (discover != null && !discover.isEmpty()) {
-            parts.add(new SectionAdapter("New songs", "Everything published lately."));
+            parts.add(new SectionAdapter("All songs", null));
             FeedAdapter rows = new FeedAdapter();
             parts.add(rows);
             rows.submitList(discover);

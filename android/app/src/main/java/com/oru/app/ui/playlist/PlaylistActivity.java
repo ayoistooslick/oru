@@ -45,6 +45,27 @@ public class PlaylistActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
 
+        binding.toolbar.inflateMenu(R.menu.playlist_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (playlist == null) {
+                return false;
+            }
+            int id = item.getItemId();
+            if (id == R.id.action_edit) {
+                askEdit();
+                return true;
+            }
+            if (id == R.id.action_add_songs) {
+                askAddSongs();
+                return true;
+            }
+            if (id == R.id.action_delete) {
+                askDelete();
+                return true;
+            }
+            return false;
+        });
+
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
             loadPlaylist();
@@ -163,6 +184,160 @@ public class PlaylistActivity extends AppCompatActivity {
                                                 .setVisibility(View.VISIBLE);
                                         binding.errorView.errorMessage
                                                 .setText(describe(error));
+                                    }
+                                }))
+                .show();
+    }
+
+    /** Rename it, and decide who may listen — the web's edit form. */
+    private void askEdit() {
+        final android.widget.EditText title = new android.widget.EditText(this);
+        title.setText(playlist.title);
+        title.setHint("Playlist name");
+        title.setSelectAllOnFocus(true);
+
+        final android.widget.CheckBox isPublic = new android.widget.CheckBox(this);
+        isPublic.setText("Anyone with the link can listen");
+        isPublic.setChecked(playlist.isPublic);
+
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = Math.round(20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad / 2, pad, 0);
+        box.addView(title);
+        box.addView(isPublic);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Edit playlist")
+                .setView(box)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String name = title.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        android.widget.Toast.makeText(this,
+                                "Give the playlist a name",
+                                android.widget.Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    communityRepo.updatePlaylist(playlist.id, name,
+                            isPublic.isChecked(), new Callback<Playlist>() {
+                                @Override
+                                public void onSuccess(Playlist updated) {
+                                    loadPlaylist();
+                                }
+
+                                @Override
+                                public void onFailure(Throwable error) {
+                                    android.widget.Toast.makeText(
+                                            PlaylistActivity.this,
+                                            describe(error),
+                                            android.widget.Toast.LENGTH_LONG)
+                                            .show();
+                                }
+                            });
+                })
+                .show();
+    }
+
+    /** Search the catalogue and add what the listener taps. */
+    private void askAddSongs() {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Song or artist");
+        input.setSingleLine(true);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Add songs")
+                .setView(input)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Search", (dialog, which) -> {
+                    String query = input.getText().toString().trim();
+                    if (query.isEmpty()) {
+                        return;
+                    }
+                    searchToAdd(query);
+                })
+                .show();
+    }
+
+    private void searchToAdd(String query) {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        musicRepo.listSongs(query, 20, 0, new Callback<List<Song>>() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                binding.progressBar.setVisibility(View.GONE);
+                if (songs == null || songs.isEmpty()) {
+                    android.widget.Toast.makeText(PlaylistActivity.this,
+                            "Nothing matched \"" + query + "\"",
+                            android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                String[] labels = new String[songs.size()];
+                for (int i = 0; i < songs.size(); i++) {
+                    labels[i] = songs.get(i).title + " — "
+                            + songs.get(i).artistLabel();
+                }
+                new androidx.appcompat.app.AlertDialog.Builder(PlaylistActivity.this)
+                        .setTitle("Add to " + playlist.title)
+                        .setItems(labels, (dialog, which) ->
+                                addSong(songs.get(which)))
+                        .setNegativeButton(R.string.cancel, null)
+                        .show();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                binding.progressBar.setVisibility(View.GONE);
+                android.widget.Toast.makeText(PlaylistActivity.this,
+                        describe(error), android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void addSong(Song song) {
+        communityRepo.addSongToPlaylist(playlist.id, song.id,
+                new Callback<com.oru.app.data.model.PlaylistSong>() {
+                    @Override
+                    public void onSuccess(com.oru.app.data.model.PlaylistSong added) {
+                        android.widget.Toast.makeText(PlaylistActivity.this,
+                                song.title + " added",
+                                android.widget.Toast.LENGTH_SHORT).show();
+                        loadPlaylist();
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        android.widget.Toast.makeText(PlaylistActivity.this,
+                                describe(error),
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private void askDelete() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Delete " + playlist.title + "?")
+                .setMessage("The playlist goes away; the songs stay on ORU.")
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton("Delete", (dialog, which) ->
+                        communityRepo.deletePlaylist(playlist.id,
+                                new Callback<Void>() {
+                                    @Override
+                                    public void onSuccess(Void ignored) {
+                                        android.widget.Toast.makeText(
+                                                PlaylistActivity.this,
+                                                "Playlist deleted",
+                                                android.widget.Toast.LENGTH_SHORT)
+                                                .show();
+                                        finish();
+                                    }
+
+                                    @Override
+                                    public void onFailure(Throwable error) {
+                                        android.widget.Toast.makeText(
+                                                PlaylistActivity.this,
+                                                describe(error),
+                                                android.widget.Toast.LENGTH_LONG)
+                                                .show();
                                     }
                                 }))
                 .show();

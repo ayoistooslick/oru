@@ -77,6 +77,47 @@
 
         </com.google.android.material.chip.ChipGroup>
 
+        <!-- Genres, the way the web offers them: one tap searches that word. -->
+        <HorizontalScrollView
+            android:id="@+id/genreScroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/genreChipGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleLine="true" />
+
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:id="@+id/recentGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Recent searches"
+                android:textAppearance="@style/TextAppearance.Oru.Label"
+                android:textColor="@color/ink_faint" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/recentChipGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView

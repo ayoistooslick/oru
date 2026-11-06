@@ -6,7 +6,6 @@ import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -21,12 +20,10 @@ import com.oru.app.data.model.Song;
 import com.oru.app.data.offline.Downloads;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
-import com.oru.app.data.repository.ModerationRepository;
-import com.oru.app.databinding.ItemFeedBinding;
 import com.oru.app.ui.components.UiErrors;
+import com.oru.app.databinding.ItemFeedBinding;
 import com.oru.app.util.LazySession;
 
-import java.util.List;
 import java.util.Objects;
 
 /** The following feed: songs from the artists you follow, newest first. */
@@ -182,64 +179,12 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
         }
 
         private void share(Context context, Song song) {
-            Intent send = new Intent(Intent.ACTION_SEND);
-            send.setType("text/plain");
-            send.putExtra(Intent.EXTRA_SUBJECT, song.title);
-            send.putExtra(Intent.EXTRA_TEXT, song.title + " by "
-                    + song.artistLabel() + " on ORU — https://oru.freebuff.app");
-            context.startActivity(Intent.createChooser(send, "Share this song"));
+            Actions.share(context, song.title + " by " + song.artistLabel(),
+                    "https://oru.freebuff.app");
         }
 
         private void report(Context context, Song song) {
-            final String[] reasons = {"copyright", "harassment", "spam",
-                    "impersonation", "other"};
-            new AlertDialog.Builder(context)
-                    .setTitle("Report " + song.title)
-                    .setItems(reasons, (dialog, which) -> {
-                        EditText details = new EditText(context);
-                        details.setHint("Anything that helps us look");
-                        details.setMinLines(2);
-                        new AlertDialog.Builder(context)
-                                .setTitle("Report as " + reasons[which])
-                                .setView(details)
-                                .setNegativeButton(R.string.cancel, null)
-                                .setPositiveButton("Send", (d, w) ->
-                                        new ModerationRepository(
-                                                LazySession.getApiService(),
-                                                LazySession.getGson())
-                                                .createReport("song", song.id,
-                                                        reasons[which],
-                                                        details.getText()
-                                                                .toString()
-                                                                .trim(),
-                                                        new Callback<
-                                                                com.oru.app.data.model.Report>() {
-                                                            @Override
-                                                            public void onSuccess(
-                                                                    com.oru.app.data.model.Report report) {
-                                                                Toast.makeText(
-                                                                        context,
-                                                                        "Report sent — thank you",
-                                                                        Toast.LENGTH_LONG)
-                                                                        .show();
-                                                            }
-
-                                                            @Override
-                                                            public void onFailure(
-                                                                    Throwable error) {
-                                                                Toast.makeText(
-                                                                        context,
-                                                                        UiErrors.message(
-                                                                                context,
-                                                                                error),
-                                                                        Toast.LENGTH_LONG)
-                                                                        .show();
-                                                            }
-                                                        }))
-                                .show();
-                    })
-                    .setNegativeButton(R.string.cancel, null)
-                    .show();
+            Actions.report(context, "song", song.id, song.title);
         }
     }
 }
