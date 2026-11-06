@@ -26,8 +26,9 @@ public class ModerationRepository {
                 gson, "Couldn't send that report", cb);
     }
 
-    public void listReports(Callback<List<Report>> cb) {
-        ApiCall.enqueue(api.listReports(), gson, "Couldn't load reports", cb);
+    /** @param status "open", "reviewed" or "actioned". */
+    public void listReports(String status, Callback<List<Report>> cb) {
+        ApiCall.enqueue(api.listReports(status), gson, "Couldn't load reports", cb);
     }
 
     public void moderationDecision(int reportId, String action, String reason,

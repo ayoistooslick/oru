@@ -21,6 +21,87 @@ import com.oru.app.ui.player.Playback;
 import java.util.ArrayList;
 import java.util.List;
 
+/** The six quick picks at the top of home, two to a line. */
+class QuickGridAdapter extends RecyclerView.Adapter<QuickGridAdapter.VH> {
+
+    private final List<Song> songs;
+
+    QuickGridAdapter(List<Song> songs) {
+        this.songs = songs;
+    }
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        return new VH(ItemRailBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false));
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        if (holder.binding.railRecyclerView.getAdapter() != null) {
+            return;
+        }
+        holder.binding.railRecyclerView.setLayoutManager(
+                new androidx.recyclerview.widget.GridLayoutManager(
+                        holder.itemView.getContext(), 2));
+        holder.binding.railRecyclerView.setAdapter(new TileAdapter(songs));
+    }
+
+    @Override
+    public int getItemCount() {
+        return 1;
+    }
+
+    static class VH extends RecyclerView.ViewHolder {
+        final ItemRailBinding binding;
+
+        VH(ItemRailBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+    }
+
+    private static class TileAdapter extends RecyclerView.Adapter<TileAdapter.VH> {
+
+        private final List<Song> songs;
+
+        TileAdapter(List<Song> songs) {
+            this.songs = songs;
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new VH(com.oru.app.databinding.ItemQuickTileBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            Song song = songs.get(position);
+            holder.binding.tileTitle.setText(song.title);
+            Covers.loadSongCover(holder.binding.tileCover, song.id, song.coverUrl);
+            holder.binding.getRoot().setOnClickListener(v -> Playback.start(
+                    holder.binding.getRoot().getContext(), songs, position));
+        }
+
+        @Override
+        public int getItemCount() {
+            return songs.size();
+        }
+
+        static class VH extends RecyclerView.ViewHolder {
+            final com.oru.app.databinding.ItemQuickTileBinding binding;
+
+            VH(com.oru.app.databinding.ItemQuickTileBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
+            }
+        }
+    }
+}
+
 /** A horizontally scrolling rail of song cards, like the web's "New songs". */
 class RailAdapter extends RecyclerView.Adapter<RailAdapter.VH> {
 

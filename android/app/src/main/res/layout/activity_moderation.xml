@@ -23,6 +23,39 @@
                 app:title="@string/reports"
                 app:titleTextColor="@color/ink" />
 
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/statusChipGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="8dp"
+                app:singleSelection="true"
+                app:selectionRequired="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipOpen"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="Open" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipReviewed"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reviewed" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipActioned"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Taken down" />
+
+            </com.google.android.material.chip.ChipGroup>
+
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.recyclerview.widget.RecyclerView

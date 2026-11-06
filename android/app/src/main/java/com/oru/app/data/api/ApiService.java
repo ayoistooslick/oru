@@ -271,7 +271,7 @@ public interface ApiService {
     Call<ApiResponse<Report>> createReport(@Body ReportCreate body);
 
     @GET("api/v1/moderation/reports")
-    Call<ApiResponse<List<Report>>> listReports();
+    Call<ApiResponse<List<Report>>> listReports(@Query("status") String status);
 
     @POST("api/v1/moderation/reports/{reportId}/decision")
     Call<ApiResponse<Void>> moderationDecision(
