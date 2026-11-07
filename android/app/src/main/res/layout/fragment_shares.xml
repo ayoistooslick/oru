@@ -77,7 +77,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginVertical="6dp"
-                    android:text="Nothing shared yet."
+                    android:text="You have not shared a song yet. Start one from the studio, or send a link below."
                     android:textAppearance="@style/TextAppearance.Oru.BodySoft"
                     android:textColor="@color/ink_faint" />
 
@@ -103,7 +103,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginVertical="6dp"
-                    android:text="No links shared yet. Use Share to send a song from somewhere else."
+                    android:text="No songs shared from outside ORU yet."
                     android:textAppearance="@style/TextAppearance.Oru.BodySoft"
                     android:textColor="@color/ink_faint" />
 
@@ -118,13 +118,6 @@
             android:layout_gravity="center"
             android:indeterminateTint="@color/flame"
             android:visibility="gone" />
-
-        <include
-            android:id="@+id/emptyView"
-            layout="@layout/view_empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="?attr/actionBarSize" />
 
         <include
             android:id="@+id/errorView"

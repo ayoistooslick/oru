@@ -16,11 +16,10 @@
         android:gravity="center">
 
         <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:src="@drawable/ic_launcher_foreground"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
             android:contentDescription="@null"
-            android:tint="@color/flame" />
+            android:src="@drawable/ic_auth_mark" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -66,7 +65,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/email"
-                    app:errorEnabled="true">
+                    app:errorEnabled="true"
+                    app:startIconDrawable="@drawable/ic_mail">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/emailEditText"
@@ -85,7 +85,8 @@
                     android:layout_marginTop="12dp"
                     android:hint="@string/password"
                     app:errorEnabled="true"
-                    app:endIconMode="password_toggle">
+                    app:endIconMode="password_toggle"
+                    app:startIconDrawable="@drawable/ic_lock">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/passwordEditText"
@@ -167,6 +168,9 @@
                     android:layout_marginTop="16dp"
                     android:text="@string/google_sign_in"
                     app:icon="@drawable/ic_google"
+                    app:iconGravity="textStart"
+                    app:iconPadding="10dp"
+                    app:iconTint="@null"
                     app:strokeColor="@color/ink_soft" />
 
             </LinearLayout>

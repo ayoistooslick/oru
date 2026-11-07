@@ -8,6 +8,7 @@ import android.os.Build;
 import com.oru.app.data.session.SessionManager;
 import com.oru.app.media.PlayerService;
 import com.oru.app.util.LazySession;
+import com.oru.app.util.ThemeMode;
 
 /**
  * Application entry point. Creates the media playback notification channel and
@@ -20,6 +21,8 @@ public class OruApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // The chosen theme has to be in place before the first screen inflates.
+        ThemeMode.apply(this);
         createNotificationChannels();
 
         // The data layer builds Retrofit from the saved session, and every

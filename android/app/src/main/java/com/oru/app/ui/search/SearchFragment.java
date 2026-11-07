@@ -77,6 +77,10 @@ public class SearchFragment extends Fragment {
                 onSearchChanged();
             }
         });
+        binding.clearSearchButton.setOnClickListener(v -> {
+            binding.searchEditText.setText("");
+            binding.searchEditText.requestFocus();
+        });
         binding.searchEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
                 handler.removeCallbacks(pendingSearch);
@@ -220,6 +224,7 @@ public class SearchFragment extends Fragment {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.searchRecyclerView.setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
+        binding.noResults.setVisibility(View.GONE);
 
         if (!artistsOnly) {
             musicRepo.listSongs(query, 50, 0, new Callback<List<Song>>() {
@@ -257,11 +262,13 @@ public class SearchFragment extends Fragment {
         pending[0]--;
         if (pending[0] > 0) return;
         binding.progressBar.setVisibility(View.GONE);
+        adapter.submitList(new ArrayList<>(results));
         if (results.isEmpty()) {
-            binding.errorView.getRoot().setVisibility(View.VISIBLE);
-            binding.errorView.errorMessage.setText("No results for \"" + query + "\"");
+            binding.noResultsTitle.setText("Nothing for \"" + query + "\"");
+            binding.noResults.setVisibility(View.VISIBLE);
+            binding.searchRecyclerView.setVisibility(View.GONE);
         } else {
-            adapter.submitList(new ArrayList<>(results));
+            binding.noResults.setVisibility(View.GONE);
             binding.searchRecyclerView.setVisibility(View.VISIBLE);
         }
     }
@@ -284,6 +291,7 @@ public class SearchFragment extends Fragment {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.searchRecyclerView.setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
+        binding.noResults.setVisibility(View.GONE);
         musicRepo.getDiscover(new Callback<com.oru.app.data.model.DiscoverResult>() {
             @Override public void onSuccess(
                     com.oru.app.data.model.DiscoverResult result) {

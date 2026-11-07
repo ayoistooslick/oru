@@ -2,18 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <!-- Your account: the web puts the avatar in the header, this is the same door. -->
-    <item
-        android:id="@+id/action_profile"
-        android:icon="@drawable/ic_artist"
-        android:title="Your profile"
-        app:showAsAction="always" />
-
-    <!-- Settings: the gear in the top right corner, like the web header. -->
+    <!-- The gear in the top right corner, like the web header. It opens the
+         account menu: profile, artist page, settings. -->
     <item
         android:id="@+id/action_settings"
         android:icon="@drawable/ic_settings"
-        android:title="Settings"
+        android:title="Account"
         app:showAsAction="always" />
 
 </menu>

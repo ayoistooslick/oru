@@ -53,6 +53,11 @@ public class User {
     public String artistBannerUrl() {
         return artistProfile != null ? artistProfile.bannerUrl : bannerUrl;
     }
+
+    /** The name on the artist page, when there is one. */
+    public String artistStageName() {
+        return artistProfile != null ? artistProfile.stageName : null;
+    }
 }
 
 class ArtistProfile {

@@ -416,7 +416,8 @@ public class StudioFragment extends Fragment {
                 }
                 binding.recyclerView.setVisibility(
                         songsEmpty ? View.GONE : View.VISIBLE);
-                updateEmpty();
+                binding.tracksEmptyText.setVisibility(
+                        songsEmpty ? View.VISIBLE : View.GONE);
             }
 
             @Override
@@ -535,7 +536,6 @@ public class StudioFragment extends Fragment {
                         releasesEmpty ? View.GONE : View.VISIBLE);
                 binding.releasesEmptyText.setVisibility(
                         releasesEmpty ? View.VISIBLE : View.GONE);
-                updateEmpty();
             }
 
             @Override
@@ -573,14 +573,6 @@ public class StudioFragment extends Fragment {
                 binding.postsEmptyText.setVisibility(View.VISIBLE);
             }
         });
-    }
-
-    private void updateEmpty() {
-        if (binding == null) {
-            return;
-        }
-        binding.emptyView.getRoot().setVisibility(
-                songsEmpty && releasesEmpty ? View.VISIBLE : View.GONE);
     }
 
     private void toast(Throwable error) {

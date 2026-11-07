@@ -99,6 +99,71 @@
                 android:textColor="@color/ink_soft"
                 android:visibility="gone" />
 
+            <!-- Appearance -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Appearance"
+                android:textAppearance="@style/TextAppearance.Oru.Label"
+                android:textColor="@color/ink_faint" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/card_surface"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Theme"
+                    android:textAppearance="@style/TextAppearance.Oru.Title"
+                    android:textColor="@color/ink" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Follow your phone, or keep ORU light or dark whatever the phone does."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_soft" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/themeChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/themeSystem"
+                        style="@style/Widget.Oru.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="System" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/themeLight"
+                        style="@style/Widget.Oru.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Light" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/themeDark"
+                        style="@style/Widget.Oru.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dark" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+            </LinearLayout>
+
             <!-- Your pictures -->
             <TextView
                 android:layout_width="wrap_content"

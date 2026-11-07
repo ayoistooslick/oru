@@ -220,18 +220,24 @@
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false" />
 
+                <!-- The web's words when there is nothing here yet, in place,
+                     so the two cards above stay usable. -->
+                <TextView
+                    android:id="@+id/tracksEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginVertical="6dp"
+                    android:background="@drawable/card_surface"
+                    android:padding="16dp"
+                    android:text="No songs yet. Upload your first song above; it stays private until you publish it."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_soft"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
-
-        <!-- Behind the upload button and the menu: an empty studio is exactly
-             when those two matter most. -->
-        <include
-            android:id="@+id/emptyView"
-            layout="@layout/view_empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="?attr/actionBarSize" />
 
         <include
             android:id="@+id/errorView"

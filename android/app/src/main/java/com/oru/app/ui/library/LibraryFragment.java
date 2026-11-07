@@ -100,6 +100,11 @@ public class LibraryFragment extends Fragment {
             loadLibrary();
         });
 
+        binding.goHomeButton.setOnClickListener(v -> {
+            // The web's empty library sends you home; so does this one.
+            androidx.navigation.NavHostFragment.findNavController(this)
+                    .navigate(R.id.homeFragment);
+        });
         binding.newPlaylistButton.setOnClickListener(v -> PlaylistPicker.create(
                 requireContext(), playlist -> {
                     Toast.makeText(requireContext(), "Playlist created",
@@ -128,7 +133,7 @@ public class LibraryFragment extends Fragment {
     private void loadLibrary() {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.recyclerView.setVisibility(View.GONE);
-        binding.emptyView.getRoot().setVisibility(View.GONE);
+        binding.libraryEmpty.setVisibility(View.GONE);
         binding.errorView.getRoot().setVisibility(View.GONE);
 
         communityRepo.getMyLikes(new Callback<List<Song>>() {
@@ -271,7 +276,8 @@ public class LibraryFragment extends Fragment {
         }
 
         if (rows.isEmpty()) {
-            binding.emptyView.getRoot().setVisibility(View.VISIBLE);
+            binding.libraryEmpty.setVisibility(View.VISIBLE);
+            binding.recyclerView.setVisibility(View.GONE);
             return;
         }
         adapter.setRows(rows);

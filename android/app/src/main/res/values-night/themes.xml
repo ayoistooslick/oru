@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Night only needs the surface itself to change: every colour below is a
+         token, and the tokens live in values-night/colors.xml. -->
+    <style name="Theme.Oru" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorSurface">@color/paper</item>
+        <item name="colorSurfaceVariant">@color/card</item>
+        <item name="colorSurfaceInverse">@color/card_hi</item>
+        <item name="android:colorBackground">@color/paper</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorOnSurfaceVariant">@color/ink_soft</item>
+        <item name="colorPrimary">@color/flame</item>
+        <item name="colorPrimaryVariant">@color/flame_ink</item>
+        <item name="colorOnPrimary">@color/night</item>
+        <item name="colorSecondary">@color/ink_soft</item>
+        <item name="colorSecondaryVariant">@color/ink_faint</item>
+        <item name="colorOnSecondary">@color/night</item>
+        <item name="colorError">@color/flame</item>
+        <item name="colorOnError">@color/night</item>
+        <item name="colorErrorContainer">@color/flame_soft</item>
+        <item name="colorOnErrorContainer">@color/flame_ink</item>
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:statusBarColor">@color/paper_deep</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textViewStyle">@style/Widget.Oru.TextView</item>
+        <item name="android:editTextStyle">@style/Widget.Oru.EditText</item>
+    </style>
+</resources>

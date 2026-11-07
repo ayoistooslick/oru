@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ORU after dark: clay + ember on near-black paper. Same names as the
+         day palette, so every screen follows the theme it is given. -->
+    <color name="paper">#17120E</color>
+    <color name="paper_deep">#0D0A07</color>
+    <color name="card">#211A14</color>
+    <color name="card_hi">#2C231B</color>
+    <color name="ink">#F4EFE7</color>
+    <color name="ink_soft">#CBC0B2</color>
+    <color name="ink_faint">#A2958A</color>
+    <color name="hair">#382C22</color>
+    <color name="flame">#E8552E</color>
+    <color name="flame_ink">#FF6A44</color>
+    <color name="flame_soft">#29140E</color>
+    <color name="cream">#F4EFE7</color>
+    <color name="night">#0D0A07</color>
+    <color name="night_soft">#17120E</color>
+    <color name="night_hair">#382C22</color>
+
+    <!-- Semantic -->
+    <color name="surface">@color/paper</color>
+    <color name="surface_raised">@color/card</color>
+    <color name="surface_hover">@color/card_hi</color>
+    <color name="on_surface">@color/ink</color>
+    <color name="on_surface_soft">@color/ink_soft</color>
+    <color name="on_surface_faint">@color/ink_faint</color>
+    <color name="primary">@color/flame</color>
+    <color name="primary_variant">@color/flame_ink</color>
+    <color name="on_primary">@color/night</color>
+    <color name="secondary">@color/ink_soft</color>
+    <color name="secondary_variant">@color/ink_faint</color>
+    <color name="on_secondary">@color/night</color>
+    <color name="error">@color/flame</color>
+    <color name="on_error">@color/night</color>
+    <color name="background">@color/paper</color>
+    <color name="on_background">@color/ink</color>
+
+    <!-- Divider / hairline -->
+    <color name="divider">@color/hair</color>
+    <color name="shimmer_base">#1F1712</color>
+    <color name="shimmer_highlight">#3A2B22</color>
+    <color name="ember">#E8552E</color>
+</resources>

@@ -28,14 +28,51 @@
         android:paddingBottom="80dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
-    <!-- Under the floating button on purpose: an empty or failed library must
-         not swallow taps meant for "New playlist". -->
-    <include
-        android:id="@+id/emptyView"
-        layout="@layout/view_empty"
+    <!-- Said where the list would be, with the way out in reach. -->
+    <LinearLayout
+        android:id="@+id/libraryEmpty"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize" />
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="32dp"
+        android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_library"
+            app:tint="@color/ink_faint" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center"
+            android:text="Your library is empty"
+            android:textAppearance="@style/TextAppearance.Oru.Title"
+            android:textColor="@color/ink" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="Tap the heart on any song to save it here. You can also make your own playlist."
+            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+            android:textColor="@color/ink_soft" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/goHomeButton"
+            style="@style/Widget.Oru.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Go to Home" />
+
+    </LinearLayout>
 
     <include
         android:id="@+id/errorView"

@@ -27,6 +27,7 @@ import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
 import com.oru.app.util.MediaUrl;
 import com.oru.app.util.PickedFile;
+import com.oru.app.util.ThemeMode;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -67,6 +68,7 @@ public class SettingsActivity extends AppCompatActivity {
                 LazySession.getGson());
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+        bindTheme();
         binding.editProfileButton.setOnClickListener(v -> editProfile());
         binding.studioButton.setOnClickListener(v -> openTab(R.id.studioFragment));
         binding.reportsButton.setOnClickListener(v -> startActivity(
@@ -225,6 +227,29 @@ public class SettingsActivity extends AppCompatActivity {
                     android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     android.net.Uri.parse("package:" + getPackageName())));
         }
+    }
+
+    /** Three choices, remembered; System is the default and follows the phone. */
+    private void bindTheme() {
+        String mode = ThemeMode.get(this);
+        int checked = R.id.themeSystem;
+        if (ThemeMode.LIGHT.equals(mode)) {
+            checked = R.id.themeLight;
+        } else if (ThemeMode.DARK.equals(mode)) {
+            checked = R.id.themeDark;
+        }
+        binding.themeChipGroup.check(checked);
+        binding.themeChipGroup.setOnCheckedStateChangeListener((group, ids) -> {
+            if (ids.isEmpty()) {
+                return;
+            }
+            int id = ids.get(0);
+            String next = id == R.id.themeLight ? ThemeMode.LIGHT
+                    : id == R.id.themeDark ? ThemeMode.DARK : ThemeMode.SYSTEM;
+            if (!next.equals(ThemeMode.get(this))) {
+                ThemeMode.set(this, next);
+            }
+        });
     }
 
     /** The same door the web footer has, straight to the developer's page. */

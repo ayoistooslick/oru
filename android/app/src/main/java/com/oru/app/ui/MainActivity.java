@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController;
     private boolean keyboardVisible;
     private boolean mainDestination = true;
+    private com.oru.app.data.model.User account;
 
     private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
@@ -141,17 +142,72 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        // Settings and the account live behind the toolbar's overflow.
+        // One gear in the corner, like the web header. It opens the account:
+        // profile, artist page when there is one, and settings.
         binding.toolbar.inflateMenu(R.menu.main_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_profile
-                    || item.getItemId() == R.id.action_settings) {
+            if (item.getItemId() == R.id.action_settings) {
+                openAccountMenu();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void openAccountMenu() {
+        if (account == null) {
+            new com.oru.app.data.repository.AuthRepository(
+                    com.oru.app.util.LazySession.getApiService(),
+                    new SessionManager(this),
+                    com.oru.app.util.LazySession.getGson())
+                    .getCurrentUser(new com.oru.app.data.repository.Callback<
+                            com.oru.app.data.model.User>() {
+                        @Override
+                        public void onSuccess(com.oru.app.data.model.User loaded) {
+                            account = loaded;
+                            showAccountMenu();
+                        }
+
+                        @Override
+                        public void onFailure(Throwable error) {
+                            // Still offer the doors that do not need the account.
+                            showAccountMenu();
+                        }
+                    });
+            return;
+        }
+        showAccountMenu();
+    }
+
+    private void showAccountMenu() {
+        View anchor = binding.toolbar.findViewById(R.id.action_settings);
+        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(
+                this, anchor != null ? anchor : binding.toolbar);
+        popup.inflate(R.menu.account_menu);
+        android.view.MenuItem artistItem =
+                popup.getMenu().findItem(R.id.menu_artist_page);
+        if (artistItem != null) {
+            artistItem.setVisible(account != null && account.hasArtistProfile());
+        }
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_profile) {
+                startActivity(new Intent(this,
+                        com.oru.app.ui.profile.ProfileActivity.class));
+                return true;
+            }
+            if (id == R.id.menu_artist_page && account != null) {
+                com.oru.app.ui.components.Actions.openArtist(this, account.id);
+                return true;
+            }
+            if (id == R.id.menu_settings) {
                 startActivity(new Intent(this,
                         com.oru.app.ui.settings.SettingsActivity.class));
                 return true;
             }
             return false;
         });
+        popup.show();
     }
 
     @Override
