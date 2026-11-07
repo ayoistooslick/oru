@@ -279,6 +279,13 @@ public class PlayerActivity extends AppCompatActivity {
 
         binding.toolbar.inflateMenu(R.menu.player_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_playlist) {
+                if (currentSong != null) {
+                    com.oru.app.ui.components.PlaylistPicker.addTo(this,
+                            currentSong);
+                }
+                return true;
+            }
             if (item.getItemId() == R.id.action_download) {
                 toggleDownload();
                 return true;
