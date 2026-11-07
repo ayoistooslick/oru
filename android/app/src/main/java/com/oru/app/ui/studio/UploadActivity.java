@@ -1,5 +1,6 @@
 package com.oru.app.ui.studio;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -17,6 +18,7 @@ import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
 import com.oru.app.util.PickedFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,16 @@ public class UploadActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.GetContent(),
                     this::onCoverPicked);
 
+    /** Back from the recorder or the clip editor, with a WAV to upload. */
+    private final ActivityResultLauncher<Intent> clip =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() != RESULT_OK || result.getData() == null) {
+                            return;
+                        }
+                        takeClip(result.getData());
+                    });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,7 +68,46 @@ public class UploadActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.audioButton.setOnClickListener(v -> pickAudio.launch("audio/*"));
         binding.coverButton.setOnClickListener(v -> pickCover.launch("image/*"));
+        binding.recordButton.setOnClickListener(v ->
+                clip.launch(new Intent(this, AudioStudioActivity.class)));
+        binding.editAudioButton.setOnClickListener(v -> editClip());
         binding.submitButton.setOnClickListener(v -> submit());
+    }
+
+    /** Opens the same editor the web studio uses, on whatever audio is picked. */
+    private void editClip() {
+        if (audio == null) {
+            Toast.makeText(this, "Choose or record the audio first",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent intent = new Intent(this, AudioStudioActivity.class);
+        intent.putExtra(AudioStudioActivity.EXTRA_AUDIO_PATH,
+                audio.file.getAbsolutePath());
+        intent.putExtra(AudioStudioActivity.EXTRA_AUDIO_NAME, audio.name);
+        clip.launch(intent);
+    }
+
+    private void takeClip(Intent data) {
+        String path = data.getStringExtra(AudioStudioActivity.RESULT_PATH);
+        if (path == null) {
+            return;
+        }
+        File file = new File(path);
+        if (!file.isFile() || file.length() == 0) {
+            Toast.makeText(this, "That clip came out empty. Try recording again.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        String name = data.getStringExtra(AudioStudioActivity.RESULT_NAME);
+        String mime = data.getStringExtra(AudioStudioActivity.RESULT_MIME);
+        long duration = data.getLongExtra(
+                AudioStudioActivity.RESULT_DURATION_MS, 0);
+        audio = PickedFile.fromFile(file, name, mime, duration);
+        binding.audioText.setText(audio.name
+                + (duration > 0 ? " · " + length(duration) : ""));
+        binding.audioText.setTextColor(getColor(com.oru.app.R.color.ink));
+        binding.editAudioButton.setVisibility(View.VISIBLE);
     }
 
     private void onAudioPicked(Uri uri) {
@@ -93,6 +144,7 @@ public class UploadActivity extends AppCompatActivity {
                                         : ""));
                         binding.audioText.setTextColor(
                                 getColor(com.oru.app.R.color.ink));
+                        binding.editAudioButton.setVisibility(View.VISIBLE);
                     } else {
                         cover = picked;
                         binding.coverText.setText(picked.name);

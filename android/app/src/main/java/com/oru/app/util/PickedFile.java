@@ -40,6 +40,14 @@ public final class PickedFile {
         this.durationMs = durationMs;
     }
 
+    /** Wraps a file the app made itself, such as an edited clip. */
+    public static PickedFile fromFile(File file, String name, String mime,
+            long durationMs) {
+        return new PickedFile(file,
+                name != null && !name.isEmpty() ? name : file.getName(),
+                mime, durationMs);
+    }
+
     public boolean isAudio() {
         return mime != null && mime.startsWith("audio/");
     }
