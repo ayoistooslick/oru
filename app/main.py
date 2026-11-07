@@ -176,7 +176,7 @@ def _demo_catalogue() -> None:
     refuses to run twice, so a restart cannot wipe the demo artists.
     """
     try:
-        from scripts.seed_demo import reset_and_seed
+        from app.demo_catalogue import reset_and_seed
         reset_and_seed()
     except Exception:  # noqa: BLE001 - a failed seed must not take the API down
         logger.exception("demo catalogue reset failed")

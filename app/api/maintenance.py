@@ -23,13 +23,14 @@ def demo_catalogue():
         raise HTTPException(status_code=404,
                             detail={"code": "not_found", "message": "Not here"})
 
-    from scripts.seed_demo import already_seeded, reset_and_seed
-
-    with SessionLocal() as db:
-        if already_seeded(db):
-            return {"reset": False, "reason": "the demo catalogue is already in place"}
-
     try:
+        from app.demo_catalogue import already_seeded, reset_and_seed
+
+        with SessionLocal() as db:
+            if already_seeded(db):
+                return {"reset": False,
+                        "reason": "the demo catalogue is already in place"}
+
         result = reset_and_seed(quick=True)
     except Exception as error:  # noqa: BLE001 - the caller wants the reason
         raise HTTPException(status_code=500,
