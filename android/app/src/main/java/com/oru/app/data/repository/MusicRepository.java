@@ -149,9 +149,12 @@ public class MusicRepository {
                 }
             }
         }
+        // The API refuses a length of zero, and some files cannot be measured
+        // on the phone. The web omits it in that case, so this does too.
+        RequestBody length = durationMs > 0 ? Uploads.number(durationMs) : null;
         ApiCall.enqueue(api.createSong(Uploads.text(title),
                 Uploads.text(description), genreParts, featuredParts,
-                Uploads.number(durationMs),
+                length,
                 Uploads.file("audio", audio.getName(), audioMime, audio),
                 cover != null
                         ? Uploads.file("cover", cover.getName(), coverMime, cover)

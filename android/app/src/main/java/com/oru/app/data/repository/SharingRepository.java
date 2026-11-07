@@ -56,9 +56,11 @@ public class SharingRepository {
                 }
             }
         }
+        // Same rule as a studio upload: an unmeasured length is left out.
+        RequestBody length = durationMs > 0 ? Uploads.number(durationMs) : null;
         ApiCall.enqueue(api.shareSong(Uploads.number(artistId),
                 Uploads.text(title), Uploads.text(description), genreParts,
-                Uploads.text(sourceUrl), Uploads.number(durationMs),
+                Uploads.text(sourceUrl), length,
                 Uploads.file("audio", audio.getName(), audioMime, audio),
                 cover != null
                         ? Uploads.file("cover", cover.getName(), coverMime, cover)

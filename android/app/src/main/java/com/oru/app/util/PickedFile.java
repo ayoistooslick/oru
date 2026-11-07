@@ -85,6 +85,34 @@ public final class PickedFile {
         return mime != null && mime.startsWith("audio/");
     }
 
+    /**
+     * The type the API has on file for this container. Phones report wav as
+     * "audio/vnd.wave" and m4a as "audio/x-m4a", which the server does not
+     * list, so the canonical name is sent instead of whatever the picker said.
+     */
+    public String uploadMime() {
+        String lower = name != null ? name.toLowerCase(Locale.US) : "";
+        if (lower.endsWith(".mp3")) {
+            return "audio/mpeg";
+        }
+        if (lower.endsWith(".wav")) {
+            return "audio/wav";
+        }
+        if (lower.endsWith(".ogg")) {
+            return "audio/ogg";
+        }
+        if (lower.endsWith(".m4a")) {
+            return "audio/mp4";
+        }
+        if (lower.endsWith(".flac")) {
+            return "audio/flac";
+        }
+        if (lower.endsWith(".opus")) {
+            return "audio/opus";
+        }
+        return mime;
+    }
+
     public boolean isImage() {
         return mime != null && mime.startsWith("image/");
     }

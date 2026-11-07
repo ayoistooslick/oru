@@ -325,7 +325,7 @@ public class UploadActivity extends AppCompatActivity {
 
         setBusy(true, "Uploading…");
         musicRepo.uploadSong(title, description, genres, featuredIds,
-                audio.durationMs, audio.file, audio.mime,
+                audio.durationMs, audio.file, audio.uploadMime(),
                 cover != null ? cover.file : null,
                 cover != null ? cover.mime : null,
                 new Callback<Song>() {
