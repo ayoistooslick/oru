@@ -57,8 +57,7 @@ public class MediaItemBuilder {
     private static MediaMetadata metadata(long id, @Nullable String title,
             @Nullable String artist, @Nullable String coverUrl) {
         com.oru.app.util.NowPlaying.remember((int) id, title, artist, coverUrl);
-        MediaMetadata.Builder meta = new MediaMetadata.Builder()
-                .setMediaId(String.valueOf(id));
+        MediaMetadata.Builder meta = new MediaMetadata.Builder();
         if (title != null) {
             meta.setTitle(title).setDisplayTitle(title).setAlbumTitle(title);
         }
