@@ -176,6 +176,11 @@ public class ShareActivity extends AppCompatActivity {
             setStatus("Attach the audio first");
             return;
         }
+        String audioIssue = com.oru.app.util.PickedFile.audioProblem(audio);
+        if (audioIssue != null) {
+            setStatus(audioIssue);
+            return;
+        }
         String sourceUrl = text(binding.sourceEditText.getText());
         if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) {
             binding.sourceLayout.setError("Add the link it came from");
