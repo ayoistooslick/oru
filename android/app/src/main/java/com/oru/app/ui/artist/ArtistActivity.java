@@ -39,6 +39,7 @@ public class ArtistActivity extends AppCompatActivity {
     private boolean following;
     /** Your own page: no follow button and no reporting yourself. */
     private boolean isSelf;
+    private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +70,8 @@ public class ArtistActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.followButton.setOnClickListener(v -> toggleFollow());
+        miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
+                binding.miniPlayer);
 
         binding.toolbar.inflateMenu(R.menu.artist_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -143,7 +146,9 @@ public class ArtistActivity extends AppCompatActivity {
         if (isSelf) {
             // Your own page offers the studio instead of a follow button.
             binding.followButton.setText("Open studio");
-            binding.followButton.setBackgroundColor(getColor(R.color.card_hi));
+            binding.followButton.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getColor(R.color.card_hi)));
             binding.followButton.setTextColor(getColor(R.color.ink));
             binding.followButton.setOnClickListener(v -> openStudio());
             android.view.MenuItem report = binding.toolbar.getMenu()
@@ -154,15 +159,27 @@ public class ArtistActivity extends AppCompatActivity {
         }
         binding.collapsingToolbar.setTitle(a.stageName);
         binding.stageNameText.setText(a.stageName);
-        binding.listenersText.setText(String.valueOf(a.followerCount));
+        StringBuilder line = new StringBuilder();
+        if (a.handle != null && !a.handle.isEmpty()) {
+            line.append('@').append(a.handle);
+        }
+        if (line.length() > 0) {
+            line.append(" · ");
+        }
+        line.append(a.followerCount).append(a.followerCount == 1
+                ? " follower" : " followers");
+        binding.listenersText.setText(line);
         binding.bioText.setText(a.bio != null ? a.bio : "");
         binding.songCountText.setText(String.valueOf(a.publishedSongCount));
         binding.playsCountText.setText(String.valueOf(a.playsCount));
         binding.followersCountText.setText(formatFollows(a.followerCount));
         updateFollowButton(following);
 
-        loadImage(binding.bannerImage, a.bannerUrl);
-        loadImage(binding.avatarImage, a.avatarUrl);
+        // Covers applies the API's media path rules; a bare path never loads.
+        com.oru.app.ui.components.Covers.load(binding.bannerImage, a.bannerUrl,
+                R.drawable.ic_music);
+        com.oru.app.ui.components.Covers.loadAvatar(binding.avatarImage,
+                a.avatarUrl);
     }
 
     private void loadContent(int artistId) {
@@ -292,8 +309,9 @@ public class ArtistActivity extends AppCompatActivity {
             return;
         }
         binding.followButton.setText(following ? "Following" : "Follow");
-        binding.followButton.setBackgroundColor(
-                getColor(following ? R.color.ink_faint : R.color.flame));
+        binding.followButton.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(
+                        getColor(following ? R.color.hair : R.color.flame)));
         binding.followButton.setTextColor(
                 getColor(following ? R.color.ink : R.color.night));
     }
@@ -313,19 +331,6 @@ public class ArtistActivity extends AppCompatActivity {
         return com.oru.app.ui.components.UiErrors.message(this, error);
     }
 
-    private void loadImage(android.widget.ImageView view,
-            String url) {
-        if (url == null) {
-            view.setImageResource(R.drawable.ic_library);
-            return;
-        }
-        com.bumptech.glide.Glide.with(this)
-                .load(url)
-                .placeholder(R.drawable.ic_library)
-                .error(R.drawable.ic_library)
-                .into(view);
-    }
-
     private String formatFollows(int count) {
         if (count >= 1000) return (count / 1000F) + "K";
         return String.valueOf(count);
@@ -334,6 +339,10 @@ public class ArtistActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (miniPlayer != null) {
+            miniPlayer.release();
+            miniPlayer = null;
+        }
         binding = null;
     }
 }

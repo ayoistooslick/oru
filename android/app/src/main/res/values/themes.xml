@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Oru app theme: clay + ember, Material 3 -->
-    <style name="Theme.Oru" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- Oru app theme: clay + ember on soft cream paper, Material 3 light -->
+    <style name="Theme.Oru" parent="Theme.Material3.Light.NoActionBar">
         <!-- Surface: paper -->
         <item name="colorSurface">@color/paper</item>
         <item name="colorSurfaceVariant">@color/card</item>
@@ -15,14 +15,20 @@
         <item name="colorSecondary">@color/ink_soft</item>
         <item name="colorSecondaryVariant">@color/ink_faint</item>
         <item name="colorOnSecondary">@color/night</item>
-        <item name="colorError">@color/flame</item>
-        <item name="colorOnError">@color/night</item>
+        <item name="colorError">@color/flame_ink</item>
+        <item name="colorOnError">@color/cream</item>
         <item name="colorErrorContainer">@color/flame_soft</item>
         <item name="colorOnErrorContainer">@color/flame_ink</item>
+        <item name="android:windowBackground">@color/paper</item>
         <item name="android:statusBarColor">@color/paper_deep</item>
         <item name="android:navigationBarColor">@color/paper</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+
+        <!-- Everything wears Outfit unless a style says otherwise. -->
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textViewStyle">@style/Widget.Oru.TextView</item>
+        <item name="android:editTextStyle">@style/Widget.Oru.EditText</item>
     </style>
 
     <!-- Splash style -->
@@ -32,28 +38,46 @@
         <item name="postSplashScreenTheme">@style/Theme.Oru</item>
     </style>
 
-    <!-- Text styles matching Outfit weight tokens -->
+    <!-- Default widgets pick up the typeface -->
+    <style name="Widget.Oru.TextView" parent="android:Widget.TextView">
+        <item name="android:fontFamily">@font/outfit</item>
+    </style>
+    <style name="Widget.Oru.EditText" parent="android:Widget.EditText">
+        <item name="android:fontFamily">@font/outfit</item>
+    </style>
+
+    <!-- Text styles: Outfit for reading, Fraunces for display -->
     <style name="TextAppearance.Oru.Display" parent="TextAppearance.Material3.DisplayLarge">
-        <item name="android:textSize">32sp</item>
+        <item name="android:fontFamily">@font/fraunces</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:letterSpacing">-0.015</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.Headline" parent="TextAppearance.Material3.HeadlineMedium">
-        <item name="android:textSize">24sp</item>
+        <item name="android:fontFamily">@font/fraunces</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:letterSpacing">-0.01</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="android:textSize">20sp</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="android:textSize">15sp</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.BodySoft" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
         <item name="android:textColor">@color/ink_soft</item>
     </style>
     <style name="TextAppearance.Oru.Label" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textColor">@color/ink_faint</item>
         <item name="android:letterSpacing">0.02</item>
@@ -62,8 +86,10 @@
     <!-- Card style -->
     <style name="Widget.Oru.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/card</item>
-        <item name="cardCornerRadius">16dp</item>
+        <item name="cardCornerRadius">18dp</item>
         <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/hair</item>
+        <item name="strokeWidth">1dp</item>
     </style>
     <style name="Widget.Oru.Card.Clickable" parent="Widget.Oru.Card">
         <item name="android:clickable">true</item>
@@ -73,19 +99,23 @@
 
     <!-- Button: Material filled, ember -->
     <style name="Widget.Oru.Button" parent="Widget.Material3.Button">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="backgroundTint">@color/flame</item>
         <item name="android:textColor">@color/night</item>
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">12dp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:letterSpacing">0.01</item>
     </style>
     <style name="Widget.Oru.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="strokeColor">@color/flame</item>
-        <item name="android:textColor">@color/flame</item>
+        <item name="android:textColor">@color/flame_ink</item>
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">12dp</item>
+        <item name="cornerRadius">14dp</item>
     </style>
     <style name="Widget.Oru.Button.Text" parent="Widget.Material3.Button.TextButton">
-        <item name="android:textColor">@color/flame</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textColor">@color/flame_ink</item>
         <item name="android:textAllCaps">false</item>
     </style>
 
@@ -93,10 +123,11 @@
     <style name="Widget.Oru.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/flame</item>
         <item name="hintTextColor">@color/ink_soft</item>
-        <item name="boxCornerRadiusTopStart">12dp</item>
-        <item name="boxCornerRadiusTopEnd">12dp</item>
-        <item name="boxCornerRadiusBottomStart">12dp</item>
-        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxBackgroundColor">@color/card</item>
+        <item name="boxCornerRadiusTopStart">14dp</item>
+        <item name="boxCornerRadiusTopEnd">14dp</item>
+        <item name="boxCornerRadiusBottomStart">14dp</item>
+        <item name="boxCornerRadiusBottomEnd">14dp</item>
     </style>
 
     <!-- Bottom navigation: ember accent -->
@@ -120,9 +151,11 @@
 
     <!-- Chip: ember outline -->
     <style name="Widget.Oru.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="android:fontFamily">@font/outfit</item>
         <item name="chipBackgroundColor">@color/chip_background_color</item>
         <item name="android:textColor">@color/chip_text_color</item>
-        <item name="chipCornerRadius">8dp</item>
+        <item name="chipStrokeColor">@color/hair</item>
+        <item name="chipCornerRadius">10dp</item>
     </style>
 
     <!-- FAB: ember -->
@@ -135,4 +168,3 @@
     <item name="cornerSize">50%</item>
 </style>
 </resources>
-

@@ -131,8 +131,8 @@ public class MusicRepository {
     /** Uploads a track: the audio file, optional artwork, and the fields the
      * API's multipart form expects. */
     public void uploadSong(String title, String description, List<String> genres,
-            long durationMs, File audio, String audioMime, File cover,
-            String coverMime, Callback<Song> cb) {
+            List<Integer> featuredIds, long durationMs, File audio,
+            String audioMime, File cover, String coverMime, Callback<Song> cb) {
         List<RequestBody> genreParts = new ArrayList<>();
         if (genres != null) {
             for (String genre : genres) {
@@ -141,8 +141,16 @@ public class MusicRepository {
                 }
             }
         }
+        List<RequestBody> featuredParts = new ArrayList<>();
+        if (featuredIds != null) {
+            for (Integer id : featuredIds) {
+                if (id != null && id > 0) {
+                    featuredParts.add(Uploads.number(id));
+                }
+            }
+        }
         ApiCall.enqueue(api.createSong(Uploads.text(title),
-                Uploads.text(description), genreParts, new ArrayList<>(),
+                Uploads.text(description), genreParts, featuredParts,
                 Uploads.number(durationMs),
                 Uploads.file("audio", audio.getName(), audioMime, audio),
                 cover != null

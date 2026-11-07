@@ -24,6 +24,7 @@ public class ReleaseActivity extends AppCompatActivity {
     private TrackAdapter trackAdapter;
     private MusicRepository musicRepo;
     private Release release;
+    private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +40,8 @@ public class ReleaseActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
+        miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
+                binding.miniPlayer);
 
         binding.toolbar.inflateMenu(R.menu.release_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -120,46 +123,35 @@ public class ReleaseActivity extends AppCompatActivity {
                         ? "A " + r.kind + " with " + r.songs.size() + " tracks"
                         : "");
 
-        if (r.songs != null && !r.songs.isEmpty()) {
+        boolean hasSongs = r.songs != null && !r.songs.isEmpty();
+        if (hasSongs) {
             trackAdapter.submitList(r.songs);
             binding.tracksRecyclerView.setVisibility(View.VISIBLE);
+            // The play-all bar was only revealed after a tap, so the release
+            // looked like it had no way to play. It is part of the page now.
+            binding.playerBar.setVisibility(View.VISIBLE);
+            binding.playerTitle.setText(r.title);
+            binding.playerArtist.setText(r.songs.get(0).artistLabel());
         } else {
             binding.tracksRecyclerView.setVisibility(View.GONE);
+            binding.playerBar.setVisibility(View.GONE);
         }
 
         binding.progressBar.setVisibility(View.GONE);
     }
 
     private void loadCover(String coverUrl) {
-        if (coverUrl == null) {
-            binding.coverImage.setImageResource(R.drawable.ic_library);
-            return;
-        }
-        com.bumptech.glide.Glide.with(this)
-                .load(coverUrl)
-                .placeholder(R.drawable.ic_library)
-                .error(R.drawable.ic_library)
-                .into(binding.coverImage);
+        // Covers turns the API's media path into a real address.
+        com.oru.app.ui.components.Covers.load(binding.coverImage, coverUrl,
+                R.drawable.ic_library);
     }
 
     private void togglePlay() {
         if (release == null || release.songs == null || release.songs.isEmpty()) {
             return;
         }
-        android.content.Intent intent = new android.content.Intent(this,
-                PlayerService.class);
-        intent.setAction("com.oru.app.PLAY");
-        // Start the service and load the first track.
-        startService(intent);
-        binding.playerBar.setVisibility(View.VISIBLE);
-        binding.playerTitle.setText(release.title);
-        binding.playerArtist.setText(
-                release.songs.get(0).artistLabel());
-        com.bumptech.glide.Glide.with(this)
-                .load(firstCover(release))
-                .placeholder(R.drawable.ic_library)
-                .into(binding.playerArtwork);
-        binding.playerPlayButton.setImageResource(R.drawable.ic_pause);
+        // The same queue the rest of the app uses, so next and previous walk it.
+        com.oru.app.ui.player.Playback.start(this, release.songs, 0);
     }
 
     private void onFailure(Throwable error) {
@@ -194,6 +186,10 @@ public class ReleaseActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (miniPlayer != null) {
+            miniPlayer.release();
+            miniPlayer = null;
+        }
         binding = null;
     }
 }

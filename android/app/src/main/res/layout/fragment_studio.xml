@@ -47,12 +47,117 @@
                     android:textColor="@color/ink_soft"
                     android:visibility="gone" />
 
+                <!-- The two doors the web desk has: put a song up, or share one. -->
+                <LinearLayout
+                    android:id="@+id/uploadCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@color/card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="18dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_upload"
+                        android:tint="@color/flame" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Upload a song"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Audio, cover, title, genres. Record or trim it here too."
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_soft" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        android:tint="@color/ink_faint" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/shareCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@color/card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="18dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_share"
+                        android:tint="@color/flame" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Share a song"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Put a song by another ORU artist up for review, or share a link."
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_soft" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        android:tint="@color/ink_faint" />
+
+                </LinearLayout>
+
                 <TextView
                     style="@style/TextAppearance.Oru.Label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="22dp"
                     android:text="Releases"
                     android:textAllCaps="true"
                     android:textColor="@color/ink_faint" />
