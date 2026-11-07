@@ -102,7 +102,7 @@ public class LibraryFragment extends Fragment {
 
         binding.goHomeButton.setOnClickListener(v -> {
             // The web's empty library sends you home; so does this one.
-            androidx.navigation.NavHostFragment.findNavController(this)
+            androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     .navigate(R.id.homeFragment);
         });
         binding.newPlaylistButton.setOnClickListener(v -> PlaylistPicker.create(
