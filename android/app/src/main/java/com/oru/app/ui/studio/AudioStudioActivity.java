@@ -308,8 +308,17 @@ public class AudioStudioActivity extends AppCompatActivity {
                 }
                 if (problem != null || ready == null) {
                     setBusy(false, null);
-                    setStatus(problem != null ? problem
-                            : "That sound couldn't be read here", true);
+                    String message = problem != null ? problem
+                            : "That sound couldn't be read here";
+                    if (ownsSource) {
+                        // The take can't be edited, so hand the microphone back.
+                        binding.recordPanel.setVisibility(View.VISIBLE);
+                        binding.editPanel.setVisibility(View.GONE);
+                        binding.toolbar.setTitle("Record a song");
+                        recordError(message);
+                    } else {
+                        setStatus(message, true);
+                    }
                     return;
                 }
                 if (clip != null) {

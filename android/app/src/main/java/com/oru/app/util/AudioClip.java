@@ -165,7 +165,8 @@ public final class AudioClip implements Closeable {
             out.close();
             out = null;
             if (samples <= 0) {
-                throw new IOException("No sound came out of that file");
+                throw new IOException("That file's sound came out empty. "
+                        + "Upload it as a file instead.");
             }
             AudioClip clip = new AudioClip(pcm, Math.max(1, channelCount),
                     Math.max(1, rate), samples / Math.max(1, channelCount));
