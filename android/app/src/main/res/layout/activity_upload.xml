@@ -269,7 +269,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                android:textColor="@color/flame"
+                android:textColor="@color/flame_ink"
                 android:visibility="gone" />
 
             <com.google.android.material.button.MaterialButton
