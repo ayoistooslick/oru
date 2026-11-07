@@ -78,6 +78,9 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
             binding.typeLabel.setText("Song");
             binding.titleText.setText(song.title);
             binding.subtitleText.setText(song.artistLabel());
+            // The artist name is a link, as it is on every web row.
+            binding.subtitleText.setOnClickListener(v -> Actions.openArtist(
+                    binding.getRoot().getContext(), song.artistId));
             String length = song.durationLabel();
             String genres = song.genreLabel();
             binding.metaText.setText(length.isEmpty() ? genres
@@ -180,7 +183,7 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
 
         private void share(Context context, Song song) {
             Actions.share(context, song.title + " by " + song.artistLabel(),
-                    "https://oru.freebuff.app");
+                    "https://oru.freebuff.app/artist/" + song.artistId);
         }
 
         private void report(Context context, Song song) {

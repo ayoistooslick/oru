@@ -37,6 +37,8 @@ public class ArtistActivity extends AppCompatActivity {
     private CommunityRepository communityRepo;
     private Artist artist;
     private boolean following;
+    /** Your own page: no follow button and no reporting yourself. */
+    private boolean isSelf;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,6 +138,20 @@ public class ArtistActivity extends AppCompatActivity {
     }
 
     private void populateHeader(Artist a) {
+        isSelf = a.artistId() == new com.oru.app.data.session.SessionManager(this)
+                .getUserId();
+        if (isSelf) {
+            // Your own page offers the studio instead of a follow button.
+            binding.followButton.setText("Open studio");
+            binding.followButton.setBackgroundColor(getColor(R.color.card_hi));
+            binding.followButton.setTextColor(getColor(R.color.ink));
+            binding.followButton.setOnClickListener(v -> openStudio());
+            android.view.MenuItem report = binding.toolbar.getMenu()
+                    .findItem(R.id.action_report);
+            if (report != null) {
+                report.setVisible(false);
+            }
+        }
         binding.collapsingToolbar.setTitle(a.stageName);
         binding.stageNameText.setText(a.stageName);
         binding.listenersText.setText(String.valueOf(a.followerCount));
@@ -228,6 +244,17 @@ public class ArtistActivity extends AppCompatActivity {
         });
     }
 
+    /** Sends the artist to their own studio tab. */
+    private void openStudio() {
+        android.content.Intent intent = new android.content.Intent(this,
+                com.oru.app.ui.MainActivity.class);
+        intent.putExtra("tab", R.id.studioFragment);
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
+    }
+
     private void toggleFollow() {
         if (artist == null) return;
         int artistId = artist.artistId();
@@ -261,6 +288,9 @@ public class ArtistActivity extends AppCompatActivity {
     }
 
     private void updateFollowButton(boolean following) {
+        if (isSelf) {
+            return;
+        }
         binding.followButton.setText(following ? "Following" : "Follow");
         binding.followButton.setBackgroundColor(
                 getColor(following ? R.color.ink_faint : R.color.flame));

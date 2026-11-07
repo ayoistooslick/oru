@@ -112,7 +112,7 @@
         <!-- Media playback foreground service -->
         <service
             android:name=".media.PlayerService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />

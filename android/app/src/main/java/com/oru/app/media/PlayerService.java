@@ -7,6 +7,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
@@ -49,6 +51,16 @@ public class PlayerService extends MediaSessionService {
 
         player = new ExoPlayer.Builder(this).build();
 
+        // Music keeps playing with the screen off, pauses when headphones are
+        // unplugged, and gives way to calls and other apps. Without these the
+        // system suspends us as soon as the app leaves the screen.
+        player.setAudioAttributes(new AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                .build(), true);
+        player.setHandleAudioBecomingNoisy(true);
+        player.setWakeMode(C.WAKE_MODE_NETWORK);
+
         // The session activity is what the notification and lock screen open.
         PendingIntent open = PendingIntent.getActivity(this, 0,
                 new Intent(this, PlayerActivity.class)
@@ -66,6 +78,21 @@ public class PlayerService extends MediaSessionService {
     @Override
     public MediaSession onGetSession(MediaSession.ControllerInfo controllerInfo) {
         return mediaSession;
+    }
+
+    /**
+     * Swiping the app away from recents must not silence the music; only stop
+     * the service when nothing is playing any more.
+     */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Player current = mediaSession != null ? mediaSession.getPlayer() : null;
+        boolean playingOn = current != null && current.getPlayWhenReady()
+                && current.getPlaybackState() != Player.STATE_IDLE;
+        if (!playingOn) {
+            stopSelf();
+        }
+        super.onTaskRemoved(rootIntent);
     }
 
     public void loadMedia(String audioUrl, String title, String artist,

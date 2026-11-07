@@ -2,6 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Your account: the web puts the avatar in the header, this is the same door. -->
+    <item
+        android:id="@+id/action_profile"
+        android:icon="@drawable/ic_artist"
+        android:title="Your profile"
+        app:showAsAction="always" />
+
     <item
         android:id="@+id/action_settings"
         android:icon="@drawable/ic_settings"

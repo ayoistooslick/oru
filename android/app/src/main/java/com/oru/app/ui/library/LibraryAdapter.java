@@ -171,6 +171,9 @@ public class LibraryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     song.id, song.coverUrl);
             binding.titleText.setText(song.title);
             binding.artistText.setText(song.artistLabel());
+            binding.artistText.setOnClickListener(v ->
+                    com.oru.app.ui.components.Actions.openArtist(
+                            binding.getRoot().getContext(), song.artistId));
             binding.likesText.setText(song.durationLabel());
             binding.playButton.setOnClickListener(v -> open(song));
             binding.getRoot().setOnClickListener(v -> open(song));

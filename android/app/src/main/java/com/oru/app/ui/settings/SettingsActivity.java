@@ -85,6 +85,12 @@ public class SettingsActivity extends AppCompatActivity {
 
         binding.toolbar.inflateMenu(R.menu.settings_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_view_artist) {
+                if (user != null) {
+                    com.oru.app.ui.components.Actions.openArtist(this, user.id);
+                }
+                return true;
+            }
             if (item.getItemId() == R.id.action_remove_picture) {
                 removePicture();
                 return true;
@@ -124,6 +130,11 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
         boolean signedIn = user != null;
+        android.view.MenuItem artistPage = binding.toolbar.getMenu()
+                .findItem(R.id.action_view_artist);
+        if (artistPage != null) {
+            artistPage.setVisible(signedIn && user.hasArtistProfile());
+        }
         binding.accountName.setText(signedIn
                 ? (user.displayName != null ? user.displayName : user.handle)
                 : "");

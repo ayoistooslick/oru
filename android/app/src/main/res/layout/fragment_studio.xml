@@ -119,6 +119,30 @@
 
         </androidx.core.widget.NestedScrollView>
 
+        <!-- Behind the upload button and the menu: an empty studio is exactly
+             when those two matter most. -->
+        <include
+            android:id="@+id/emptyView"
+            layout="@layout/view_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize" />
+
+        <include
+            android:id="@+id/errorView"
+            layout="@layout/view_error"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/flame"
+            android:visibility="gone" />
+
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/uploadButton"
             android:layout_width="wrap_content"
@@ -130,26 +154,6 @@
             app:backgroundTint="@color/flame"
             app:icon="@drawable/ic_music"
             app:iconTint="@color/night" />
-
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminateTint="@color/flame"
-            android:visibility="gone" />
-
-        <include
-            android:id="@+id/emptyView"
-            layout="@layout/view_empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <include
-            android:id="@+id/errorView"
-            layout="@layout/view_error"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

@@ -239,6 +239,11 @@ public class MainActivity extends AppCompatActivity {
         // Settings and the account live behind the toolbar's overflow.
         binding.toolbar.inflateMenu(R.menu.main_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_profile) {
+                startActivity(new Intent(this,
+                        com.oru.app.ui.settings.SettingsActivity.class));
+                return true;
+            }
             if (item.getItemId() == R.id.action_settings) {
                 startActivity(new Intent(this,
                         com.oru.app.ui.settings.SettingsActivity.class));

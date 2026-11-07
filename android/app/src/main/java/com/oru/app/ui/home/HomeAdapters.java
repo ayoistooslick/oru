@@ -165,6 +165,9 @@ class RailAdapter extends RecyclerView.Adapter<RailAdapter.VH> {
             Song song = songs.get(position);
             holder.binding.cardTitle.setText(song.title);
             holder.binding.cardArtist.setText(song.artistLabel());
+            holder.binding.cardArtist.setOnClickListener(v ->
+                    com.oru.app.ui.components.Actions.openArtist(
+                            holder.itemView.getContext(), song.artistId));
             Covers.loadSongCover(holder.binding.cardCover, song.id, song.coverUrl);
             holder.binding.getRoot().setOnClickListener(v -> Playback.start(
                     holder.binding.getRoot().getContext(), songs, position));

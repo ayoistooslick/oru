@@ -147,6 +147,9 @@ public class PlaylistActivity extends AppCompatActivity {
             Song first = songs.get(0);
             binding.playerTitle.setText(first.title);
             binding.playerArtist.setText(first.artistLabel());
+            binding.playerArtist.setOnClickListener(v ->
+                    com.oru.app.ui.components.Actions.openArtist(this,
+                            first.artistId));
             com.bumptech.glide.Glide.with(this)
                     .load(com.oru.app.util.MediaUrl.of(first.coverUrl))
                     .placeholder(R.drawable.ic_library)
