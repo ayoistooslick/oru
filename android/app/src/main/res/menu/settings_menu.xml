@@ -3,6 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_view_artist"
+        android:icon="@drawable/ic_artist"
+        android:title="Your artist page"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_remove_picture"
         android:icon="@drawable/ic_delete"
         android:title="Remove picture"

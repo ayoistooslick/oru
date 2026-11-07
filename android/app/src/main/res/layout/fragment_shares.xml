@@ -111,18 +111,6 @@
 
         </androidx.core.widget.NestedScrollView>
 
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/shareSongButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="20dp"
-            android:text="Share"
-            android:textColor="@color/night"
-            app:backgroundTint="@color/flame"
-            app:icon="@drawable/ic_inbox"
-            app:iconTint="@color/night" />
-
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
@@ -135,13 +123,27 @@
             android:id="@+id/emptyView"
             layout="@layout/view_empty"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize" />
 
         <include
             android:id="@+id/errorView"
             layout="@layout/view_error"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:layout_marginTop="?attr/actionBarSize" />
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/shareSongButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:text="Share"
+            android:textColor="@color/night"
+            app:backgroundTint="@color/flame"
+            app:icon="@drawable/ic_inbox"
+            app:iconTint="@color/night" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

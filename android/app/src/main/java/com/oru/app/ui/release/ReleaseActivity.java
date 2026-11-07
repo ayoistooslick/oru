@@ -110,6 +110,9 @@ public class ReleaseActivity extends AppCompatActivity {
                 r.songs != null && !r.songs.isEmpty()
                         ? r.songs.get(0).artistLabel()
                         : "");
+        binding.artistText.setOnClickListener(v ->
+                com.oru.app.ui.components.Actions.openArtist(this,
+                        r.artistId));
         binding.playsCountText.setText(
                 (r.songs != null ? r.songs.size() : 0) + " tracks");
         binding.descriptionText.setText(

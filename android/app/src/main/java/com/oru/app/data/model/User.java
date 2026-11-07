@@ -41,6 +41,11 @@ public class User {
         return "artist".equals(role) && artistProfile != null;
     }
 
+    /** Whether this account has an artist page to open, whatever its role. */
+    public boolean hasArtistProfile() {
+        return artistProfile != null;
+    }
+
     @SerializedName("artist_profile")
     public ArtistProfile artistProfile;
 

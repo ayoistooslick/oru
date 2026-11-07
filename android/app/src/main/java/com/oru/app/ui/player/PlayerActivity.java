@@ -31,6 +31,10 @@ import com.oru.app.media.PlayerService;
 import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /** The full player: transport, scrubbing, like and share. */
 public class PlayerActivity extends AppCompatActivity {
 
@@ -40,8 +44,8 @@ public class PlayerActivity extends AppCompatActivity {
     private ListenableFuture<MediaController> controllerFuture;
     private Song currentSong;
     private int songLoadGeneration;
-    /** The list this song came from, as ids, so next/previous walk it. */
-    private int[] queueIds;
+    /** The list the session is playing, so next/previous walk it. */
+    private List<Song> queue;
     private int queueIndex = -1;
 
     private MusicRepository musicRepo;
@@ -63,10 +67,12 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onPlaybackStateChanged(int state) {
-            if (state == Player.STATE_ENDED) {
-                onTrackEnded();
+        public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
+            if (item == null) {
+                return;
             }
+            // The session moved on by itself (queue, notification, lock screen).
+            syncWithPlayer();
         }
 
         @Override
@@ -119,8 +125,8 @@ public class PlayerActivity extends AppCompatActivity {
                 controller = connected;
                 player = connected;
                 player.addListener(playerListener);
-                if (currentSong != null) {
-                    loadSong(currentSong);
+                if (queue != null) {
+                    playQueue();
                 } else {
                     resumeCurrentTrack();
                 }
@@ -130,7 +136,10 @@ public class PlayerActivity extends AppCompatActivity {
         }, androidx.core.content.ContextCompat.getMainExecutor(this));
     }
 
-    /** Opened from the notification: pick up whatever the service is playing. */
+    /**
+     * Opened from the notification, the lock screen or the player bar: pick up
+     * whatever the session is already playing, without starting it over.
+     */
     private void resumeCurrentTrack() {
         MediaItem item = player != null ? player.getCurrentMediaItem() : null;
         if (item == null || item.mediaId == null) {
@@ -138,11 +147,95 @@ public class PlayerActivity extends AppCompatActivity {
                     "Choose a song with playable audio to start listening."));
             return;
         }
+        syncWithPlayer();
+    }
+
+    /** Shows what the session is playing. Never restarts or seeks. */
+    private void syncWithPlayer() {
+        if (player == null || binding == null) {
+            return;
+        }
+        MediaItem item = player.getCurrentMediaItem();
+        if (item == null || item.mediaId == null) {
+            return;
+        }
+        int id;
         try {
-            loadSongById(Integer.parseInt(item.mediaId));
+            id = Integer.parseInt(item.mediaId);
         } catch (NumberFormatException error) {
+            return;
+        }
+        Song known = songInQueue(id);
+        if (known != null) {
+            currentSong = known;
+            populateUI(known);
+        } else {
+            // Opened cold from the notification: read the details, keep playing.
+            loadSongById(id, true);
+        }
+        binding.miniPlayerBar.setVisibility(View.VISIBLE);
+        startTicker();
+    }
+
+    private Song songInQueue(int songId) {
+        if (queue == null) {
+            return null;
+        }
+        for (Song song : queue) {
+            if (song.id == songId) {
+                return song;
+            }
+        }
+        return null;
+    }
+
+    private void startTicker() {
+        ticker.removeCallbacks(tick);
+        ticker.post(tick);
+    }
+
+    /** Hands the tapped list to the session and starts on the tapped song. */
+    private void playQueue() {
+        if (player == null || queue == null || queue.isEmpty() || binding == null) {
+            return;
+        }
+        int wanted = Math.max(0, Math.min(queueIndex, queue.size() - 1));
+        List<MediaItem> items = new ArrayList<>(queue.size());
+        List<Song> playable = new ArrayList<>(queue.size());
+        int at = 0;
+        for (int i = 0; i < queue.size(); i++) {
+            Song song = queue.get(i);
+            try {
+                items.add(com.oru.app.media.MediaItemBuilder.create(this,
+                        com.oru.app.util.MediaUrl.of(song.audioUrl), song.id,
+                        song.title, song.artistLabel(),
+                        com.oru.app.util.MediaUrl.of(song.coverUrl)));
+                if (i == wanted) {
+                    at = items.size() - 1;
+                }
+                playable.add(song);
+            } catch (RuntimeException unplayable) {
+                // A song without audio cannot be queued; the rest still play.
+            }
+        }
+        if (items.isEmpty()) {
             showError(new IllegalArgumentException(
-                    "The player lost track of this song. Pick it again."));
+                    "None of these songs have playable audio."));
+            return;
+        }
+        // Keep the queue in step with what actually made it into the session.
+        queue = playable;
+        queueIndex = at;
+        try {
+            player.setMediaItems(items, at, 0L);
+            player.prepare();
+            player.play();
+            currentSong = queue.get(at);
+            populateUI(currentSong);
+            binding.miniPlayerBar.setVisibility(View.VISIBLE);
+            startTicker();
+        } catch (RuntimeException error) {
+            showError(error);
         }
     }
 
@@ -176,6 +269,13 @@ public class PlayerActivity extends AppCompatActivity {
         binding.likeButton.setOnClickListener(v -> toggleLike());
         binding.miniLikeButton.setOnClickListener(v -> toggleLike());
         binding.shareButton.setOnClickListener(v -> shareSong());
+        // The artist line in the player opens that artist, like the web one.
+        binding.artistText.setOnClickListener(v -> {
+            if (currentSong != null) {
+                com.oru.app.ui.components.Actions.openArtist(this,
+                        currentSong.artistId);
+            }
+        });
 
         binding.toolbar.inflateMenu(R.menu.player_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -223,47 +323,67 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void openPlaybackIntent(Intent intent) {
-        queueIds = intent.getIntArrayExtra("songIds");
-        queueIndex = intent.getIntExtra("songIndex", -1);
-        int songId = intent.getIntExtra("songId", -1);
-        if (songId <= 0 && queueIds != null && queueIndex >= 0
-                && queueIndex < queueIds.length) {
-            songId = queueIds[queueIndex];
+        List<Song> requested = null;
+        String payload = intent.getStringExtra("queue");
+        if (payload != null) {
+            try {
+                Song[] songs = LazySession.getGson().fromJson(payload, Song[].class);
+                if (songs != null && songs.length > 0) {
+                    requested = new ArrayList<>(Arrays.asList(songs));
+                }
+            } catch (RuntimeException ignore) {
+                requested = null;
+            }
         }
-        if (songId > 0) {
-            loadSongById(songId);
-        } else if (player == null) {
-            // The controller is still connecting; it resumes the current track.
-        } else {
+        if (requested != null) {
+            queue = requested;
+            int index = intent.getIntExtra("songIndex", -1);
+            queueIndex = Math.max(0, Math.min(index, requested.size() - 1));
+            if (player != null) {
+                playQueue();
+            }
+            // Otherwise the controller is still connecting and will start it.
+            return;
+        }
+        if (player != null) {
             resumeCurrentTrack();
         }
     }
 
-    /** Next or previous track in the list that opened the player. */
+    /** Next or previous track in the list the session is playing. */
     private void skip(int direction) {
-        if (queueIds == null || queueIds.length == 0 || queueIndex < 0) {
-            jump(direction);
+        if (player == null) {
             return;
         }
-        int next = queueIndex + direction;
-        if (next < 0 || next >= queueIds.length) {
-            Toast.makeText(this,
-                    direction > 0 ? "That's the last song" : "That's the first song",
+        if (direction > 0) {
+            if (player.hasNextMediaItem()) {
+                player.seekToNextMediaItem();
+            } else {
+                Toast.makeText(this, "That's the last song",
+                        Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+        if (player.hasPreviousMediaItem()) {
+            player.seekToPreviousMediaItem();
+        } else if (player.getCurrentPosition() > 3_000) {
+            player.seekTo(0);
+        } else {
+            Toast.makeText(this, "That's the first song",
                     Toast.LENGTH_SHORT).show();
-            return;
-        }
-        queueIndex = next;
-        loadSongById(queueIds[next]);
-    }
-
-    private void onTrackEnded() {
-        if (queueIds != null && queueIndex >= 0
-                && queueIndex + 1 < queueIds.length) {
-            skip(1);
         }
     }
 
     private void loadSongById(int songId) {
+        loadSongById(songId, false);
+    }
+
+    /**
+     * Reads a song's details.
+     *
+     * @param playingAlready the session is already playing it, so start nothing.
+     */
+    private void loadSongById(int songId, final boolean playingAlready) {
         final int generation = ++songLoadGeneration;
         binding.progressBar.setVisibility(View.VISIBLE);
         musicRepo.getSong(songId, new Callback<Song>() {
@@ -281,17 +401,17 @@ public class PlayerActivity extends AppCompatActivity {
                         return;
                     }
                     currentSong = song;
-                    if (queueIds != null) {
-                        for (int i = 0; i < queueIds.length; i++) {
-                            if (queueIds[i] == song.id) {
+                    if (queue != null) {
+                        for (int i = 0; i < queue.size(); i++) {
+                            if (queue.get(i).id == song.id) {
                                 queueIndex = i;
                                 break;
                             }
                         }
                     }
                     populateUI(song);
-                    if (player != null) {
-                        loadSong(song);
+                    if (player != null && !playingAlready) {
+                        playNow(song);
                     }
                 });
             }
@@ -309,8 +429,8 @@ public class PlayerActivity extends AppCompatActivity {
                     if (saved != null) {
                         currentSong = saved;
                         populateUI(saved);
-                        if (player != null) {
-                            loadSong(saved);
+                        if (player != null && !playingAlready) {
+                            playNow(saved);
                         }
                         return;
                     }
@@ -420,9 +540,10 @@ public class PlayerActivity extends AppCompatActivity {
                     .placeholder(R.drawable.ic_library)
                     .into(binding.miniArtwork);
         }
-        if (queueIds != null && queueIds.length > 1 && queueIndex >= 0) {
-            binding.queueText.setText("Track " + (queueIndex + 1) + " of "
-                    + queueIds.length);
+        int count = player != null ? player.getMediaItemCount() : 0;
+        if (count > 1) {
+            int at = player.getCurrentMediaItemIndex();
+            binding.queueText.setText("Track " + (at + 1) + " of " + count);
             binding.queueText.setVisibility(View.VISIBLE);
         } else {
             binding.queueText.setVisibility(View.GONE);
@@ -433,6 +554,19 @@ public class PlayerActivity extends AppCompatActivity {
         updateLikeButtons();
         updateModeButtons();
         refreshDownloadMenu();
+    }
+
+    /** Starts a song, unless the session is already on it. */
+    private void playNow(Song song) {
+        MediaItem current = player != null ? player.getCurrentMediaItem() : null;
+        boolean same = current != null && current.mediaId != null
+                && current.mediaId.equals(String.valueOf(song.id));
+        if (same) {
+            binding.miniPlayerBar.setVisibility(View.VISIBLE);
+            startTicker();
+            return;
+        }
+        loadSong(song);
     }
 
     private void loadSong(Song song) {
@@ -547,7 +681,7 @@ public class PlayerActivity extends AppCompatActivity {
         send.putExtra(Intent.EXTRA_SUBJECT, currentSong.title);
         send.putExtra(Intent.EXTRA_TEXT, currentSong.title + " by "
                 + currentSong.artistLabel() + " on ORU — "
-                + "https://oru.freebuff.app");
+                + "https://oru.freebuff.app/artist/" + currentSong.artistId);
         startActivity(Intent.createChooser(send, "Share this song"));
     }
 

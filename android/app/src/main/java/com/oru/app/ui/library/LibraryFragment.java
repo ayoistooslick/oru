@@ -101,7 +101,11 @@ public class LibraryFragment extends Fragment {
         });
 
         binding.newPlaylistButton.setOnClickListener(v -> PlaylistPicker.create(
-                requireContext(), playlist -> loadLibrary()));
+                requireContext(), playlist -> {
+                    Toast.makeText(requireContext(), "Playlist created",
+                            Toast.LENGTH_SHORT).show();
+                    loadLibrary();
+                }));
 
         musicRepo = new MusicRepository(com.oru.app.util.LazySession.getApiService(),
                 com.oru.app.util.LazySession.getGson());
@@ -184,18 +188,31 @@ public class LibraryFragment extends Fragment {
         });
     }
 
-    /** Long press on a song: queue it up or keep it on the device. */
+    /** Long press on a song: the same actions every web row offers. */
     private void songActions(Song song) {
         boolean saved = Downloads.isDownloaded(requireContext(), song.id);
         String[] options = {
                 "Add to playlist",
-                saved ? "Remove download" : "Save for offline"
+                saved ? "Remove download" : "Save for offline",
+                "Share",
+                "Report",
+                "Go to artist"
         };
         new AlertDialog.Builder(requireContext())
                 .setTitle(song.title)
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
                         PlaylistPicker.addTo(requireContext(), song);
+                    } else if (which == 2) {
+                        com.oru.app.ui.components.Actions.share(requireContext(),
+                                song.title + " by " + song.artistLabel(),
+                                "https://oru.freebuff.app/artist/" + song.artistId);
+                    } else if (which == 3) {
+                        com.oru.app.ui.components.Actions.report(requireContext(),
+                                "song", song.id, song.title);
+                    } else if (which == 4) {
+                        com.oru.app.ui.components.Actions.openArtist(
+                                requireContext(), song.artistId);
                     } else if (saved) {
                         Downloads.remove(requireContext(), song.id);
                         Toast.makeText(requireContext(), "Download removed",

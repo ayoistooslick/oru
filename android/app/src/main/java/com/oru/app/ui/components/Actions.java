@@ -28,6 +28,20 @@ public final class Actions {
         context.startActivity(Intent.createChooser(send, "Share"));
     }
 
+    /** Opens an artist's profile; the id is the one songs carry. */
+    public static void openArtist(Context context, int artistId) {
+        if (context == null || artistId <= 0) {
+            return;
+        }
+        Intent intent = new Intent(context,
+                com.oru.app.ui.artist.ArtistActivity.class);
+        intent.putExtra("artistId", artistId);
+        if (!(context instanceof android.app.Activity)) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
+        context.startActivity(intent);
+    }
+
     /**
      * The same report flow the web uses: pick a reason, add details, send.
      *

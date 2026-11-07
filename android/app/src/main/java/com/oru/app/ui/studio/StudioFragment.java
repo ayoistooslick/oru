@@ -116,6 +116,13 @@ public class StudioFragment extends Fragment {
 
         binding.toolbar.inflateMenu(R.menu.studio_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_view_artist) {
+                int userId = new com.oru.app.data.session.SessionManager(
+                        requireContext()).getUserId();
+                com.oru.app.ui.components.Actions.openArtist(
+                        requireContext(), userId);
+                return true;
+            }
             if (item.getItemId() == R.id.action_new_release) {
                 showReleaseDialog();
                 return true;

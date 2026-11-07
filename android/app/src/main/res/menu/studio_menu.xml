@@ -3,15 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_view_artist"
+        android:icon="@drawable/ic_artist"
+        android:title="Your artist page"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_new_release"
         android:icon="@drawable/ic_playlist"
         android:title="New release"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_new_post"
         android:icon="@drawable/ic_edit"
         android:title="New post"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
 
 </menu>
