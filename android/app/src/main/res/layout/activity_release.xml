@@ -201,4 +201,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- The playing song, above this release's own play bar. -->
+    <include
+        android:id="@+id/miniPlayer"
+        layout="@layout/view_mini_player"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="@dimen/player_bar_height" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

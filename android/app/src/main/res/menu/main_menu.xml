@@ -9,10 +9,11 @@
         android:title="Your profile"
         app:showAsAction="always" />
 
+    <!-- Settings: the gear in the top right corner, like the web header. -->
     <item
         android:id="@+id/action_settings"
         android:icon="@drawable/ic_settings"
-        android:title="Settings &amp; account"
-        app:showAsAction="never" />
+        android:title="Settings"
+        app:showAsAction="always" />
 
 </menu>

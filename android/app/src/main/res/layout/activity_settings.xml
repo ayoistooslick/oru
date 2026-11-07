@@ -15,6 +15,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_left"
+            app:navigationIconTint="@color/ink"
             app:title="Settings"
             app:titleTextColor="@color/ink" />
 
@@ -38,7 +40,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -91,7 +93,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:padding="18dp"
                 android:textAppearance="@style/TextAppearance.Oru.BodySoft"
                 android:textColor="@color/ink_soft"
@@ -118,7 +120,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:orientation="horizontal"
                 android:padding="14dp">
 
@@ -149,7 +151,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:orientation="vertical"
                 android:padding="14dp"
                 android:visibility="gone">
@@ -207,7 +209,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -258,7 +260,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -301,7 +303,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp"
@@ -353,7 +355,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -380,7 +382,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -422,7 +424,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="@color/card"
+                android:background="@drawable/card_surface"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="18dp">
@@ -444,9 +446,47 @@
 
             </LinearLayout>
 
+            <!-- About -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="About"
+                android:textAppearance="@style/TextAppearance.Oru.Label"
+                android:textColor="@color/ink_faint" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/card_surface"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="ORU is for musicians who are just starting out. One person builds it, and the ranking rules are written down in the docs where anyone can read them."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_soft" />
+
+                <TextView
+                    android:id="@+id/githubButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:paddingVertical="4dp"
+                    android:text="github.com/ayoistooslick"
+                    android:textAppearance="@style/TextAppearance.Oru.Body"
+                    android:textColor="@color/flame_ink"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/signOutButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Oru.Button.Outlined"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"

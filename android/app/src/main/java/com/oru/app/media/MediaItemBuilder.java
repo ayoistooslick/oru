@@ -42,18 +42,33 @@ public class MediaItemBuilder {
     public static MediaItem create(String audioUrl, long id,
             @Nullable String title, @Nullable String artist,
             @Nullable String coverUrl) {
-        MediaItem.Builder builder = new MediaItem.Builder()
+        return new MediaItem.Builder()
                 .setUri(audioUri(audioUrl))
-                .setMediaId(String.valueOf(id));
+                .setMediaId(String.valueOf(id))
+                .setMediaMetadata(metadata(id, title, artist, coverUrl))
+                .build();
+    }
 
-        if (title != null || artist != null) {
-            MediaMetadata.Builder meta = new MediaMetadata.Builder();
-            if (title != null) meta.setTitle(title);
-            if (artist != null) meta.setArtist(artist);
-            if (coverUrl != null) meta.setArtworkUri(Uri.parse(coverUrl));
-            builder.setMediaMetadata(meta.build());
+    /**
+     * One shape for every field a lock screen, notification or mini player
+     * might read. Display and album values are filled in too, because the
+     * system's own media cards prefer them over the plain title.
+     */
+    private static MediaMetadata metadata(long id, @Nullable String title,
+            @Nullable String artist, @Nullable String coverUrl) {
+        com.oru.app.util.NowPlaying.remember((int) id, title, artist, coverUrl);
+        MediaMetadata.Builder meta = new MediaMetadata.Builder()
+                .setMediaId(String.valueOf(id));
+        if (title != null) {
+            meta.setTitle(title).setDisplayTitle(title).setAlbumTitle(title);
         }
-        return builder.build();
+        if (artist != null) {
+            meta.setArtist(artist).setAlbumArtist(artist);
+        }
+        if (coverUrl != null) {
+            meta.setArtworkUri(Uri.parse(coverUrl));
+        }
+        return meta.build();
     }
 
     /**
@@ -74,13 +89,7 @@ public class MediaItemBuilder {
         if (mime != null) {
             builder.setMimeType(mime);
         }
-        if (title != null || artist != null) {
-            MediaMetadata.Builder meta = new MediaMetadata.Builder();
-            if (title != null) meta.setTitle(title);
-            if (artist != null) meta.setArtist(artist);
-            if (coverUrl != null) meta.setArtworkUri(Uri.parse(coverUrl));
-            builder.setMediaMetadata(meta.build());
-        }
+        builder.setMediaMetadata(metadata(id, title, artist, coverUrl));
         return builder.build();
     }
 }

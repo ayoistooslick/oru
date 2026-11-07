@@ -15,14 +15,6 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MediaMetadata;
-import androidx.media3.common.Player;
-import androidx.media3.session.MediaController;
-import androidx.media3.session.SessionToken;
-
-import com.google.common.util.concurrent.ListenableFuture;
-
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.oru.app.R;
 import com.oru.app.data.session.SessionManager;
@@ -44,29 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean keyboardVisible;
     private boolean mainDestination = true;
 
-    private MediaController controller;
-    private ListenableFuture<MediaController> controllerFuture;
-
-    /**
-     * The web keeps a player bar on every page; this keeps the same controls on
-     * the main screen, driven by the same media session as the notification.
-     */
-    private final Player.Listener miniListener = new Player.Listener() {
-        @Override
-        public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
-            updateMiniPlayer();
-        }
-
-        @Override
-        public void onIsPlayingChanged(boolean isPlaying) {
-            updateMiniPlayer();
-        }
-
-        @Override
-        public void onPlaybackStateChanged(int state) {
-            updateMiniPlayer();
-        }
-    };
+    private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,70 +62,9 @@ public class MainActivity extends AppCompatActivity {
 
         setupBottomNavigation();
         setupToolbar();
-        setupMiniPlayer();
+        miniPlayer = new com.oru.app.ui.components.MiniPlayer(this, binding.miniPlayer);
         askForNotifications();
         openRequestedTab(getIntent());
-    }
-
-    private void setupMiniPlayer() {
-        binding.miniPlayerBar.setOnClickListener(v -> startActivity(
-                new Intent(this, com.oru.app.ui.player.PlayerActivity.class)));
-        binding.miniPlayPause.setOnClickListener(v -> {
-            if (controller == null) {
-                return;
-            }
-            if (controller.isPlaying()) {
-                controller.pause();
-            } else {
-                controller.play();
-            }
-        });
-        binding.miniNext.setOnClickListener(v -> {
-            if (controller != null) {
-                controller.seekToNextMediaItem();
-            }
-        });
-
-        SessionToken token = new SessionToken(this,
-                new ComponentName(this, com.oru.app.media.PlayerService.class));
-        controllerFuture = new MediaController.Builder(this, token).buildAsync();
-        controllerFuture.addListener(() -> {
-            try {
-                controller = controllerFuture.get();
-            } catch (Exception error) {
-                return;
-            }
-            runOnUiThread(() -> {
-                if (binding == null) {
-                    return;
-                }
-                controller.addListener(miniListener);
-                updateMiniPlayer();
-            });
-        }, androidx.core.content.ContextCompat.getMainExecutor(this));
-    }
-
-    private void updateMiniPlayer() {
-        if (binding == null) {
-            return;
-        }
-        MediaItem item = controller != null ? controller.getCurrentMediaItem() : null;
-        boolean playingSomething = item != null && controller != null
-                && controller.getPlaybackState() != Player.STATE_IDLE
-                && controller.getPlaybackState() != Player.STATE_ENDED;
-        binding.miniPlayerBar.setVisibility(
-                playingSomething ? View.VISIBLE : View.GONE);
-        if (!playingSomething) {
-            return;
-        }
-        MediaMetadata metadata = item.mediaMetadata;
-        binding.miniTitle.setText(metadata.title);
-        binding.miniArtist.setText(metadata.artist);
-        com.oru.app.ui.components.Covers.load(binding.miniCover,
-                metadata.artworkUri != null ? metadata.artworkUri.toString() : null,
-                R.drawable.ic_music);
-        binding.miniPlayPause.setImageResource(controller.isPlaying()
-                ? R.drawable.ic_pause : R.drawable.ic_play);
     }
 
     /** Android 13+ hides the media notification until this is granted. */
@@ -173,13 +82,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (controller != null) {
-            controller.removeListener(miniListener);
-            controller = null;
-        }
-        if (controllerFuture != null) {
-            MediaController.releaseFuture(controllerFuture);
-            controllerFuture = null;
+        if (miniPlayer != null) {
+            miniPlayer.release();
+            miniPlayer = null;
         }
         super.onDestroy();
     }
@@ -239,12 +144,8 @@ public class MainActivity extends AppCompatActivity {
         // Settings and the account live behind the toolbar's overflow.
         binding.toolbar.inflateMenu(R.menu.main_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_profile) {
-                startActivity(new Intent(this,
-                        com.oru.app.ui.settings.SettingsActivity.class));
-                return true;
-            }
-            if (item.getItemId() == R.id.action_settings) {
+            if (item.getItemId() == R.id.action_profile
+                    || item.getItemId() == R.id.action_settings) {
                 startActivity(new Intent(this,
                         com.oru.app.ui.settings.SettingsActivity.class));
                 return true;

@@ -113,6 +113,10 @@ public class StudioFragment extends Fragment {
 
         binding.uploadButton.setOnClickListener(v -> uploadLauncher.launch(
                 new Intent(requireContext(), UploadActivity.class)));
+        binding.uploadCard.setOnClickListener(v -> uploadLauncher.launch(
+                new Intent(requireContext(), UploadActivity.class)));
+        binding.shareCard.setOnClickListener(v -> startActivity(new Intent(
+                requireContext(), com.oru.app.ui.shares.ShareActivity.class)));
 
         binding.toolbar.inflateMenu(R.menu.studio_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {

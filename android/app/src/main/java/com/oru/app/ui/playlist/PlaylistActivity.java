@@ -28,6 +28,7 @@ public class PlaylistActivity extends AppCompatActivity {
     private MusicRepository musicRepo;
     private CommunityRepository communityRepo;
     private Playlist playlist;
+    private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +45,8 @@ public class PlaylistActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
+        miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
+                binding.miniPlayer);
 
         binding.toolbar.inflateMenu(R.menu.playlist_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -359,6 +362,10 @@ public class PlaylistActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (miniPlayer != null) {
+            miniPlayer.release();
+            miniPlayer = null;
+        }
         binding = null;
     }
 }

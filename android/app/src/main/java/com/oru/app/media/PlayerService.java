@@ -1,5 +1,6 @@
 package com.oru.app.media;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import android.app.PendingIntent;
 import android.content.Intent;
@@ -15,6 +16,16 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
+import androidx.media3.session.SessionCommand;
+import androidx.media3.session.SessionCommands;
+import androidx.media3.session.SessionResult;
+import androidx.media3.session.CommandButton;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
+import android.os.Bundle;
 
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.MusicRepository;
@@ -60,6 +71,12 @@ public class PlayerService extends MediaSessionService {
                 .build(), true);
         player.setHandleAudioBecomingNoisy(true);
         player.setWakeMode(C.WAKE_MODE_NETWORK);
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
+                remember(item);
+            }
+        });
 
         // The session activity is what the notification and lock screen open.
         PendingIntent open = PendingIntent.getActivity(this, 0,
@@ -70,9 +87,90 @@ public class PlayerService extends MediaSessionService {
 
         mediaSession = new MediaSession.Builder(this, player)
                 .setSessionActivity(open)
+                .setCallback(sessionCallback)
                 .build();
 
+        // Shuffle and repeat ride along as custom commands, so the notification,
+        // the lock screen and every in-app control drive the same player.
+        mediaSession.setCustomLayout(ImmutableList.of(
+                new CommandButton.Builder()
+                        .setSessionCommand(PlaybackCommands.SHUFFLE)
+                        .setIconResId(com.oru.app.R.drawable.ic_shuffle)
+                        .setDisplayName("Shuffle")
+                        .build(),
+                new CommandButton.Builder()
+                        .setSessionCommand(PlaybackCommands.REPEAT)
+                        .setIconResId(com.oru.app.R.drawable.ic_repeat)
+                        .setDisplayName("Repeat")
+                        .build()));
+        setMediaNotificationProvider(new OruNotificationProvider(this));
+
         listenTicker.postDelayed(listenTick, LISTEN_REPORT_MS);
+    }
+
+    /** Offers the two extra commands and carries them out. */
+    private final MediaSession.Callback sessionCallback = new MediaSession.Callback() {
+        @Override
+        public MediaSession.ConnectionResult onConnect(MediaSession session,
+                MediaSession.ControllerInfo controller) {
+            SessionCommands commands = MediaSession.ConnectionResult
+                    .DEFAULT_SESSION_COMMANDS
+                    .buildUpon()
+                    .add(PlaybackCommands.SHUFFLE)
+                    .add(PlaybackCommands.REPEAT)
+                    .build();
+            return new MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                    .setAvailableSessionCommands(commands)
+                    .build();
+        }
+
+        @Override
+        public ListenableFuture<SessionResult> onCustomCommand(MediaSession session,
+                MediaSession.ControllerInfo controller,
+                SessionCommand customCommand, Bundle args) {
+            Player current = session.getPlayer();
+            if (customCommand.equals(PlaybackCommands.SHUFFLE)) {
+                current.setShuffleModeEnabled(!current.getShuffleModeEnabled());
+                return Futures.immediateFuture(
+                        new SessionResult(SessionResult.RESULT_SUCCESS));
+            }
+            if (customCommand.equals(PlaybackCommands.REPEAT)) {
+                current.setRepeatMode(nextRepeatMode(current.getRepeatMode()));
+                return Futures.immediateFuture(
+                        new SessionResult(SessionResult.RESULT_SUCCESS));
+            }
+            return Futures.immediateFuture(
+                    new SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED));
+        }
+    };
+
+    /** Keeps the in-app name fallback in step with what the session plays. */
+    private static void remember(@Nullable MediaItem item) {
+        if (item == null || item.mediaMetadata == null) {
+            return;
+        }
+        int id = 0;
+        try {
+            id = item.mediaId != null ? Integer.parseInt(item.mediaId) : 0;
+        } catch (NumberFormatException ignored) {
+            // A non-song item still shows its own metadata.
+        }
+        androidx.media3.common.MediaMetadata metadata = item.mediaMetadata;
+        com.oru.app.util.NowPlaying.remember(id,
+                metadata.title != null ? metadata.title.toString() : null,
+                metadata.artist != null ? metadata.artist.toString() : null,
+                metadata.artworkUri != null ? metadata.artworkUri.toString() : null);
+    }
+
+    /** Off, then the whole queue, then this one song, then off again. */
+    static int nextRepeatMode(int repeatMode) {
+        if (repeatMode == Player.REPEAT_MODE_OFF) {
+            return Player.REPEAT_MODE_ALL;
+        }
+        if (repeatMode == Player.REPEAT_MODE_ALL) {
+            return Player.REPEAT_MODE_ONE;
+        }
+        return Player.REPEAT_MODE_OFF;
     }
 
     @Override

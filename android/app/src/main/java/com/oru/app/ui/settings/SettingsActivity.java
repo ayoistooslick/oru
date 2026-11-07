@@ -81,6 +81,7 @@ public class SettingsActivity extends AppCompatActivity {
         binding.bannerButton.setOnClickListener(v -> pickBanner.launch(IMAGE_MIME));
         binding.aboutButton.setOnClickListener(v -> startActivity(
                 new Intent(this, AboutActivity.class)));
+        binding.githubButton.setOnClickListener(v -> openDeveloper());
         binding.signOutButton.setOnClickListener(v -> signOut());
 
         binding.toolbar.inflateMenu(R.menu.settings_menu);
@@ -223,6 +224,18 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(new Intent(
                     android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     android.net.Uri.parse("package:" + getPackageName())));
+        }
+    }
+
+    /** The same door the web footer has, straight to the developer's page. */
+    private void openDeveloper() {
+        Intent intent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://github.com/ayoistooslick"));
+        try {
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException error) {
+            Toast.makeText(this, "No browser to open that link",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
