@@ -130,15 +130,9 @@ public class PlaylistActivity extends AppCompatActivity {
     }
 
     private void loadCover(String coverUrl) {
-        if (coverUrl == null) {
-            binding.coverImage.setImageResource(R.drawable.ic_library);
-            return;
-        }
-        com.bumptech.glide.Glide.with(this)
-                .load(coverUrl)
-                .placeholder(R.drawable.ic_library)
-                .error(R.drawable.ic_library)
-                .into(binding.coverImage);
+        // The API sends a media path, not a full address; Covers knows that.
+        com.oru.app.ui.components.Covers.load(binding.coverImage, coverUrl,
+                R.drawable.ic_library);
     }
 
     private void populateTracks(List<Song> songs) {

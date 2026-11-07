@@ -48,6 +48,39 @@ public final class PickedFile {
                 mime, durationMs);
     }
 
+    /** The audio containers the API stores. */
+    private static final String[] AUDIO_EXTENSIONS = {
+            ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".opus" };
+    private static final long MAX_AUDIO_BYTES = 100L * 1024 * 1024;
+
+    /**
+     * What is wrong with this audio, in words the listener can act on, or null
+     * when the API will take it. The server refuses an unsupported container
+     * with a bare 415, so it is worth saying it before the upload starts.
+     */
+    public static String audioProblem(PickedFile picked) {
+        if (picked == null) {
+            return "Choose the audio file first";
+        }
+        String name = picked.name != null ? picked.name.toLowerCase(Locale.US) : "";
+        boolean supported = false;
+        for (String extension : AUDIO_EXTENSIONS) {
+            if (name.endsWith(extension)) {
+                supported = true;
+                break;
+            }
+        }
+        if (!supported) {
+            return "ORU takes mp3, wav, ogg, m4a, flac or opus. \""
+                    + picked.name + "\" is none of those.";
+        }
+        if (picked.file != null && picked.file.length() > MAX_AUDIO_BYTES) {
+            return "That audio is " + (picked.file.length() / (1024 * 1024))
+                    + " MB. Keep it under 100 MB.";
+        }
+        return null;
+    }
+
     public boolean isAudio() {
         return mime != null && mime.startsWith("audio/");
     }

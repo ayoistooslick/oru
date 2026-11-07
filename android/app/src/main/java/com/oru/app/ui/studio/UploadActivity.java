@@ -39,10 +39,7 @@ public class UploadActivity extends AppCompatActivity {
     private MusicRepository musicRepo;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
-    private static final long MAX_AUDIO_BYTES = 100L * 1024 * 1024;
     private static final int MAX_FEATURED = 5;
-    private static final String[] AUDIO_EXTENSIONS = {
-            ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".opus" };
 
     private PickedFile audio;
     private PickedFile cover;
@@ -308,7 +305,7 @@ public class UploadActivity extends AppCompatActivity {
             setBusy(false, "Choose the audio file first");
             return;
         }
-        String problem = audioProblem(audio);
+        String problem = PickedFile.audioProblem(audio);
         if (problem != null) {
             setBusy(false, problem);
             return;
@@ -385,28 +382,6 @@ public class UploadActivity extends AppCompatActivity {
         binding.statusText.setText(message != null ? message : "");
         binding.statusText.setVisibility(
                 message != null && !message.isEmpty() ? View.VISIBLE : View.GONE);
-    }
-
-    /** The formats the API stores; anything else is refused before it uploads. */
-    private String audioProblem(PickedFile picked) {
-        String name = picked.name != null ? picked.name.toLowerCase(java.util.Locale.US)
-                : "";
-        boolean supported = false;
-        for (String extension : AUDIO_EXTENSIONS) {
-            if (name.endsWith(extension)) {
-                supported = true;
-                break;
-            }
-        }
-        if (!supported) {
-            return "ORU takes mp3, wav, ogg, m4a, flac or opus. \""
-                    + picked.name + "\" is none of those.";
-        }
-        if (picked.file != null && picked.file.length() > MAX_AUDIO_BYTES) {
-            return "That audio is " + (picked.file.length() / (1024 * 1024))
-                    + " MB. Keep it under 100 MB.";
-        }
-        return null;
     }
 
     private static String text(CharSequence value) {

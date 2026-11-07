@@ -18,6 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="@string/app_name"
+            app:titleTextAppearance="@style/TextAppearance.Oru.Title"
             app:titleTextColor="@color/ink"
             app:subtitleTextColor="@color/ink_faint" />
 
