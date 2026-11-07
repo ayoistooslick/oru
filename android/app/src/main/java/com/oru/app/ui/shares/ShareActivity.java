@@ -192,7 +192,7 @@ public class ShareActivity extends AppCompatActivity {
         sharingRepo.shareSong(artist.artistId(), title,
                 text(binding.descriptionEditText.getText()), genres,
                 sourceUrl, audio.durationMs,
-                audio.file, audio.mime,
+                audio.file, audio.uploadMime(),
                 cover != null ? cover.file : null,
                 cover != null ? cover.mime : null,
                 new Callback<Song>() {
