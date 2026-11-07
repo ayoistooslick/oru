@@ -22,7 +22,7 @@ from array import array
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.database import Base, SessionLocal, engine
@@ -239,12 +239,12 @@ def _add(buffer: list[float], start: int, freq: float, seconds: float,
         phase += step
 
 
-def track(progressions: dict[str, list[int]], tempo: int, seed: int) -> bytes:
+def track(progressions: dict[str, list[int]], tempo: int, seed: int,
+          bars: int = 12) -> bytes:
     """Thirty-odd seconds of pad, bass and a melody, in a key that suits it."""
     beat = 60.0 / tempo
     loop = progressions
     chords = [CHORDS[name] for name in loop]
-    bars = 12
     beats_per_chord = 8
     total_beats = bars * 4
     length = int(total_beats * beat * RATE) + RATE
@@ -301,7 +301,11 @@ def unique_handle(db: Session, base: str) -> str:
 
 
 def wipe(db: Session) -> tuple[int, int]:
-    """All songs, releases, posts and artist accounts. Listener accounts stay."""
+    """Every song, release, post and artist page.
+
+    Accounts are kept, so nobody loses the login they sign in with: the artist
+    pages go, the people stay, and anyone can put a page back up afterwards.
+    """
     song_count = db.scalar(select(func.count()).select_from(Song)) or 0
     artist_ids = set(db.scalars(select(ArtistProfile.user_id)).all())
     artist_ids |= set(db.scalars(select(User.id).where(User.role == "artist")).all())
@@ -322,9 +326,9 @@ def wipe(db: Session) -> tuple[int, int]:
     if artist_ids:
         db.execute(delete(Follow).where(or_(Follow.artist_id.in_(artist_ids),
                                             Follow.listener_id.in_(artist_ids))))
-        db.execute(delete(ArtistProfile).where(ArtistProfile.user_id.in_(artist_ids)))
-        db.execute(delete(User).where(User.id.in_(artist_ids)))
-    db.commit()
+    db.execute(delete(ArtistProfile))
+    # Their account stays, but nothing about it says artist until they say so.
+    db.execute(update(User).where(User.role == "artist").values(role="listener"))
     return song_count, artist_count
 
 
@@ -339,7 +343,12 @@ def ensure_genres(db: Session, names: list[str]) -> dict[str, Genre]:
     return found
 
 
-def seed(db: Session) -> dict[str, int]:
+def seed(db: Session, quick: bool = False) -> dict[str, int]:
+    """Insert the demo artists and their songs.
+
+    quick trades art size and track length for speed, which matters when the
+    seed runs inside one request rather than on a laptop.
+    """
     all_genres = sorted({g for artist in ARTISTS for g in artist["genres"]})
     genres = ensure_genres(db, all_genres)
     listeners = db.scalars(select(User).where(User.role != "artist").limit(5)).all()
@@ -348,7 +357,8 @@ def seed(db: Session) -> dict[str, int]:
     for index, artist in enumerate(ARTISTS):
         palette = artist["palette"]
         avatar = save_media(artwork(320, 320, palette, index), ".png")
-        banner = save_media(artwork(900, 320, palette, index + 1), ".png")
+        banner = save_media(artwork(960 if not quick else 720, 320 if not quick else 240,
+                                     palette, index + 1), ".png")
         handle = unique_handle(db, artist["handle"])
         user = User(
             email=f"{handle}@demo.oru.invalid",
@@ -368,11 +378,13 @@ def seed(db: Session) -> dict[str, int]:
                           body=f"{artist['songs'][0][0]} is out now. Turn it up."))
 
         release_songs: list[Song] = []
-        for song_index, (title, description, tempo, key) in enumerate(artist["songs"]):
+        songs = artist["songs"][:2] if quick else artist["songs"]
+        for song_index, (title, description, tempo, key) in enumerate(songs):
             progression = PROGRESSIONS.get(key, PROGRESSIONS["C"])
             audio = track({name: CHORDS[name] for name in progression}, tempo,
-                          seed=index + song_index)
-            cover = artwork(500, 500, palette, index + song_index * 3)
+                          seed=index + song_index, bars=8 if quick else 12)
+            cover = artwork(500 if not quick else 380, 500 if not quick else 380,
+                            palette, index + song_index * 3)
             song = Song(
                 artist_id=user.id,
                 title=title,
@@ -415,8 +427,31 @@ def seed(db: Session) -> dict[str, int]:
                                    position=position))
         db.flush()
 
-    db.commit()
     return {"artists": len(ARTISTS), "songs": songs_created}
+
+
+def already_seeded(db: Session) -> bool:
+    """True once the demo artists exist, so a restart never wipes them again."""
+    handles = [artist["handle"] for artist in ARTISTS]
+    return (db.scalar(select(func.count()).select_from(User)
+                      .where(User.handle.in_(handles))) or 0) > 0
+
+
+def reset_and_seed(force: bool = False, quick: bool = False) -> dict[str, int]:
+    """The same reset, callable from a one-off hook rather than a terminal."""
+    Base.metadata.create_all(engine)
+    with SessionLocal() as db:
+        if not force and already_seeded(db):
+            print("demo catalogue already in place; leaving it alone")
+            return {"artists": 0, "songs": 0, "removed": 0}
+        songs, artists = wipe(db)
+        print(f"removed {songs} songs and {artists} artist pages")
+        result = seed(db, quick=quick)
+        # One commit at the end: a failure half way leaves the old catalogue.
+        db.commit()
+        print(f"seeded {result['artists']} artists and {result['songs']} songs")
+        return {"artists": result["artists"], "songs": result["songs"],
+                "removed": songs}
 
 
 def main() -> None:
@@ -428,12 +463,7 @@ def main() -> None:
         print("This deletes every song and artist. Re-run with --yes.")
         raise SystemExit(2)
 
-    Base.metadata.create_all(engine)
-    with SessionLocal() as db:
-        songs, artists = wipe(db)
-        print(f"removed {songs} songs and {artists} artist accounts")
-        result = seed(db)
-        print(f"seeded {result['artists']} artists and {result['songs']} songs")
+    reset_and_seed(force=True)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 import logging
+import os
+import threading
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from time import monotonic
@@ -12,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, community, moderation, music
+from app.api import accounts, community, maintenance, moderation, music
 from app.social import render_document, request_origin
 from app.config import BASE_DIR, settings
 from app.database import Base, engine
@@ -167,9 +169,25 @@ def ensure_schema() -> None:
                     logger.info("added %s.%s", table, name)
 
 
+def _demo_catalogue() -> None:
+    """One-off catalogue reset, in the background so the site stays up.
+
+    Switched on with ORU_DEMO_RESET=1 for a single deploy; the seed itself
+    refuses to run twice, so a restart cannot wipe the demo artists.
+    """
+    try:
+        from scripts.seed_demo import reset_and_seed
+        reset_and_seed()
+    except Exception:  # noqa: BLE001 - a failed seed must not take the API down
+        logger.exception("demo catalogue reset failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_schema()
+    if os.environ.get("ORU_DEMO_RESET") == "1":
+        threading.Thread(target=_demo_catalogue, daemon=True,
+                         name="oru-demo-catalogue").start()
     yield
 
 
@@ -179,6 +197,7 @@ def build_api() -> FastAPI:
     api.include_router(music.router)
     api.include_router(community.router)
     api.include_router(moderation.router)
+    api.include_router(maintenance.router)
     api.add_exception_handler(RequestValidationError, validation_error_handler)
     api.add_exception_handler(HTTPException, http_error_handler)
     # Starlette raises its own HTTPException for a path that matches no route;
