@@ -78,8 +78,17 @@ public class SharesFragment extends Fragment {
                 new LinearLayoutManager(requireContext()));
         binding.externalRecyclerView.setAdapter(externalAdapter);
 
-        binding.shareSongButton.setOnClickListener(v -> shareLauncher.launch(
-                new android.content.Intent(requireContext(), ShareActivity.class)));
+        // Two doors, in the toolbar and in the empty card, both land here.
+        binding.toolbar.inflateMenu(R.menu.shares_menu);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_share) {
+                openShare(false);
+                return true;
+            }
+            return false;
+        });
+        binding.shareSongEmptyButton.setOnClickListener(v -> openShare(false));
+        binding.shareLinkEmptyButton.setOnClickListener(v -> openShare(true));
 
         binding.errorView.retryButton.setOnClickListener(v -> {
             binding.errorView.getRoot().setVisibility(View.GONE);
@@ -121,7 +130,7 @@ public class SharesFragment extends Fragment {
                     adapter.submitList(shares);
                 }
                 binding.recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
-                binding.songsEmptyText.setVisibility(empty ? View.VISIBLE : View.GONE);
+                binding.songsEmptyCard.setVisibility(empty ? View.VISIBLE : View.GONE);
             }
 
             @Override
@@ -192,6 +201,14 @@ public class SharesFragment extends Fragment {
                 binding.externalEmptyText.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    /** Opens the share form, either on the upload half or the link half. */
+    private void openShare(boolean linkSection) {
+        android.content.Intent intent = new android.content.Intent(requireContext(),
+                ShareActivity.class);
+        intent.putExtra("open_link", linkSection);
+        shareLauncher.launch(intent);
     }
 
     private void decide(Song song, String action) {

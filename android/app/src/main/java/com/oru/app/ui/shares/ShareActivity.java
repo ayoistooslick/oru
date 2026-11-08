@@ -76,6 +76,12 @@ public class ShareActivity extends AppCompatActivity {
         binding.coverButton.setOnClickListener(v -> pickCover.launch("image/*"));
         binding.shareButton.setOnClickListener(v -> shareSong());
         binding.linkButton.setOnClickListener(v -> shareLink());
+
+        // The Shares screen can ask for the link half of this form directly.
+        if (getIntent().getBooleanExtra("open_link", false)) {
+            binding.scrollView.post(() -> binding.scrollView.smoothScrollTo(0,
+                    Math.max(0, binding.linkTitleLayout.getTop())));
+        }
     }
 
     private void pickArtist() {

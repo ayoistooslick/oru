@@ -16,7 +16,9 @@
             android:layout_height="wrap_content"
             android:background="@color/paper_deep">
 
-            <androidx.appcompat.widget.Toolbar
+            <!-- The toolbar carries Share as a visible action, so the way in
+                 is on screen even when the list is empty. -->
+            <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
@@ -71,15 +73,52 @@
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false" />
 
-                <TextView
-                    android:id="@+id/songsEmptyText"
+                <!-- Empty, but not a dead end: both ways to share sit here. -->
+                <LinearLayout
+                    android:id="@+id/songsEmptyCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
-                    android:layout_marginVertical="6dp"
-                    android:text="You have not shared a song yet. Start one from the studio, or send a link below."
-                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                    android:textColor="@color/ink_faint" />
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/card_surface"
+                    android:orientation="vertical"
+                    android:padding="18dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nothing shared yet"
+                        android:textAppearance="@style/TextAppearance.Oru.Title"
+                        android:textColor="@color/ink" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Heard something good? Send the song to its artist and it goes to review. Songs by artists who are not on ORU travel as a link instead."
+                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                        android:textColor="@color/ink_soft" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/shareSongEmptyButton"
+                        style="@style/Widget.Oru.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/share_a_song"
+                        app:icon="@drawable/ic_share"
+                        app:iconTint="@color/night" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/shareLinkEmptyButton"
+                        style="@style/Widget.Oru.Button.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/share_a_link" />
+
+                </LinearLayout>
 
                 <TextView
                     style="@style/TextAppearance.Oru.Label"
@@ -107,6 +146,7 @@
                     android:textAppearance="@style/TextAppearance.Oru.BodySoft"
                     android:textColor="@color/ink_faint" />
 
+
             </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
@@ -126,17 +166,8 @@
             android:layout_height="match_parent"
             android:layout_marginTop="?attr/actionBarSize" />
 
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/shareSongButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="20dp"
-            android:text="Share"
-            android:textColor="@color/night"
-            app:backgroundTint="@color/flame"
-            app:icon="@drawable/ic_inbox"
-            app:iconTint="@color/night" />
+        <!-- No floating button here: the bottom bar covered it. Sharing is the
+             toolbar action and the buttons in the empty card. -->
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The account door: a solid ember coin so it reads at a glance from the
+     greeting, with a ripple so it still feels pressable. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/ripple_on_flame">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/flame" />
+        </shape>
+    </item>
+</ripple>

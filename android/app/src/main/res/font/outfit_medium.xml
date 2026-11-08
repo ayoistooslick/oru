@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Outfit's variable axis, pinned to the middle weight. Reading text sat too
+     thin at the default 400 on a phone screen, so body copy rides at 500. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/outfit"
+        android:fontStyle="normal"
+        android:fontWeight="500"
+        android:fontVariationSettings="'wght' 500" />
+</font-family>

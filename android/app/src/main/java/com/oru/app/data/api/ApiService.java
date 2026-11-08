@@ -38,10 +38,13 @@ public interface ApiService {
     @PATCH("api/v1/listeners/me")
     Call<ApiResponse<User>> updateProfile(@Body ProfileUpdate body);
 
-    // Pictures arrive as a file part named "file".
+    // Pictures arrive as a file part named "file". The name belongs in the
+    // MultipartBody.Part itself (see Uploads.file); naming it here as well makes
+    // Retrofit refuse the call with "@Part parameters using the
+    // MultipartBody.Part must not include a part name in the annotation".
     @Multipart
     @POST("api/v1/listeners/me/avatar")
-    Call<ApiResponse<User>> uploadAvatar(@Part("file") MultipartBody.Part file);
+    Call<ApiResponse<User>> uploadAvatar(@Part MultipartBody.Part file);
 
     @DELETE("api/v1/listeners/me/avatar")
     Call<ApiResponse<User>> deleteAvatar();
@@ -57,7 +60,7 @@ public interface ApiService {
 
     @Multipart
     @POST("api/v1/artists/me/banner")
-    Call<ApiResponse<Artist>> uploadBanner(@Part("file") MultipartBody.Part file);
+    Call<ApiResponse<Artist>> uploadBanner(@Part MultipartBody.Part file);
 
     @DELETE("api/v1/artists/me/banner")
     Call<ApiResponse<Artist>> deleteBanner();

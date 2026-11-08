@@ -6,29 +6,76 @@
     android:layout_height="match_parent"
     android:background="@color/paper_deep">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/paper_deep">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
+        <!-- Spotify's library header: the title, then the two things you do
+             from here — filter, and make a playlist. -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="@string/nav_library"
+            app:title="@string/your_library"
             app:titleTextColor="@color/ink" />
 
-    </com.google.android.material.appbar.AppBarLayout>
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:clipToPadding="false"
+            android:scrollbars="none">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingBottom="80dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/filterChips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:chipSpacingHorizontal="8dp"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true">
 
-    <!-- Said where the list would be, with the way out in reach. -->
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipAll"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="All" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipPlaylists"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Playlists" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipArtists"
+                    style="@style/Widget.Oru.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Artists" />
+
+            </com.google.android.material.chip.ChipGroup>
+
+        </HorizontalScrollView>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingHorizontal="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="110dp" />
+
+    </LinearLayout>
+
+    <!-- Said where the list would be, with both ways out in reach. -->
     <LinearLayout
         android:id="@+id/libraryEmpty"
         android:layout_width="match_parent"
@@ -36,8 +83,7 @@
         android:gravity="center"
         android:orientation="vertical"
         android:paddingHorizontal="32dp"
-        android:visibility="gone"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:visibility="gone">
 
         <ImageView
             android:layout_width="44dp"
@@ -60,17 +106,27 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:gravity="center"
-            android:text="Tap the heart on any song to save it here. You can also make your own playlist."
+            android:text="Tap the heart on any song to keep it here, or start a playlist of your own."
             android:textAppearance="@style/TextAppearance.Oru.BodySoft"
             android:textColor="@color/ink_soft" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/createPlaylistEmptyButton"
+            style="@style/Widget.Oru.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/new_playlist"
+            app:icon="@drawable/ic_add"
+            app:iconTint="@color/night" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/goHomeButton"
             style="@style/Widget.Oru.Button.Outlined"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Go to Home" />
+            android:layout_marginTop="8dp"
+            android:text="Find songs" />
 
     </LinearLayout>
 
@@ -88,17 +144,5 @@
         android:layout_gravity="center"
         android:indeterminateTint="@color/flame"
         android:visibility="gone" />
-
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/newPlaylistButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="20dp"
-        android:text="New playlist"
-        android:textColor="@color/night"
-        app:backgroundTint="@color/flame"
-        app:icon="@drawable/ic_music"
-        app:iconTint="@color/night" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -69,6 +69,11 @@
             android:theme="@style/Theme.Oru" />
 
         <activity
+            android:name=".ui.library.LikedSongsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Oru" />
+
+        <activity
             android:name=".ui.search.SearchActivity"
             android:exported="false"
             android:theme="@style/Theme.Oru" />

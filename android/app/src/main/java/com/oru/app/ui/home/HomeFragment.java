@@ -59,6 +59,15 @@ public class HomeFragment extends Fragment {
             loadHome(true);
         });
 
+        // The account door lives beside the greeting now; MainActivity owns the
+        // menu so the artist-page entry keeps the account it already loaded.
+        binding.accountButton.setOnClickListener(v -> {
+            if (getActivity() instanceof com.oru.app.ui.MainActivity) {
+                ((com.oru.app.ui.MainActivity) getActivity())
+                        .openAccountMenu(binding.accountButton);
+            }
+        });
+
         if (musicRepo == null) {
             musicRepo = new MusicRepository(
                     com.oru.app.util.LazySession.getApiService(),

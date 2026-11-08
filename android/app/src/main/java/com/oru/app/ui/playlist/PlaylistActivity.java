@@ -45,6 +45,8 @@ public class PlaylistActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
+        binding.playAllButton.setOnClickListener(v -> togglePlay());
+        binding.shuffleButton.setOnClickListener(v -> shuffle());
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
                 binding.miniPlayer);
 
@@ -140,6 +142,9 @@ public class PlaylistActivity extends AppCompatActivity {
         binding.tracksRecyclerView.setVisibility(View.VISIBLE);
         binding.progressBar.setVisibility(View.GONE);
         binding.playerBar.setVisibility(songs.isEmpty() ? View.GONE : View.VISIBLE);
+        binding.playAllButton.setEnabled(!songs.isEmpty());
+        binding.playAllButton.setAlpha(songs.isEmpty() ? 0.4f : 1f);
+        binding.shuffleButton.setEnabled(!songs.isEmpty());
         if (!songs.isEmpty()) {
             Song first = songs.get(0);
             binding.playerTitle.setText(first.title);
@@ -161,6 +166,17 @@ public class PlaylistActivity extends AppCompatActivity {
             return;
         }
         com.oru.app.ui.player.Playback.start(this, playlist.songs, 0);
+    }
+
+    /** Shuffle plays the same songs from a randomised order. */
+    private void shuffle() {
+        if (playlist == null || playlist.songs == null
+                || playlist.songs.isEmpty()) {
+            return;
+        }
+        List<Song> shuffled = new java.util.ArrayList<>(playlist.songs);
+        java.util.Collections.shuffle(shuffled);
+        com.oru.app.ui.player.Playback.start(this, shuffled, 0);
     }
 
     private void askRemove(Song song) {

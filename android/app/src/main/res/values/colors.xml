@@ -40,4 +40,8 @@
     <color name="shimmer_base">#F1E7DA</color>
     <color name="shimmer_highlight">#FDF8F1</color>
     <color name="ember">#E8552E</color>
+    <color name="ripple_on_flame">#40FFFDF9</color>
+    <!-- Liked songs cover: the ember gradient Spotify gives its heart tile. -->
+    <color name="liked_from">#E8552E</color>
+    <color name="liked_to">#8E2B7A</color>
 </resources>

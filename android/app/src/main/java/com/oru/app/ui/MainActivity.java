@@ -62,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
         ViewCompat.requestApplyInsets(binding.getRoot());
 
         setupBottomNavigation();
-        setupToolbar();
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this, binding.miniPlayer);
         askForNotifications();
         openRequestedTab(getIntent());
@@ -141,20 +140,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupToolbar() {
-        // One gear in the corner, like the web header. It opens the account:
-        // profile, artist page when there is one, and settings.
-        binding.toolbar.inflateMenu(R.menu.main_menu);
-        binding.toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_settings) {
-                openAccountMenu();
-                return true;
-            }
-            return false;
-        });
-    }
-
-    private void openAccountMenu() {
+    /**
+     * The account menu — profile, artist page when there is one, settings — is
+     * opened by the button beside the greeting on Home.
+     */
+    public void openAccountMenu(View anchor) {
         if (account == null) {
             new com.oru.app.data.repository.AuthRepository(
                     com.oru.app.util.LazySession.getApiService(),
@@ -165,22 +155,21 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onSuccess(com.oru.app.data.model.User loaded) {
                             account = loaded;
-                            showAccountMenu();
+                            showAccountMenu(anchor);
                         }
 
                         @Override
                         public void onFailure(Throwable error) {
                             // Still offer the doors that do not need the account.
-                            showAccountMenu();
+                            showAccountMenu(anchor);
                         }
                     });
             return;
         }
-        showAccountMenu();
+        showAccountMenu(anchor);
     }
 
-    private void showAccountMenu() {
-        View anchor = binding.toolbar.findViewById(R.id.action_settings);
+    private void showAccountMenu(View anchor) {
         androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(
                 this, anchor != null ? anchor : binding.toolbar);
         popup.inflate(R.menu.account_menu);

@@ -2,6 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- The + from Spotify's library header: a playlist, made right here. -->
+    <item
+        android:id="@+id/action_new_playlist"
+        android:icon="@drawable/ic_add"
+        android:title="@string/new_playlist"
+        app:showAsAction="always" />
+
     <item
         android:id="@+id/action_downloads"
         android:icon="@drawable/ic_download"

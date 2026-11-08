@@ -25,8 +25,9 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
 
-        <!-- Everything wears Outfit unless a style says otherwise. -->
-        <item name="android:fontFamily">@font/outfit</item>
+        <!-- Everything wears Outfit unless a style says otherwise. The family
+             is pinned to 500: the default 400 read as hairlines on a phone. -->
+        <item name="android:fontFamily">@font/outfit_medium</item>
         <item name="android:textViewStyle">@style/Widget.Oru.TextView</item>
         <item name="android:editTextStyle">@style/Widget.Oru.EditText</item>
     </style>
@@ -40,10 +41,10 @@
 
     <!-- Default widgets pick up the typeface -->
     <style name="Widget.Oru.TextView" parent="android:Widget.TextView">
-        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit_medium</item>
     </style>
     <style name="Widget.Oru.EditText" parent="android:Widget.EditText">
-        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit_medium</item>
     </style>
 
     <!-- Text styles: Outfit for reading, Fraunces for display. Weights are
@@ -66,13 +67,13 @@
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.Body" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit_medium</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineSpacingMultiplier">1.2</item>
         <item name="android:textColor">@color/ink</item>
     </style>
     <style name="TextAppearance.Oru.BodySoft" parent="TextAppearance.Material3.BodyMedium">
-        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit_medium</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineSpacingMultiplier">1.25</item>
         <item name="android:textColor">@color/ink_soft</item>
