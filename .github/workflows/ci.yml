@@ -68,7 +68,16 @@ jobs:
       - uses: android-actions/setup-android@v4
 
       # Plain Gradle project: compileSdk 34, minSdk 24, Java 17. The wrapper
-      # downloads its own Gradle 8.7, so no Gradle setup step is needed.
+      # downloads its own Gradle 8.7, so no Gradle setup step is needed; the
+      # cache keeps that download (and the dependency cache) between runs.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+
       - name: Build the native APK
         run: cd android && ./gradlew assembleDebug --no-daemon
 
