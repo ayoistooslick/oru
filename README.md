@@ -1,60 +1,48 @@
 # ORU
 
-ORU, a music app for artists who are just starting out. Listeners find new songs, artists upload
-their own, and the front page is scored so that small artists can still show up there.
+ORU is a music app for artists who are just starting out. It is an Android app now: listeners find
+new songs, artists upload their own, and the front page is scored so that small artists can still
+show up there.
 
-Live at [oru.freebuff.app](https://oru.freebuff.app).
+[oru.freebuff.app](https://oru.freebuff.app) is the download page. Google will only sign people in
+inside a browser, so that site also hosts the one page the app needs: `/auth`.
 
-Tags: `independent-artist-platform` · `music-discovery` · `stream-your-own-songs` · `fastapi` · `react` · `vite` · `gsap-motion` · `android` · `media3` · `self-hosted-s3`
-## What the app does
+Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `android` · `media3` ·
+`react` · `vite` · `self-hosted-s3`
 
-- **Listeners** can sign up, browse, search, like songs, build playlists, follow artists and play
-  music. Playback controls are available in the sticky in-app player and, on supported devices,
-  in the lock-screen or notification media controls. The installed app shell opens offline, while
-  account data, search and streamed audio still need a connection.
-- **Artists** get a studio page where they upload audio and cover art, save drafts, publish songs
-  and releases, and see plays, likes and follows.
+## What the product does
+
+- **Listeners** sign up, browse, search, like songs, build playlists, follow artists and play music.
+  Playback has a queue, shuffle, repeat, a sleep timer that keeps counting with the screen off, and
+  lock-screen controls. Downloads play without a connection.
+- **Artists** get a studio page where they record or upload audio, trim it, add cover art, save
+  drafts, publish songs and releases, and see plays, likes and follows.
 - **Moderators** see reports from listeners and mark them resolved or dismissed.
-- The whole thing is one FastAPI process serving one React build, so there is no CORS setup and no
-  second server to keep running.
+
+The web build is a download page plus the sign-in handoff. All product UI lives in `android/`.
+
+## Sign-in across two surfaces
+
+Google refuses to sign a native app in directly, so the app sends the browser to `/auth`:
+
+1. The app opens `https://oru.freebuff.app/auth?client=android` in the browser.
+2. The page finishes Google sign-in (Google Identity Services) with the same client id the API
+   verifies.
+3. The page asks the API for a **one-time code** (`POST /auth/handoff`) and redirects to
+   `oru://auth?code=…`.
+4. `AuthCallbackActivity` trades that code for the session (`POST /auth/handoff/exchange`). Codes
+   live five minutes, are stored hashed, and die on first use, so a URL left in browser history is
+   useless.
+
+Email and password still sign in natively, inside the app.
 
 ## Stack
 
 - Python 3.11+ with FastAPI, SQLAlchemy and Alembic. SQLite by default, PostgreSQL through
   `DATABASE_URL`.
-- React 19, TypeScript, Vite and Tailwind CSS 4 for the web app. GSAP for animation, lucide-react
-  for icons.
-
-## Motion: one system, three places
-
-Movement in ORU is GSAP, and it is gated by the visitor's own motion settings (`motionSafe()` in
-`src/lib/motion.ts` short-circuits everything when `prefers-reduced-motion: reduce` is on). The
-three places it happens:
-
-1. **Page entrances** — `usePageEnter` in `src/hooks/usePageEnter.ts` staggers everything marked
-   `data-enter` into place on route change, then clears its inline styles so CSS transitions take
-   over again.
-2. **The player chrome** — `NowPlaying.tsx` runs a typed timeline when a track opens, in the exact
-   order the ear goes: artwork, then title, then controls.
-3. **Toasts** — `ToastViewport.tsx` animates a toast in from the same side as the action that
-   triggered it.
-
-The player timeline is the one worth reading in full; it shows the stagger approach in its
-plainest form:
-
-```tsx
-const timeline = gsap.timeline();
-timeline
-  .from("[data-np-art]", { scale: 0.9, y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 0)
-  .from("[data-np-line]", { y: 16, opacity: 0, duration: 0.45, stagger: 0.06, ease: "power3.out" }, 0.12)
-  .from("[data-np-controls]", { y: 18, opacity: 0, duration: 0.45, stagger: 0.05, ease: "power3.out" }, 0.2);
-```
-
-The promo film in `public/promo` is built from real screen captures with the pipeline in
-`scripts/promo/capture.cjs` (headless Chrome over the live site) and `scripts/promo/build_video.py`
-(Pillow frames piped into ffmpeg, synthesized soundtrack).
-- SQLite and local files for media in development. Production runs on PostgreSQL and
-  S3-compatible object storage. Uploads are streamed as-is: there is no transcoding and no CDN.
+- React 19, TypeScript, Vite and Tailwind CSS 4 for the download page and the sign-in handoff. GSAP
+  for animation.
+- Android in Java with native views, Retrofit, and Android Media3 for playback.
 
 ## Where things live
 
@@ -62,16 +50,14 @@ The promo film in `public/promo` is built from real screen captures with the pip
 app/                  FastAPI app. Routes are in app/api/, models in app/models.py
 api/index.py          production entrypoint used by the host. The host only routes /api, so
                       calls travel as /api?__path=/api/v1/... and app/main.py puts the path back
-src/                  React app: pages in src/pages, state in src/state
-public/               web manifest, service worker, icons, share images
+src/                  the site: Landing.tsx (download page), Auth.tsx (sign-in handoff), About.tsx
+public/               icons and share images. sw.js is a self-destruct worker that retires the
+                      old web app's cache for anyone who installed it
 docs/API.md           every route with example requests
 docs/DECISIONS.md     why discovery and ranking work the way they do
 tests/                pytest suite
 scripts/preview.sh    runs API and built frontend on one port
-scripts/generate_images.py   regenerates icons and share images
-scripts/promo/        headless screen capture and the promo film builder
-android/              the native Android client (Java, Media3 playback, Retrofit)
-twa-manifest.json     the retired TWA config, kept only for reference
+android/              the Android client (Java, Media3 playback, Retrofit)
 .github/workflows/    CI: tests, then the native Android build and release
 ```
 
@@ -97,17 +83,6 @@ Everything on one port, which is how production runs:
 sh ./scripts/preview.sh
 ```
 
-The script builds the frontend if `dist/` is missing, then starts the API process that serves it.
-One process, one port.
-
-If you would rather run Vite on its own, point it at the API with `VITE_API_BASE_URL` and add its
-origin to `CORS_ORIGINS` in `.env`:
-
-```bash
-npm install
-VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1 npm run dev
-```
-
 ## Tests
 
 ```bash
@@ -124,105 +99,37 @@ Copy `.env.example` to `.env`. The settings that matter:
 
 - `DATABASE_URL` - SQLite file or a PostgreSQL URL.
 - `JWT_SECRET` - a long random value. Never reuse the example value in production.
-- `JWT_EXPIRE_MINUTES` - access token lifetime.
-- `CORS_ORIGINS` - JSON array of frontend origins, only needed when the frontend runs elsewhere.
+- `GOOGLE_CLIENT_ID` - the web client id. Sign-in is hidden until this is set, and the API checks
+  every Google token against it.
 - `MEDIA_DIRECTORY` - where uploads land, `./data/media` by default.
-- `MAX_AUDIO_BYTES`, `MAX_IMAGE_BYTES` - upload limits.
 - `ADMIN_EMAILS` - addresses that get moderator access on registration. Keep it private.
-- `SITE_URL` - the public origin of the app, for example `https://oru.freebuff.app`. Used to build
-  absolute links in share previews. Leave it empty locally.
+- `SITE_URL` - the public origin, for example `https://oru.freebuff.app`. Used for share links.
 
 `.env` and the database files are ignored by Git. Never commit them.
 
+## Starting the catalogue over
+
+`POST /api/v1/maintenance/reset` drops every table and builds the schema back. It only exists while
+`ORU_RESET_TOKEN` is set in the environment; the caller must send the same value in `X-Oru-Reset`.
+Store and remove the secret around the wipe, so the route is not left armed:
+
+```bash
+freebuff-deploy env set '{"ORU_RESET_TOKEN":"<random>"}' && freebuff-deploy start
+curl -X POST "https://oru.freebuff.app/api?__path=/api/v1/maintenance/reset" \
+  -H "X-Oru-Reset: <random>"
+freebuff-deploy env unset ORU_RESET_TOKEN && freebuff-deploy start
+```
+
 ## The Android app
 
-`android/` is the native Android client (Java, native views, Retrofit networking, and Android
-Media3 playback). It is not a WebView or Trusted Web Activity. It uses the same ORU API and
-account as the website, while Android owns navigation, file pickers, notifications, media
-controls, and background playback.
+`android/` is the native client (Java, native views, Retrofit networking, Android Media3 playback).
+It is not a WebView or Trusted Web Activity. It talks to the same ORU API as the site.
 
-CI (`.github/workflows/ci.yml`) runs backend and frontend checks, builds the native debug APK,
-and publishes it as both a workflow artifact and a GitHub release asset.
+CI (`.github/workflows/ci.yml`) runs backend and frontend checks, builds the native debug APK, and
+publishes it as both a workflow artifact and a GitHub release asset.
 
 - Pushes to `main` create a release tagged `build-<run number>`.
 - Pushing a tag like `v1.0.0` creates a release with that tag instead.
-- The current raw APK is available at
-  `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
-- CI builds do not need the website to be reachable. The app connects to the ORU API at runtime.
-- CI uses a per-run debug signing key. This is suitable for testing; uninstall an APK from a prior
-  CI run before installing a newer one. Configure a stable release keystore before Play Store use.
-
-## Recent listener update
-
-- Listeners can submit an ORU artist's song for review, track and withdraw pending submissions,
-  and see who shared an approved song. The credited artist or a moderator can approve or reject it.
-- The player has a seek bar, shuffle, repeat-one and repeat-queue controls. Its mini-player remains
-  available across signed-in pages, and supported browsers expose playback through system media
-  controls.
-- The expanded player actions menu opens and closes from its toggle, the explicit hide control,
-  Escape, or an outside click.
-- Liked songs have playlist artwork, play-all and shuffle actions, and a complete queue/list view.
-- Search supports recent terms and result scopes. Artist names on track rows link to their profile.
-- Mobile captions and touch targets are larger. The app explains offline limits and provides a
-  first-launch setup checklist for notification permission and persistent browser storage.
-
-The browser must wait for a user action before asking for notification permission; storage
-persistence is requested through the browser storage API. A PWA/TWA cannot request Android's
-default music-player role. Android file handling is declared separately in the TWA configuration.
-
-## Recording, pictures and weekly charts
-
-- **Record in the app.** The studio can record straight from the device microphone, or take a
-  file. Either way the sound lands in the same editor before it is uploaded.
-- **Trim, fade and level.** The editor draws a waveform, sets a start and an end, adds a fade in
-  and a fade out, can even out the volume, and saves a WAV. The cut happens in the browser, so
-  nothing is uploaded until the artist saves the clip.
-- **Seek properly.** Audio responses answer HTTP Range requests, so dragging the player no longer
-  restarts the song. The scrubber follows the finger while it is held, then hands control back to
-  the audio clock.
-- **Pictures.** Everyone can add a profile picture. Artists also get a wide banner behind their
-  name. Both use the same storage and size rules as cover artwork.
-- **Features.** A song can credit up to five other artists. They show as `feat.` wherever the song
-  plays and appear on their own page under "Featured on".
-- **This week.** The home page shows the most played tracks of the last seven days, the studio
-  shows weekly plays, weekly likes and the week's top song, and `/rankings/weekly` serves the same
-  numbers over the API.
-- **Phones.** The signed-in app is drawn at 92 percent on small screens, so more of it fits without
-  shrinking touches below a comfortable size.
-
-The expanded player closes from its down arrow again, and opens whenever a song starts.
-
-## Promo video
-
-`public/promo/oru-promo.mp4` is a 34 second 1080p promo built from the real product screenshots.
-`scripts/promo/build_video.py` draws every frame with Pillow, writes the soundtrack with numpy and
-hands the frames to ffmpeg. To rebuild it:
-
-```bash
-.venv/bin/pip install pillow numpy
-npm install --no-save --ignore-scripts ffmpeg-static && node node_modules/ffmpeg-static/install.js
-.venv/bin/python scripts/promo/build_video.py
-```
-
-## Plan for the next update
-
-- **Listener upgrades.** Smaller quality-of-life work for people who only listen: better search,
-  clearer offline behaviour, and quicker ways to get from one song to more by the same artist.
-- **Playlists that feel like playlists.** A collapsible queue, drag to reorder, and a proper next
-  up view while a song plays.
-- **Saved takes.** Keep several recordings in the studio, so a second attempt does not replace the
-  first.
-
-## Documentation
-
-- [CONTRIBUTING.md](CONTRIBUTING.md) - how to send a change.
-- [docs/API.md](docs/API.md) - routes, payloads, example requests.
-- [docs/DECISIONS.md](docs/DECISIONS.md) - ranking and discovery choices, and what is deliberately
-  not claimed.
-
-## Known limits
-
-This is a working product, not a finished hosting service. Audio is streamed in its original file,
-there is no resume or retry on uploads, no email verification or password reset, and rate limiting
-is in-process. The report endpoints record what people said and what moderators decided; that is a
-log, not a legal process.
+- The current raw APK is at `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
+- CI uses a per-run debug signing key, so uninstall an APK from a prior CI run before installing a
+  newer one. Configure a stable release keystore before Play Store use.
