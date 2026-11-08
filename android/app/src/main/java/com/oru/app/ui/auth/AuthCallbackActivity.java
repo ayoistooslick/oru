@@ -8,7 +8,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.oru.app.R;
-import com.oru.app.data.api.ApiResponse;
+import com.oru.app.data.model.ApiResponse;
 import com.oru.app.data.model.TokenResponse;
 import com.oru.app.data.repository.AuthRepository;
 import com.oru.app.data.repository.Callback;
