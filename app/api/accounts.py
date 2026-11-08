@@ -1,5 +1,7 @@
+import hashlib
 import re
 import secrets
+from datetime import timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -11,8 +13,15 @@ from app.api.uploads import IMAGE_TYPES, guess_image_type, media_response, save_
 from app.config import settings
 from app.database import get_db
 from app.dependencies import current_user, optional_current_user
-from app.models import ArtistProfile, Follow, Like, ListeningEvent, Song, User
-from app.schemas import ArtistProfileCreate, GoogleLoginRequest, LoginRequest, ProfileUpdate, RegisterRequest
+from app.models import ArtistProfile, Follow, Like, ListeningEvent, LoginCode, Song, User, now_utc
+from app.schemas import (
+    ArtistProfileCreate,
+    GoogleLoginRequest,
+    HandoffRequest,
+    LoginRequest,
+    ProfileUpdate,
+    RegisterRequest,
+)
 from app.security import create_access_token, hash_password, verify_password
 from app.storage import storage
 
@@ -187,6 +196,52 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/auth/me")
 def me(user: User = Depends(current_user)):
     return {"user": user_data(user)}
+
+
+# How long a browser has to hand its sign-in to the phone before the code is
+# useless. Long enough to switch apps, short enough that a leaked URL is stale.
+_HANDOFF_TTL = timedelta(minutes=5)
+
+
+def _handoff_hash(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+@router.post("/auth/handoff")
+def start_handoff(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Mint a one-time code for the app, after a browser has signed in."""
+    now = now_utc()
+    db.query(LoginCode).filter(LoginCode.expires_at < now).delete()
+    code = secrets.token_urlsafe(32)
+    db.add(LoginCode(user_id=user.id, code_hash=_handoff_hash(code),
+                     expires_at=now + _HANDOFF_TTL))
+    db.commit()
+    return {"code": code, "expires_in": int(_HANDOFF_TTL.total_seconds())}
+
+
+@router.post("/auth/handoff/exchange")
+def exchange_handoff(payload: HandoffRequest, db: Session = Depends(get_db)):
+    """Trade the code the app received for a session, exactly once."""
+    row = db.scalar(select(LoginCode).where(
+        LoginCode.code_hash == _handoff_hash(payload.code),
+        LoginCode.used_at.is_(None)))
+    # SQLite hands datetimes back without a zone; Postgres keeps the offset.
+    expires = row.expires_at.replace(tzinfo=timezone.utc) if row is not None \
+        and row.expires_at.tzinfo is None else (row.expires_at if row else None)
+    if row is None or expires is None or expires < now_utc():
+        raise HTTPException(status_code=401, detail={
+            "code": "bad_handoff",
+            "message": "That sign-in link has expired. Sign in again."})
+    row.used_at = now_utc()
+    user = db.get(User, row.user_id)
+    if user is None or not user.is_active:
+        db.commit()
+        raise HTTPException(status_code=401, detail={
+            "code": "bad_handoff",
+            "message": "That account is no longer available."})
+    db.commit()
+    return {"user": user_data(user), "access_token": create_access_token(user.id),
+            "token_type": "bearer"}
 
 
 @router.patch("/listeners/me")

@@ -182,6 +182,39 @@ public class AuthRepository {
         });
     }
 
+    /**
+     * Trade the code the browser returned for a real session. Google only signs
+     * people in inside a browser, so this is the last step of that detour.
+     */
+    public void exchangeHandoff(String code, Callback<TokenResponse> cb) {
+        HandoffRequest body = new HandoffRequest(code);
+        api.exchangeHandoff(body).enqueue(new retrofit2.Callback<TokenResponse>() {
+            @Override
+            public void onResponse(retrofit2.Call<TokenResponse> call,
+                    retrofit2.Response<TokenResponse> response) {
+                try {
+                    if (!response.isSuccessful()) {
+                        cb.onFailure(failure(response));
+                        return;
+                    }
+                    TokenResponse token = response.body();
+                    if (token == null || token.accessToken == null) {
+                        cb.onFailure(emptyReply());
+                        return;
+                    }
+                    cb.onSuccess(token);
+                } catch (Exception e) {
+                    cb.onFailure(e);
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<TokenResponse> call, Throwable t) {
+                cb.onFailure(t);
+            }
+        });
+    }
+
     public void getCurrentUser(Callback<User> cb) {
         api.getCurrentUser().enqueue(new retrofit2.Callback<UserEnvelope>() {
             @Override

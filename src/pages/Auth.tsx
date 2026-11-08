@@ -1,38 +1,31 @@
-import { useEffect, useMemo, useState, type FormEvent, type InputHTMLAttributes } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { ApiError, auth } from "../lib/api";
-import { useAuth } from "../state/AuthContext";
-import { useToasts } from "../state/ToastContext";
-import { OruLogo } from "../components/OruMark";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ApiError, auth, setToken } from "../lib/api";
+import { OruLogo, OruMark } from "../components/OruMark";
+import { Check, Download } from "../components/icons";
 import { Spinner } from "../components/ui";
 
-type Mode = "signin" | "signup";
+/**
+ * The one page the site still does real work on: finishing a Google sign-in
+ * for the Android app.
+ *
+ * Google only signs people in inside a browser. The app opens this page in the
+ * browser, the page signs in, and the browser hands the app a single-use code
+ * through `oru://auth?code=…`. The code is traded for the session by the app,
+ * so a URL left in browser history cannot be replayed.
+ */
 
-function LightField({
-  label,
-  hint,
-  error,
-  ...rest
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; error?: string }) {
-  return (
-    <label className="block">
-      <span className="text-[13px] font-bold text-paper">{label}</span>
-      <input
-        className={`mt-1.5 h-12 w-full rounded-lg border-2 bg-white px-4 text-[15px] text-paper outline-none transition placeholder:text-[#8a8175] ${
-          error ? "border-[#d31c2a]" : "border-hair focus:border-flame"
-        }`}
-        {...rest}
-      />
-      {error ? (
-        <span className="mt-1 block text-[12.5px] font-semibold text-[#d31c2a]">{error}</span>
-      ) : hint ? (
-        <span className="mt-1 block text-[12.5px] text-[#4d4d4d]">{hint}</span>
-      ) : null}
-    </label>
-  );
+const APP_SCHEME = "oru://auth";
+
+function deepLink(code: string): string {
+  return `${APP_SCHEME}?code=${encodeURIComponent(code)}`;
 }
 
-/** Loads Google's sign-in script once and reports when it is ready to use. */
+interface GoogleIdApi {
+  initialize: (options: Record<string, unknown>) => void;
+  renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
+}
+
 function useGoogleScript(enabled: boolean): boolean {
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -52,205 +45,194 @@ function useGoogleScript(enabled: boolean): boolean {
   return ready;
 }
 
+type Phase = "checking" | "ready" | "finishing" | "handing" | "handed" | "unavailable";
+
 export function AuthPage() {
-  const [params] = useSearchParams();
-  const navigate = useNavigate();
-  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
-  const toasts = useToasts();
+  const [phase, setPhase] = useState<Phase>("checking");
+  const [config, setConfig] = useState<{ enabled: boolean; clientId: string | null }>({
+    enabled: false,
+    clientId: null,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
 
-  const returnTo = params.get("returnTo") || "/listen";
-  const mode: Mode = useMemo(() => (params.get("mode") === "signin" ? "signin" : "signup"), [params]);
-
-  const [tab, setTab] = useState<Mode>(mode);
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [values, setValues] = useState({ email: "", password: "" });
-  const [google, setGoogle] = useState<{ enabled: boolean; client_id: string | null }>({ enabled: false, client_id: null });
-
-  // Only offer Google when the server confirms it is configured. A dead button
-  // is worse than no button.
   useEffect(() => {
     let alive = true;
     auth
       .config()
-      .then((config) => {
-        if (alive) setGoogle({ enabled: config.google_enabled, client_id: config.google_client_id });
+      .then((result) => {
+        if (!alive) return;
+        const enabled = Boolean(result.google_enabled && result.google_client_id);
+        setConfig({ enabled, clientId: result.google_client_id });
+        setPhase(enabled ? "ready" : "unavailable");
       })
-      .catch(() => {
-        /* leave Google hidden */
+      .catch((cause: unknown) => {
+        if (!alive) return;
+        setPhase("unavailable");
+        setError(cause instanceof Error ? cause.message : "The server could not be reached.");
       });
     return () => {
       alive = false;
     };
   }, []);
 
-  const scriptReady = useGoogleScript(google.enabled && Boolean(google.client_id));
+  const scriptReady = useGoogleScript(phase === "ready" && config.enabled);
 
   useEffect(() => {
-    if (!scriptReady || !google.client_id) return;
-    interface GoogleIdApi {
-      initialize: (options: Record<string, unknown>) => void;
-      renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
-    }
-    const g = (window as unknown as { google?: { accounts?: { id?: GoogleIdApi } } }).google;
-    const googleApi = g?.accounts?.id;
+    if (!scriptReady || !config.clientId) return;
+    const googleApi = (window as unknown as { google?: { accounts?: { id?: GoogleIdApi } } }).google?.accounts?.id;
     if (!googleApi) return;
+
+    const finish = async (credential: string) => {
+      setError(null);
+      setPhase("finishing");
+      try {
+        const session = await auth.google(credential);
+        setToken(session.access_token);
+        // The browser session is only a means to an end; the code is what the
+        // app needs, and it is good for a few minutes and one use.
+        const handoff = await auth.handoff();
+        setCode(handoff.code);
+        setPhase("handed");
+        window.location.href = deepLink(handoff.code);
+      } catch (cause) {
+        setPhase("ready");
+        setError(
+          cause instanceof ApiError
+            ? cause.message
+            : cause instanceof Error
+              ? cause.message
+              : "Sign-in did not finish. Try again.",
+        );
+      }
+    };
+
     googleApi.initialize({
-      client_id: google.client_id,
+      client_id: config.clientId,
       callback: (response: { credential?: string }) => {
-        if (!response.credential) return;
-        signInWithGoogle(response.credential)
-          .then(() => navigate(returnTo, { replace: true }))
-          .catch((error: unknown) => setFormError(error instanceof Error ? error.message : "Google sign-in failed. Try again."));
+        if (response.credential) void finish(response.credential);
       },
     });
+
     const holder = document.getElementById("google-button");
     if (holder) {
       holder.innerHTML = "";
-      googleApi.renderButton(holder, { theme: "outline", size: "large", width: 320, text: "continue_with" });
+      googleApi.renderButton(holder, {
+        theme: "filled_black",
+        size: "large",
+        width: 300,
+        text: "continue_with",
+        shape: "pill",
+        logo_alignment: "left",
+      });
     }
-  }, [scriptReady, google.client_id, signInWithGoogle, navigate, returnTo]);
-
-  if (!loading && user) return <Navigate to={returnTo} replace />;
-
-  const update = (key: keyof typeof values) => (event: { target: { value: string } }) =>
-    setValues((current) => ({ ...current, [key]: event.target.value }));
-
-  const handleError = (error: unknown) => {
-    if (error instanceof ApiError) {
-      setFormError(error.details.length === 0 ? error.message : null);
-      const mapped: Record<string, string> = {};
-      for (const detail of error.details) {
-        const field = detail.field?.split(".").pop() ?? "";
-        if (field) mapped[field] = detail.message;
-      }
-      setFieldErrors(mapped);
-      if (error.details.length > 0 && !Object.keys(mapped).length) setFormError(error.message);
-      return;
-    }
-    setFormError(error instanceof Error ? error.message : "Something went wrong. Try again.");
-  };
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setFormError(null);
-    setFieldErrors({});
-    try {
-      if (tab === "signin") {
-        const signedIn = await signIn(values.email.trim(), values.password);
-        toasts.saved(`Welcome back, ${signedIn.display_name.split(" ")[0]}`);
-      } else {
-        // Email and password is all we ask for. The name and handle are worked
-        // out on the server so sign-up stays to one short step.
-        await signUp({ email: values.email.trim(), password: values.password });
-        toasts.saved("Account created", "You can start listening right away.");
-      }
-      navigate(returnTo, { replace: true });
-    } catch (error) {
-      handleError(error);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const switchTab = (next: Mode) => {
-    setTab(next);
-    setFormError(null);
-    setFieldErrors({});
-  };
-
-  const showGoogle = google.enabled && Boolean(google.client_id);
+  }, [scriptReady, config.clientId]);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-paper px-4 py-8">
+    <div className="flex min-h-[100dvh] flex-col bg-paper px-5 py-8">
       <Link to="/" className="mx-auto" aria-label="ORU home">
         <OruLogo />
       </Link>
 
-      <main className="mx-auto flex w-full max-w-[480px] flex-1 flex-col justify-center py-10">
-        <div className="rounded-2xl bg-white p-8 shadow-float sm:p-10">
-          <h1 className="font-display text-[30px] font-semibold tracking-[-0.01em] text-paper">
-            {tab === "signin" ? "Log in to ORU" : "Create your account"}
-          </h1>
-          <p className="mt-2 text-[14.5px] text-[#4d4d4d]">
-            {tab === "signin" ? "Welcome back." : "Free to join. One minute to finish."}
-          </p>
+      <main className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center py-10">
+        <div className="overflow-hidden rounded-3xl border border-hair bg-card shadow-float">
+          <div className="border-b border-hair bg-gradient-to-br from-flame/20 to-transparent px-7 py-7">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-flame/15 ring-1 ring-flame/30">
+              <OruMark className="h-6 w-6" />
+            </span>
+            <h1 className="mt-4 font-display text-[27px] font-extrabold leading-tight tracking-[-0.02em] text-ink">
+              {phase === "handed" ? "You're in." : "Sign in to ORU"}
+            </h1>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
+              {phase === "handed"
+                ? "Handing you back to the app now. It stays open in the background."
+                : "This page finishes Google sign-in and sends you straight back to the ORU app."}
+            </p>
+          </div>
 
-          {showGoogle ? (
-            <>
-              <div id="google-button" className="mt-6 flex min-h-[44px] justify-center" />
-              <div className="my-5 flex items-center gap-3 text-[13px] font-semibold text-[#8a8175]">
-                <span className="h-px flex-1 bg-[#e0e0e0]" />
-                or
-                <span className="h-px flex-1 bg-[#e0e0e0]" />
+          <div className="px-7 py-7">
+            {phase === "checking" ? (
+              <div className="flex items-center gap-3 text-[14.5px] font-semibold text-ink-soft">
+                <Spinner className="h-5 w-5 text-flame-ink" />
+                Checking how you can sign in
               </div>
-            </>
-          ) : null}
-
-          <form onSubmit={submit} className={showGoogle ? "space-y-4" : "mt-6 space-y-4"}>
-            <LightField
-              label="Email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              value={values.email}
-              onChange={update("email")}
-              error={fieldErrors.email}
-              required
-            />
-            <LightField
-              label="Password"
-              name="password"
-              type="password"
-              placeholder={tab === "signup" ? "10 characters or more" : "Your password"}
-              autoComplete={tab === "signin" ? "current-password" : "new-password"}
-              hint={tab === "signup" ? "Use at least 10 characters." : undefined}
-              value={values.password}
-              onChange={update("password")}
-              error={fieldErrors.password}
-              required
-            />
-
-            {formError ? (
-              <p className="rounded border border-[#d31c2a] bg-[#fdeaea] px-4 py-3 text-[14px] font-semibold text-[#a41b25]">
-                {formError}
-              </p>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="h-12 w-full rounded-full bg-flame text-[16px] font-semibold text-cream shadow-ember transition hover:scale-[1.01] disabled:opacity-60 press"
-            >
-              {busy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner /> One moment
-                </span>
-              ) : tab === "signin" ? (
-                "Log in"
-              ) : (
-                "Sign up free"
-              )}
-            </button>
-          </form>
+            {phase === "ready" || phase === "finishing" ? (
+              <>
+                <div id="google-button" className="flex min-h-[46px] justify-center" />
+                {!scriptReady ? (
+                  <p className="mt-3 text-center text-[13px] text-ink-faint">
+                    Loading Google sign-in…
+                  </p>
+                ) : null}
+                {phase === "finishing" ? (
+                  <p className="mt-4 flex items-center justify-center gap-2 text-[14px] font-semibold text-ink-soft">
+                    <Spinner className="h-4 w-4" />
+                    Signing you in
+                  </p>
+                ) : null}
+                <p className="mt-5 text-center text-[13px] leading-relaxed text-ink-faint">
+                  ORU uses your Google name and picture for your profile. Nothing else.
+                </p>
+              </>
+            ) : null}
 
-          <div className="mt-6 border-t border-[#e0e0e0] pt-5 text-center text-[15px] text-[#4d4d4d]">
-            {tab === "signin" ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={() => switchTab(tab === "signin" ? "signup" : "signin")}
-              className="font-bold text-paper underline underline-offset-4"
-            >
-              {tab === "signin" ? "Sign up for free" : "Log in"}
-            </button>
+            {phase === "handed" ? (
+              <div className="space-y-4">
+                <ol className="space-y-3">
+                  {["Signed in", "Sent back to the app"].map((line) => (
+                    <li key={line} className="flex items-center gap-3 text-[14.5px] font-semibold text-ink">
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-flame text-cream">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                      {line}
+                    </li>
+                  ))}
+                </ol>
+                {code ? (
+                  <a
+                    href={deepLink(code)}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-flame text-[15px] font-bold text-cream shadow-ember transition hover:bg-flame-ink press"
+                  >
+                    Open the ORU app
+                  </a>
+                ) : null}
+                <p className="text-center text-[13px] leading-relaxed text-ink-soft">
+                  Nothing happened? Open ORU yourself and you will already be signed in.
+                </p>
+              </div>
+            ) : null}
+
+            {phase === "unavailable" ? (
+              <div className="space-y-4">
+                <p className="rounded-xl border border-hair bg-paper-deep px-4 py-3 text-[14px] leading-relaxed text-ink-soft">
+                  {error ??
+                    "Google sign-in is switched off right now. You can still sign in with your email and password inside the app."}
+                </p>
+                <Link
+                  to="/"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-hair text-[14.5px] font-semibold text-ink transition hover:bg-ink/8"
+                >
+                  <Download className="h-4 w-4" />
+                  Download ORU for Android
+                </Link>
+              </div>
+            ) : null}
+
+            {error && phase === "ready" ? (
+              <p className="mt-4 rounded-xl border border-[#e5484d]/40 bg-[#e5484d]/10 px-4 py-3 text-[13.5px] font-semibold leading-relaxed text-[#ffb0ab]">
+                {error}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[13px] text-[#7a7a7a]">
-          By continuing you agree to keep other people's music your own.
+        <p className="mt-6 text-center text-[13px] text-ink-faint">
+          ORU runs on Android.{" "}
+          <Link to="/" className="font-semibold text-ink-soft underline underline-offset-4 hover:text-ink">
+            Download the app
+          </Link>
         </p>
       </main>
     </div>

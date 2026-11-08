@@ -53,6 +53,20 @@
             android:screenOrientation="unspecified"
             android:theme="@style/Theme.Oru" />
 
+        <!-- The browser's Google sign-in comes back here as oru://auth?code=… -->
+        <activity
+            android:name=".ui.auth.AuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Oru">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="oru" android:host="auth" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".ui.artist.ArtistActivity"
             android:exported="false"

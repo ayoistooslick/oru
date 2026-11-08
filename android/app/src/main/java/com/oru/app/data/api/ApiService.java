@@ -29,6 +29,11 @@ public interface ApiService {
     @POST("api/v1/auth/google")
     Call<TokenResponse> googleLogin(@Body GoogleLoginRequest body);
 
+    // Google sign-in finishes in the browser, which hands the app a one-time
+    // code through oru://auth. This trades that code for the session.
+    @POST("api/v1/auth/handoff/exchange")
+    Call<TokenResponse> exchangeHandoff(@Body HandoffRequest body);
+
     @GET("api/v1/auth/config")
     Call<AuthConfig> authConfig();
 

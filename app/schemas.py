@@ -18,6 +18,11 @@ class GoogleLoginRequest(BaseModel):
     id_token: str = Field(min_length=10, max_length=4096)
 
 
+class HandoffRequest(BaseModel):
+    """The one-time code the browser gave the app after signing in."""
+    code: str = Field(min_length=10, max_length=128)
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)

@@ -149,4 +149,8 @@ export const auth = {
   google: (idToken: string) => request<AuthResponse>("/auth/google", { method: "POST", body: { id_token: idToken }, token: null }),
   config: () => request<{ google_enabled: boolean; google_client_id: string | null }>("/auth/config", { token: null }),
   me: () => request<{ user: AuthResponse["user"] }>("/auth/me"),
+  // Browser to app: mint a one-time code the phone can trade for its session.
+  handoff: () => request<{ code: string; expires_in: number }>("/auth/handoff", { method: "POST" }),
+  exchange: (code: string) =>
+    request<AuthResponse>("/auth/handoff/exchange", { method: "POST", body: { code }, token: null }),
 };

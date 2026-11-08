@@ -30,6 +30,23 @@ class User(Base):
     artist_profile: Mapped["ArtistProfile"] = relationship(back_populates="user", uselist=False)
 
 
+class LoginCode(Base):
+    """A short-lived ticket that carries a browser sign-in back to the app.
+
+    Google will only sign a person in inside a browser, so the app opens the
+    site, the site signs in, and the phone is handed a single-use code instead
+    of the token itself: a URL that ends up in browser history cannot be
+    replayed as a session.
+    """
+    __tablename__ = "login_codes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+
 class ArtistProfile(Base):
     __tablename__ = "artist_profiles"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

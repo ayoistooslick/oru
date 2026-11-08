@@ -4,11 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Patterns;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -29,8 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *  - When signed out, show sign-in form.
  *  - Tapping "No account? Sign up" swaps to the registration form
  *    (adds handle + display name fields).
- *  - Google sign-in goes through Credential Manager with the web client ID the
- *    server publishes; the button only appears when the server has it enabled.
+ *  - Google leaves for the site in a browser, comes back through oru://auth
+ *    and finishes in {@link AuthCallbackActivity}.
  */
 public class AuthActivity extends AppCompatActivity {
 
@@ -39,7 +36,7 @@ public class AuthActivity extends AppCompatActivity {
     private AuthRepository authRepo;
     private boolean isSignUp = false;
     private final AtomicBoolean busy = new AtomicBoolean(false);
-    private String googleClientId = null;
+    private boolean googleAvailable = false;
     private int minPasswordLength = 10;
 
     @Override
@@ -81,7 +78,7 @@ public class AuthActivity extends AppCompatActivity {
                     }
                     if (config.googleEnabled && config.googleClientId != null
                             && !config.googleClientId.isEmpty()) {
-                        googleClientId = config.googleClientId;
+                        googleAvailable = true;
                         binding.googleButton.setVisibility(View.VISIBLE);
                     }
                 });
@@ -136,9 +133,6 @@ public class AuthActivity extends AppCompatActivity {
                 }
             });
         }
-        binding.primaryButton.setOnClickListener(v -> submit());
-        binding.secondaryButton.setOnClickListener(v -> toggleMode());
-        binding.googleButton.setOnClickListener(v -> signInWithGoogle());
     }
 
     private void setupButtons() {
@@ -148,86 +142,42 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     /**
-     * Asks Google for an ID token through Credential Manager. The server's web
-     * client ID is the audience, which is what the backend verifies.
+     * Google only signs people in inside a browser, so the button leaves for
+     * ORU's own page. That page finishes the sign-in and returns through
+     * oru://auth with a one-time code, which AuthCallbackActivity trades for
+     * the session.
      */
     private void signInWithGoogle() {
-        if (googleClientId == null) {
+        if (!googleAvailable) {
             Snackbar.make(binding.getRoot(),
                     "Google sign-in is not available right now",
                     Snackbar.LENGTH_SHORT).show();
             return;
         }
-        binding.progressBar.setVisibility(View.VISIBLE);
-        androidx.credentials.CredentialManager manager =
-                androidx.credentials.CredentialManager.create(this);
-        com.google.android.libraries.identity.googleid.GetGoogleIdOption option =
-                new com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
-                        .setFilterByAuthorizedAccounts(false)
-                        .setAutoSelectEnabled(false)
-                        .setServerClientId(googleClientId)
-                        .build();
-        androidx.credentials.GetCredentialRequest request =
-                new androidx.credentials.GetCredentialRequest.Builder()
-                        .addCredentialOption(option)
-                        .build();
-
-        manager.getCredentialAsync(this, request, null,
-                androidx.core.content.ContextCompat.getMainExecutor(this),
-                new androidx.credentials.CredentialManagerCallback<androidx.credentials.GetCredentialResponse,
-                        androidx.credentials.exceptions.GetCredentialException>() {
-                    @Override
-                    public void onResult(androidx.credentials.GetCredentialResponse result) {
-                        String idToken = googleIdToken(result);
-                        if (idToken == null) {
-                            binding.progressBar.setVisibility(View.GONE);
-                            setError("Google did not return a usable account");
-                            return;
-                        }
-                        sendGoogleToken(idToken);
-                    }
-
-                    @Override
-                    public void onError(@NonNull androidx.credentials.exceptions.GetCredentialException error) {
-                        binding.progressBar.setVisibility(View.GONE);
-                        // A dismissed sheet is not an error worth shouting about.
-                        String message = error.getMessage();
-                        if (message != null && message.contains("cancel")) {
-                            return;
-                        }
-                        setError("Google sign-in failed. Try another way.");
-                    }
-                });
-    }
-
-    private String googleIdToken(androidx.credentials.GetCredentialResponse result) {
+        clearError();
+        String url = com.oru.app.data.api.ApiClient.origin()
+                + "/auth?mode=signin&client=android";
+        Intent browser = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+        browser.addCategory(Intent.CATEGORY_BROWSABLE);
         try {
-            com.google.android.libraries.identity.googleid.GoogleIdTokenCredential credential =
-                    com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-                            .createFrom(result.getCredential().getData());
-            return credential.getIdToken();
-        } catch (RuntimeException error) {
-            // A credential that is not a Google ID token is not usable here.
-            return null;
+            startActivity(browser);
+            Snackbar.make(binding.getRoot(),
+                    "Finish signing in with Google in the browser, then come back to ORU.",
+                    Snackbar.LENGTH_LONG).show();
+        } catch (android.content.ActivityNotFoundException error) {
+            setError("This phone has no browser to finish Google sign-in. "
+                    + "Use your email and password instead.");
         }
     }
 
-    private void sendGoogleToken(String idToken) {
-        if (authRepo == null) {
-            authRepo = new AuthRepository(LazySession.getApiService(), session,
-                    LazySession.getGson());
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Coming back from the browser: the callback activity has saved the
+        // session, so this screen is no longer needed.
+        if (session != null && session.isSignedIn() && !isFinishing() && binding != null) {
+            goHome();
         }
-        authRepo.googleLogin(idToken, new Callback<TokenResponse>() {
-            @Override
-            public void onSuccess(TokenResponse token) {
-                finishAuth(token);
-            }
-
-            @Override
-            public void onFailure(Throwable error) {
-                onAuthFailure(error);
-            }
-        });
     }
 
     private void toggleMode() {

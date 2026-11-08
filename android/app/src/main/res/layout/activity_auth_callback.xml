@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one moment between the browser and the app: it is on screen only while
+     the one-time code is being traded for a session. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/paper_deep"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <ImageView
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_auth_mark" />
+
+    <ProgressBar
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginTop="28dp"
+        android:indeterminateTint="@color/flame" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="Finishing sign-in"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.Oru.Headline" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="One moment while we bring you back."
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.Oru.BodySoft" />
+
+</LinearLayout>

@@ -1,20 +1,53 @@
-"""One-off catalogue reset, reachable only while an operator asks for it.
+"""Operator-only resets.
 
-ORU_DEMO_RESET=1 in the environment switches it on for a single deploy; the
-route answers 404 otherwise. The seed itself refuses to run when the demo
-artists are already there, so a repeat call (or a stay-behind env var) cannot
-delete the demo catalogue again.
+Two one-off jobs live here, both switched off unless the environment names a
+secret for them, so a deployed API never exposes a button that deletes data:
+
+- ``POST /maintenance/reset`` empties the database completely (``ORU_RESET_TOKEN``).
+- ``POST /maintenance/demo-catalogue`` seeds the demo artists (``ORU_DEMO_RESET``).
 """
 
 from __future__ import annotations
 
 import os
+import secrets
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
-from app.database import SessionLocal
+from app.database import Base, SessionLocal, engine
 
 router = APIRouter(tags=["maintenance"])
+
+
+def _guard(field: str, expected: str) -> None:
+    """Answer 404 when unconfigured, 403 on a wrong secret.
+
+    Constant-time comparison keeps the secret from being guessed a character at
+    a time, even though the route is only meant to exist for a minute.
+    """
+    if not secrets.compare_digest(field or "", expected):
+        raise HTTPException(status_code=403,
+                            detail={"code": "forbidden", "message": "Not here"})
+
+
+@router.post("/maintenance/reset")
+def reset_database(x_oru_reset: str = Header(default="")):
+    """Drop every table and build the schema back, so ORU starts from nothing."""
+    expected = os.environ.get("ORU_RESET_TOKEN", "")
+    if not expected:
+        raise HTTPException(status_code=404,
+                            detail={"code": "not_found", "message": "Not here"})
+    _guard(x_oru_reset, expected)
+
+    tables = sorted(Base.metadata.tables)
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    # Columns added to live tables after create_all's schema are re-attached so
+    # the app boots on the fresh database exactly as it does on an old one.
+    from app.main import ensure_schema
+
+    ensure_schema()
+    return {"reset": True, "tables": len(tables)}
 
 
 @router.post("/maintenance/demo-catalogue")
