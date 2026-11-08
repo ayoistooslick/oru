@@ -20,6 +20,10 @@ Validation errors are `422`, missing or private resources are `404`, duplicate a
 | --- | --- | --- | --- |
 | POST | `/auth/register` | Public | Create listener account and get a token |
 | POST | `/auth/login` | Public | Sign in and get a token |
+| GET | `/auth/config` | Public | Which sign-in methods are live, plus the public Google client id |
+| POST | `/auth/google` | Public | Exchange a Google ID token for a session |
+| POST | `/auth/handoff` | Signed in | Mint a one-time code for the Android app (five minutes) |
+| POST | `/auth/handoff/exchange` | Public | Trade that code for a session, once |
 | GET | `/auth/me` | Signed in | Current account |
 | PATCH | `/listeners/me` | Signed in | Change display name or bio |
 | POST | `/listeners/me/avatar` | Signed in | Upload a profile picture (`file` field) |
@@ -147,6 +151,13 @@ curl -X POST http://127.0.0.1:8000/api/v1/artists/me/posts \
 
 A report is a request for review, not proof that a rule or law was broken. This backend records a reason and moderation decision but does not implement takedown notices, appeals, counter-notices, legal deadlines, or a complete policy workflow.
 
-## Health
+## Health and maintenance
 
 `GET /health` checks whether the API can query its configured database. It returns `503` when that check fails.
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| POST | `/maintenance/reset` | `X-Oru-Reset` header matching `ORU_RESET_TOKEN` | Drop every table and rebuild the schema |
+| POST | `/maintenance/demo-catalogue` | Only when `ORU_DEMO_RESET=1` | Seed the demo artists |
+
+`/maintenance/reset` answers `404` unless `ORU_RESET_TOKEN` is set in the environment, so the route does not exist unless an operator arms it. The Android app never calls it.
