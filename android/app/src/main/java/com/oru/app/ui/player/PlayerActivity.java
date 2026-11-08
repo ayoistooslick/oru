@@ -864,7 +864,8 @@ public class PlayerActivity extends AppCompatActivity {
         if (player == null) {
             return built;
         }
-        for (MediaItem item : player.getMediaItems()) {
+        for (int i = 0; i < player.getMediaItemCount(); i++) {
+            MediaItem item = player.getMediaItemAt(i);
             Song song = new Song();
             try {
                 song.id = item.mediaId != null ? Integer.parseInt(item.mediaId) : 0;
