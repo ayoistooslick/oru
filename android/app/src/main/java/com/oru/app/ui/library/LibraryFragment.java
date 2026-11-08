@@ -209,8 +209,27 @@ public class LibraryFragment extends Fragment {
         if (binding == null) {
             return;
         }
+        boolean nothingForFilter = (filter == Filter.PLAYLISTS && playlists.isEmpty())
+                || (filter == Filter.ARTISTS && following.isEmpty());
+        if (nothingForFilter) {
+            adapter.setContent(0, new ArrayList<>(), new ArrayList<>());
+            if (filter == Filter.PLAYLISTS) {
+                binding.emptyTitle.setText("No playlists yet");
+                binding.emptyText.setText("Tap the heart on a song, or start a playlist of your own.");
+            } else {
+                binding.emptyTitle.setText("You follow no artists yet");
+                binding.emptyText.setText("Follow an artist from their page and they show up here.");
+            }
+            binding.libraryEmpty.setVisibility(View.VISIBLE);
+            binding.recyclerView.setVisibility(View.GONE);
+            return;
+        }
+
         if (likes.isEmpty() && playlists.isEmpty() && following.isEmpty()) {
             adapter.setContent(0, new ArrayList<>(), new ArrayList<>());
+            binding.emptyTitle.setText("Your library is empty");
+            binding.emptyText.setText(
+                    "Tap the heart on any song to keep it here, or start a playlist of your own.");
             binding.libraryEmpty.setVisibility(View.VISIBLE);
             binding.recyclerView.setVisibility(View.GONE);
             return;
