@@ -15,6 +15,18 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_queue"
+        android:icon="@drawable/ic_queue"
+        android:title="Play queue"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_sleep_timer"
+        android:icon="@drawable/ic_timer"
+        android:title="Sleep timer"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_report"
         android:icon="@drawable/ic_report"
         android:title="Report this song"

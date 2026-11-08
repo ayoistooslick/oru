@@ -154,9 +154,16 @@ def ensure_schema() -> None:
         },
         "users": {
             "avatar_key": "ALTER TABLE users ADD COLUMN avatar_key VARCHAR(500)",
+            "banner_key": "ALTER TABLE users ADD COLUMN banner_key VARCHAR(500)",
+            "image_version": "ALTER TABLE users ADD COLUMN image_version INTEGER NOT NULL DEFAULT 0",
         },
         "artist_profiles": {
             "banner_key": "ALTER TABLE artist_profiles ADD COLUMN banner_key VARCHAR(500)",
+        },
+        "playlists": {
+            "cover_key": "ALTER TABLE playlists ADD COLUMN cover_key VARCHAR(500)",
+            "banner_key": "ALTER TABLE playlists ADD COLUMN banner_key VARCHAR(500)",
+            "image_version": "ALTER TABLE playlists ADD COLUMN image_version INTEGER NOT NULL DEFAULT 0",
         },
     }
     inspector = inspect(engine)

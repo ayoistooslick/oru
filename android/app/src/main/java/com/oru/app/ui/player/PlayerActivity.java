@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -18,6 +19,7 @@ import androidx.media3.session.SessionToken;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.slider.Slider;
 import com.oru.app.R;
 import com.oru.app.data.offline.Downloads;
@@ -27,6 +29,7 @@ import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
 import com.oru.app.data.repository.MusicRepository;
 import com.oru.app.databinding.ActivityPlayerBinding;
+import com.oru.app.media.PlaybackCommands;
 import com.oru.app.media.PlayerService;
 import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
@@ -173,7 +176,6 @@ public class PlayerActivity extends AppCompatActivity {
             // Opened cold from the notification: read the details, keep playing.
             loadSongById(id, true);
         }
-        binding.miniPlayerBar.setVisibility(View.VISIBLE);
         startTicker();
     }
 
@@ -232,7 +234,6 @@ public class PlayerActivity extends AppCompatActivity {
             player.play();
             currentSong = queue.get(at);
             populateUI(currentSong);
-            binding.miniPlayerBar.setVisibility(View.VISIBLE);
             startTicker();
         } catch (RuntimeException error) {
             showError(error);
@@ -252,7 +253,6 @@ public class PlayerActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playButton.setOnClickListener(v -> togglePlay());
-        binding.miniPlayPauseButton.setOnClickListener(v -> togglePlay());
         binding.previousButton.setOnClickListener(v -> skip(-1));
         binding.nextButton.setOnClickListener(v -> skip(1));
         // Holding a skip button still nudges 15 seconds, like the web player.
@@ -267,8 +267,14 @@ public class PlayerActivity extends AppCompatActivity {
         binding.shuffleButton.setOnClickListener(v -> toggleShuffle());
         binding.repeatButton.setOnClickListener(v -> cycleRepeat());
         binding.likeButton.setOnClickListener(v -> toggleLike());
-        binding.miniLikeButton.setOnClickListener(v -> toggleLike());
         binding.shareButton.setOnClickListener(v -> shareSong());
+        binding.addButton.setOnClickListener(v -> {
+            if (currentSong != null) {
+                com.oru.app.ui.components.PlaylistPicker.addTo(this, currentSong);
+            }
+        });
+        binding.queueButton.setOnClickListener(v -> openQueue());
+        binding.sleepTimerButton.setOnClickListener(v -> askSleepTimer());
         // The artist line in the player opens that artist, like the web one.
         binding.artistText.setOnClickListener(v -> {
             if (currentSong != null) {
@@ -292,6 +298,14 @@ public class PlayerActivity extends AppCompatActivity {
             }
             if (item.getItemId() == R.id.action_report) {
                 askReportReason();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_queue) {
+                openQueue();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_sleep_timer) {
+                askSleepTimer();
                 return true;
             }
             return false;
@@ -542,21 +556,14 @@ public class PlayerActivity extends AppCompatActivity {
                     .load(cover)
                     .placeholder(R.drawable.ic_library)
                     .into(binding.coverImage);
-            com.bumptech.glide.Glide.with(this)
-                    .load(cover)
-                    .placeholder(R.drawable.ic_library)
-                    .into(binding.miniArtwork);
         }
         int count = player != null ? player.getMediaItemCount() : 0;
         if (count > 1) {
             int at = player.getCurrentMediaItemIndex();
             binding.queueText.setText("Track " + (at + 1) + " of " + count);
-            binding.queueText.setVisibility(View.VISIBLE);
         } else {
-            binding.queueText.setVisibility(View.GONE);
+            binding.queueText.setText("Now playing");
         }
-        binding.miniTitle.setText(song.title);
-        binding.miniArtist.setText(song.artistLabel());
         updatePlayPauseButtons();
         updateLikeButtons();
         updateModeButtons();
@@ -569,7 +576,6 @@ public class PlayerActivity extends AppCompatActivity {
         boolean same = current != null && current.mediaId != null
                 && current.mediaId.equals(String.valueOf(song.id));
         if (same) {
-            binding.miniPlayerBar.setVisibility(View.VISIBLE);
             startTicker();
             return;
         }
@@ -589,7 +595,6 @@ public class PlayerActivity extends AppCompatActivity {
             player.prepare();
             player.play();
             updatePlayPauseButtons();
-            binding.miniPlayerBar.setVisibility(View.VISIBLE);
             ticker.removeCallbacks(tick);
             ticker.post(tick);
         } catch (RuntimeException error) {
@@ -749,8 +754,6 @@ public class PlayerActivity extends AppCompatActivity {
                 ? R.color.flame : R.color.ink_soft;
         binding.likeButton.setImageTintList(
                 android.content.res.ColorStateList.valueOf(getColor(tint)));
-        binding.miniLikeButton.setImageTintList(
-                android.content.res.ColorStateList.valueOf(getColor(tint)));
     }
 
     private void updateModeButtons() {
@@ -781,9 +784,6 @@ public class PlayerActivity extends AppCompatActivity {
             if (binding.progressSlider.getValue() != percent) {
                 binding.progressSlider.setValue(percent);
             }
-            if (binding.miniProgressSlider.getValue() != percent) {
-                binding.miniProgressSlider.setValue(percent);
-            }
             binding.totalTimeText.setText(clock(duration));
         }
         binding.currentTimeText.setText(clock(position));
@@ -803,8 +803,137 @@ public class PlayerActivity extends AppCompatActivity {
         boolean playing = player.isPlaying();
         binding.playButton.setImageResource(
                 playing ? R.drawable.ic_pause : R.drawable.ic_play);
-        binding.miniPlayPauseButton.setImageResource(
-                playing ? R.drawable.ic_pause : R.drawable.ic_play);
+    }
+
+    /**
+     * What is queued, as a sheet you can jump around in.
+     *
+     * Tapping a row seeks the running session, so the song starts immediately
+     * instead of starting the whole queue over.
+     */
+    private void openQueue() {
+        if (player == null) {
+            Toast.makeText(this, "The player is still starting",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<Song> items = queueForSheet();
+        if (items.isEmpty()) {
+            Toast.makeText(this, "Nothing is queued yet", Toast.LENGTH_SHORT)
+                    .show();
+            return;
+        }
+
+        View sheet = getLayoutInflater().inflate(R.layout.sheet_queue, null);
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        dialog.setContentView(sheet);
+
+        int at = player.getCurrentMediaItemIndex();
+        int after = Math.max(0, items.size() - at - 1);
+        TextView subtitle = sheet.findViewById(R.id.queueSubtitle);
+        subtitle.setText(after == 0
+                ? "This is the last song in the queue"
+                : after + (after == 1 ? " song after this one" : " songs after this one"));
+
+        QueueAdapter adapter = new QueueAdapter(index -> {
+            player.seekTo(index, 0);
+            player.play();
+            dialog.dismiss();
+        });
+        androidx.recyclerview.widget.RecyclerView list =
+                sheet.findViewById(R.id.queueRecyclerView);
+        list.setLayoutManager(
+                new androidx.recyclerview.widget.LinearLayoutManager(this));
+        list.setAdapter(adapter);
+        adapter.submit(items, at);
+        dialog.show();
+    }
+
+    /**
+     * The queue as song objects.
+     *
+     * With the app open this is the list that was tapped. Opened cold from the
+     * notification there is no such list, so the session's own items are read
+     * back, which still names and pictures every song.
+     */
+    private List<Song> queueForSheet() {
+        if (queue != null && !queue.isEmpty()) {
+            return queue;
+        }
+        List<Song> built = new ArrayList<>();
+        if (player == null) {
+            return built;
+        }
+        for (MediaItem item : player.getMediaItems()) {
+            Song song = new Song();
+            try {
+                song.id = item.mediaId != null ? Integer.parseInt(item.mediaId) : 0;
+            } catch (NumberFormatException ignored) {
+                song.id = 0;
+            }
+            song.title = item.mediaMetadata != null
+                    && item.mediaMetadata.title != null
+                            ? item.mediaMetadata.title.toString() : "Unknown song";
+            song.artistName = item.mediaMetadata != null
+                    && item.mediaMetadata.artist != null
+                            ? item.mediaMetadata.artist.toString() : "";
+            song.coverUrl = item.mediaMetadata != null
+                    && item.mediaMetadata.artworkUri != null
+                            ? item.mediaMetadata.artworkUri.toString() : null;
+            built.add(song);
+        }
+        return built;
+    }
+
+    /** Off, a few durations, or the end of the song that is playing. */
+    private void askSleepTimer() {
+        final String[] options = {"Off", "5 minutes", "15 minutes",
+                "30 minutes", "45 minutes", "60 minutes",
+                "End of this song"};
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Sleep timer")
+                .setItems(options, (dialog, which) -> {
+                    int minutes;
+                    if (which == 0) {
+                        minutes = 0;
+                    } else if (which == options.length - 1) {
+                        minutes = -1;
+                    } else {
+                        minutes = new int[] {0, 5, 15, 30, 45, 60}[which];
+                    }
+                    sendSleepTimer(minutes);
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void sendSleepTimer(int minutes) {
+        if (controller == null) {
+            Toast.makeText(this, "The player is still starting",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Bundle args = new Bundle();
+        args.putLong(PlaybackCommands.SLEEP_MINUTES, minutes);
+        controller.sendCustomCommand(PlaybackCommands.SLEEP_TIMER, args);
+
+        String label;
+        String message;
+        if (minutes == 0) {
+            label = "Sleep";
+            message = "Sleep timer off";
+        } else if (minutes < 0) {
+            label = "Song end";
+            message = "Playback stops when this song ends";
+        } else {
+            label = minutes + "m";
+            message = "Playback stops in " + minutes + " minutes";
+        }
+        binding.sleepTimerLabel.setText(label);
+        binding.sleepTimerButton.setImageTintList(
+                android.content.res.ColorStateList.valueOf(getColor(
+                        minutes == 0 ? R.color.ink_soft : R.color.flame)));
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     private void showError(Throwable error) {

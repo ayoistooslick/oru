@@ -261,8 +261,9 @@ public class AuthRepository {
                 gson, "Couldn't upload that picture", cb);
     }
 
+    /** A wide banner for any account, artist or listener. */
     public void uploadBanner(java.io.File file, String mime,
-            Callback<Artist> cb) {
+            Callback<User> cb) {
         ApiCall.enqueue(api.uploadBanner(
                 Uploads.file("file", file.getName(), mime, file)),
                 gson, "Couldn't upload that banner", cb);
@@ -274,7 +275,7 @@ public class AuthRepository {
                 "Couldn't remove your picture", cb);
     }
 
-    public void deleteBanner(Callback<Artist> cb) {
+    public void deleteBanner(Callback<User> cb) {
         ApiCall.enqueue(api.deleteBanner(), gson,
                 "Couldn't remove that banner", cb);
     }

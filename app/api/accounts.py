@@ -46,15 +46,29 @@ def _derive_handle(db: Session, email: str, display_name: str | None = None) -> 
     return _unique_handle(db, from_name or from_email)
 
 
-def user_data(user: User) -> dict:
+def banner_key(user: User) -> str | None:
+    """The wide picture for an account.
+
+    Banners started on artist profiles; they now live on the account, so
+    listeners can have one too. The artist row stays as a fallback for pictures
+    uploaded before the move.
+    """
+    if user.banner_key:
+        return user.banner_key
     profile = user.artist_profile
+    return profile.banner_key if profile is not None else None
+
+
+def user_data(user: User) -> dict:
+    version = user.image_version or 0
     return {"id": user.id, "email": user.email, "handle": user.handle, "display_name": user.display_name,
             "bio": user.bio, "role": user.role, "created_at": user.created_at,
             "avatar_url": f"/api/v1/users/{user.id}/avatar" if user.avatar_key else None,
-            # Artists carry a wide banner; expose it so the profile and settings
-            # read the real picture instead of building a link that misses the
-            # API prefix and 404s into its own alt text.
-            "banner_url": f"/api/v1/artists/{user.id}/banner" if profile and profile.banner_key else None}
+            # Expose the real path so the profile and settings read the picture
+            # instead of building a link that misses the API prefix and 404s
+            # into its own alt text.
+            "banner_url": f"/api/v1/users/{user.id}/banner" if banner_key(user) else None,
+            "image_version": version}
 
 
 def artist_data(artist: User, db: Session | None = None, viewer: User | None = None) -> dict:
@@ -63,7 +77,8 @@ def artist_data(artist: User, db: Session | None = None, viewer: User | None = N
             "stage_name": profile.stage_name if profile else artist.display_name,
             "bio": artist.bio,
             "avatar_url": f"/api/v1/users/{artist.id}/avatar" if artist.avatar_key else None,
-            "banner_url": f"/api/v1/artists/{artist.id}/banner" if profile and profile.banner_key else None}
+            "banner_url": f"/api/v1/users/{artist.id}/banner" if banner_key(artist) else None,
+            "image_version": artist.image_version or 0}
     if db is not None:
         data["published_song_count"] = db.scalar(
             select(func.count(Song.id)).where(Song.artist_id == artist.id, Song.status == "published")
@@ -189,6 +204,7 @@ def update_listener_profile(payload: ProfileUpdate, user: User = Depends(current
 def set_avatar(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
     """A profile picture. Same storage and limits as cover artwork."""
     user.avatar_key = _replace_image("profile", file, user.avatar_key)
+    user.image_version = (user.image_version or 0) + 1
     db.commit()
     db.refresh(user)
     return {"user": user_data(user)}
@@ -199,6 +215,7 @@ def clear_avatar(user: User = Depends(current_user), db: Session = Depends(get_d
     if user.avatar_key:
         storage.delete(user.avatar_key)
         user.avatar_key = None
+        user.image_version = (user.image_version or 0) + 1
         db.commit()
     return {"user": user_data(user)}
 
@@ -225,32 +242,75 @@ def create_artist_profile(payload: ArtistProfileCreate, user: User = Depends(cur
     return {"artist": artist_data(user, db, user)}
 
 
-@router.post("/artists/me/banner")
-def set_banner(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if user.artist_profile is None:
-        raise HTTPException(status_code=403, detail={"code": "artist_profile_required", "message": "Open your artist profile first"})
-    user.artist_profile.banner_key = _replace_image("banner", file, user.artist_profile.banner_key)
+def _set_banner(user: User, upload: UploadFile, db: Session) -> User:
+    previous = banner_key(user)
+    user.banner_key = _replace_image("banner", upload, previous)
+    user.image_version = (user.image_version or 0) + 1
+    if user.artist_profile is not None:
+        # One picture, read from both the account and the artist page.
+        user.artist_profile.banner_key = user.banner_key
     db.commit()
     db.refresh(user)
-    return {"artist": artist_data(user, db, user)}
+    return user
+
+
+@router.post("/listeners/me/banner")
+def set_listener_banner(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """A wide banner for any account, not only artists."""
+    return {"user": user_data(_set_banner(user, file, db))}
+
+
+@router.delete("/listeners/me/banner")
+def clear_listener_banner(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    previous = banner_key(user)
+    if previous:
+        storage.delete(previous)
+    user.banner_key = None
+    if user.artist_profile is not None:
+        user.artist_profile.banner_key = None
+    user.image_version = (user.image_version or 0) + 1
+    db.commit()
+    db.refresh(user)
+    return {"user": user_data(user)}
+
+
+@router.get("/users/{user_id}/banner")
+def get_user_banner(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    key = banner_key(user) if user is not None else None
+    if key is None:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No banner picture"})
+    return media_response(key, guess_image_type(key), request, cache_control="public, max-age=3600")
+
+
+@router.post("/artists/me/banner")
+def set_banner(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The same picture as /listeners/me/banner, kept for existing clients."""
+    if user.artist_profile is None:
+        raise HTTPException(status_code=403, detail={"code": "artist_profile_required", "message": "Open your artist profile first"})
+    return {"artist": artist_data(_set_banner(user, file, db), db, user)}
 
 
 @router.delete("/artists/me/banner")
 def clear_banner(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    if user.artist_profile and user.artist_profile.banner_key:
+    if user.artist_profile is not None and user.artist_profile.banner_key:
         storage.delete(user.artist_profile.banner_key)
         user.artist_profile.banner_key = None
-        db.commit()
+    if user.banner_key:
+        storage.delete(user.banner_key)
+        user.banner_key = None
+    user.image_version = (user.image_version or 0) + 1
+    db.commit()
     return {"artist": artist_data(user, db, user)}
 
 
 @router.get("/artists/{artist_id}/banner")
 def get_banner(artist_id: int, request: Request, db: Session = Depends(get_db)):
     artist = db.get(User, artist_id)
-    if artist is None or artist.artist_profile is None or not artist.artist_profile.banner_key:
+    key = banner_key(artist) if artist is not None else None
+    if key is None:
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No banner picture"})
-    key = artist.artist_profile.banner_key
-    return media_response(key, guess_image_type(key), request, cache_control="public, max-age=86400")
+    return media_response(key, guess_image_type(key), request, cache_control="public, max-age=3600")
 
 
 @router.get("/artists")

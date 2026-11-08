@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The banner melts into the page instead of ending on a hard edge. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="@android:color/transparent"
+        android:centerColor="#66FDF8F1"
+        android:endColor="@color/paper"
+        android:type="linear" />
+</shape>

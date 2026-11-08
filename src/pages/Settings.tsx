@@ -89,9 +89,11 @@ export function SettingsPage() {
         setAvatarVersion((value) => value + 1);
         toasts.saved("Profile picture updated", "People will see it beside your name");
       } else {
-        await upload("/artists/me/banner", form);
+        // Banners belong to the account now, so listeners have one too.
+        const response = await upload<{ user: NonNullable<typeof user> }>("/listeners/me/banner", form);
+        updateUser(response.user);
         setBannerVersion((value) => value + 1);
-        toasts.saved("Banner updated", "It shows at the top of your artist page");
+        toasts.saved("Banner updated", "It shows behind your name");
       }
     } catch (error) {
       toasts.error("Could not save that picture", error instanceof Error ? error.message : "Try again.");
@@ -108,7 +110,8 @@ export function SettingsPage() {
         updateUser(response.user);
         setAvatarVersion((value) => value + 1);
       } else {
-        await request("/artists/me/banner", { method: "DELETE" });
+        const response = await request<{ user: NonNullable<typeof user> }>("/listeners/me/banner", { method: "DELETE" });
+        updateUser(response.user);
         setBannerVersion((value) => value + 1);
       }
       toasts.info("Removed", kind === "avatar" ? "Your initials are back" : "The banner is gone");
@@ -181,7 +184,7 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {isArtist ? (
+          {
             <div className="mt-5 border-t border-white/10 pt-5">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="block h-16 w-32 shrink-0 overflow-hidden rounded-lg bg-white/5">
@@ -194,8 +197,8 @@ export function SettingsPage() {
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15.5px] font-bold">Artist banner</p>
-                  <p className="mt-0.5 text-[13.5px] text-ink-soft">A wide picture behind your name on your artist page.</p>
+                  <p className="text-[15.5px] font-bold">Profile banner</p>
+                  <p className="mt-0.5 text-[13.5px] text-ink-soft">A wide picture behind your name.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -231,7 +234,7 @@ export function SettingsPage() {
                 </div>
               </div>
             </div>
-          ) : null}
+          }
         </div>
       </section>
 

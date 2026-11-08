@@ -1,8 +1,12 @@
 package com.oru.app.ui.playlist;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -11,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.oru.app.R;
 import com.oru.app.data.model.Playlist;
 import com.oru.app.data.model.Song;
+import com.oru.app.data.session.SessionManager;
+import com.oru.app.ui.components.Covers;
 import com.oru.app.ui.release.TrackAdapter;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
@@ -18,8 +24,12 @@ import com.oru.app.data.repository.MusicRepository;
 import com.oru.app.databinding.ActivityPlaylistBinding;
 import com.oru.app.media.PlayerService;
 import com.oru.app.util.LazySession;
+import com.oru.app.util.PickedFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class PlaylistActivity extends AppCompatActivity {
 
@@ -29,6 +39,19 @@ public class PlaylistActivity extends AppCompatActivity {
     private CommunityRepository communityRepo;
     private Playlist playlist;
     private com.oru.app.ui.components.MiniPlayer miniPlayer;
+    private SessionManager session;
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
+
+    private static final String IMAGE_MIME = "image/*";
+
+    /** The two pictures a playlist can carry, both with the system picker. */
+    private final ActivityResultLauncher<String> pickCover =
+            registerForActivityResult(new ActivityResultContracts.GetContent(),
+                    uri -> uploadImage(uri, true));
+
+    private final ActivityResultLauncher<String> pickBanner =
+            registerForActivityResult(new ActivityResultContracts.GetContent(),
+                    uri -> uploadImage(uri, false));
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,16 +66,23 @@ public class PlaylistActivity extends AppCompatActivity {
                 new LinearLayoutManager(this));
         binding.tracksRecyclerView.setAdapter(trackAdapter);
 
+        session = new SessionManager(this);
+
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.playerPlayButton.setOnClickListener(v -> togglePlay());
         binding.playAllButton.setOnClickListener(v -> togglePlay());
         binding.shuffleButton.setOnClickListener(v -> shuffle());
+        binding.coverFrame.setOnClickListener(v -> showPictureSheet());
+        binding.editCoverButton.setOnClickListener(v -> showPictureSheet());
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
                 binding.miniPlayer);
 
         binding.toolbar.inflateMenu(R.menu.playlist_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (playlist == null) {
+                return false;
+            }
+            if (!isOwner()) {
                 return false;
             }
             int id = item.getItemId();
@@ -109,7 +139,7 @@ public class PlaylistActivity extends AppCompatActivity {
             public void onSuccess(Playlist p) {
                 playlist = p;
                 populateHeader(p);
-                loadCover(com.oru.app.util.MediaUrl.of(p.coverUrl));
+                loadCover(p);
                 populateTracks(p.songs != null ? p.songs
                         : new java.util.ArrayList<>());
             }
@@ -121,20 +151,158 @@ public class PlaylistActivity extends AppCompatActivity {
         });
     }
 
+    private boolean isOwner() {
+        return playlist != null && session != null
+                && session.getUserId() == playlist.ownerId;
+    }
+
     private void populateHeader(Playlist p) {
-        binding.collapsingToolbar.setTitle(p.title);
         binding.titleText.setText(p.title);
-        binding.songCountText.setText(p.songCount() + " songs");
+        int count = p.songCount();
+        binding.songCountText.setText(count + (count == 1 ? " song" : " songs"));
         binding.ownerText.setText(p.owner != null
                 && p.owner.displayName != null
                         ? "by " + p.owner.displayName
-                        : (p.isPublic ? "Public" : "Private"));
+                        : (p.isPublic ? "Public playlist" : "Private playlist"));
+        boolean owner = isOwner();
+        binding.editCoverButton.setVisibility(owner ? View.VISIBLE : View.GONE);
+        // Editing belongs to the owner; a visitor sees a listening page.
+        android.view.Menu menu = binding.toolbar.getMenu();
+        for (int id : new int[] {R.id.action_edit, R.id.action_add_songs,
+                R.id.action_delete}) {
+            android.view.MenuItem item = menu.findItem(id);
+            if (item != null) {
+                item.setVisible(owner);
+            }
+        }
+
+        // The wide banner sits behind the header; without one the warm wash
+        // underneath shows through.
+        boolean hasBanner = p.bannerUrl != null;
+        binding.bannerImage.setVisibility(hasBanner ? View.VISIBLE : View.GONE);
+        if (hasBanner) {
+            Covers.loadVersioned(binding.bannerImage, p.bannerUrl, p.imageVersion,
+                    R.drawable.ic_playlist);
+        }
     }
 
-    private void loadCover(String coverUrl) {
-        // The API sends a media path, not a full address; Covers knows that.
-        com.oru.app.ui.components.Covers.load(binding.coverImage, coverUrl,
-                R.drawable.ic_library);
+    private void loadCover(Playlist p) {
+        // Versioned, so a replaced cover is not served from the image cache.
+        Covers.loadVersioned(binding.coverImage, p.coverUrl, p.imageVersion,
+                R.drawable.ic_playlist);
+    }
+
+    /** The sheet behind the edit badge: cover on top, banner below. */
+    private void showPictureSheet() {
+        if (playlist == null) {
+            return;
+        }
+        if (!isOwner()) {
+            Toast.makeText(this, "Only the owner can change these pictures",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        labels.add(playlist.hasCover ? "Change cover" : "Add a cover");
+        labels.add(playlist.bannerUrl != null ? "Change banner" : "Add a banner");
+        if (playlist.hasCover) {
+            labels.add("Remove cover");
+        }
+        if (playlist.bannerUrl != null) {
+            labels.add("Remove banner");
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Playlist pictures")
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
+                    String choice = labels.get(which);
+                    if (choice.endsWith("cover") && choice.startsWith("Remove")) {
+                        communityRepo.deletePlaylistCover(playlist.id,
+                                new Callback<Playlist>() {
+                                    @Override
+                                    public void onSuccess(Playlist updated) {
+                                        afterPicture(updated);
+                                    }
+
+                                    @Override
+                                    public void onFailure(Throwable error) {
+                                        Toast.makeText(PlaylistActivity.this,
+                                                describe(error),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    } else if (choice.endsWith("banner") && choice.startsWith("Remove")) {
+                        communityRepo.deletePlaylistBanner(playlist.id,
+                                new Callback<Playlist>() {
+                                    @Override
+                                    public void onSuccess(Playlist updated) {
+                                        afterPicture(updated);
+                                    }
+
+                                    @Override
+                                    public void onFailure(Throwable error) {
+                                        Toast.makeText(PlaylistActivity.this,
+                                                describe(error),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    } else if (choice.endsWith("cover")) {
+                        pickCover.launch(IMAGE_MIME);
+                    } else {
+                        pickBanner.launch(IMAGE_MIME);
+                    }
+                })
+                .show();
+    }
+
+    private void uploadImage(Uri uri, boolean cover) {
+        if (uri == null || playlist == null) {
+            return;
+        }
+        Toast.makeText(this, cover ? "Uploading cover…" : "Uploading banner…",
+                Toast.LENGTH_SHORT).show();
+        io.execute(() -> {
+            try {
+                PickedFile picked = PickedFile.copyImage(this, uri);
+                Callback<Playlist> done = new Callback<Playlist>() {
+                    @Override
+                    public void onSuccess(Playlist updated) {
+                        runOnUiThread(() -> afterPicture(updated));
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        runOnUiThread(() -> Toast.makeText(PlaylistActivity.this,
+                                describe(error), Toast.LENGTH_LONG).show());
+                    }
+                };
+                if (cover) {
+                    communityRepo.uploadPlaylistCover(playlist.id, picked.file,
+                            picked.mime, done);
+                } else {
+                    communityRepo.uploadPlaylistBanner(playlist.id, picked.file,
+                            picked.mime, done);
+                }
+            } catch (IOException | RuntimeException error) {
+                String reason = error.getMessage();
+                runOnUiThread(() -> Toast.makeText(this,
+                        reason != null && !reason.isEmpty() ? reason
+                                : "Couldn't read that picture",
+                        Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    /** The API returns the whole playlist, so the page is simply redrawn. */
+    private void afterPicture(Playlist updated) {
+        if (binding == null) {
+            return;
+        }
+        if (updated != null) {
+            playlist = updated;
+            populateHeader(updated);
+            loadCover(updated);
+        }
+        Toast.makeText(this, "Playlist pictures updated", Toast.LENGTH_SHORT).show();
     }
 
     private void populateTracks(List<Song> songs) {
@@ -372,6 +540,7 @@ public class PlaylistActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        io.shutdown();
         if (miniPlayer != null) {
             miniPlayer.release();
             miniPlayer = null;

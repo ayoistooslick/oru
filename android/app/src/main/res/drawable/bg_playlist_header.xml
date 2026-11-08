@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A playlist with no banner still gets a warm header instead of dead space. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="@color/flame_soft"
+        android:centerColor="@color/card_hi"
+        android:endColor="@color/paper_deep"
+        android:type="linear" />
+</shape>

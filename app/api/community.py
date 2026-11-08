@@ -1,31 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.uploads import IMAGE_TYPES, guess_image_type, media_response, save_upload
+from app.config import settings
 from app.database import get_db
 from app.dependencies import current_user, optional_current_user
 from app.models import ArtistPost, ArtistProfile, Follow, Like, Playlist, PlaylistSong, Song, User
 from app.schemas import ArtistPostCreate, PlaylistCreate, PlaylistUpdate
 from app.api.music import song_data
+from app.storage import storage
 
 router = APIRouter(tags=["community"])
 
 
 def playlist_data(playlist: Playlist, db: Session, songs: list[dict] | None = None) -> dict:
-    """A playlist card needs its owner and a picture; the playlist itself stores
-    neither, so both come from its songs and its owner's account."""
+    """A playlist card needs its owner and a picture.
+
+    Its own cover wins; without one it borrows the first song's artwork, the way
+    a playlist without artwork always has. The banner is its own wide picture.
+    """
     song_ids = db.scalars(
         select(PlaylistSong.song_id).where(PlaylistSong.playlist_id == playlist.id).order_by(PlaylistSong.position)
     ).all()
-    cover = None
-    if song_ids:
+    cover = f"/api/v1/playlists/{playlist.id}/cover" if playlist.cover_key else None
+    if cover is None and song_ids:
         first = db.get(Song, song_ids[0])
         if first is not None and first.cover_key:
             cover = f"/api/v1/songs/{first.id}/cover"
     owner = db.get(User, playlist.owner_id)
     data = {"id": playlist.id, "title": playlist.title, "is_public": playlist.is_public,
             "owner_id": playlist.owner_id, "song_count": len(song_ids), "song_ids": song_ids,
-            "cover_url": cover, "created_at": playlist.created_at,
+            "cover_url": cover, "has_cover": bool(playlist.cover_key),
+            "banner_url": f"/api/v1/playlists/{playlist.id}/banner" if playlist.banner_key else None,
+            "image_version": playlist.image_version or 0, "created_at": playlist.created_at,
             "owner": {"handle": owner.handle, "display_name": owner.display_name} if owner else None}
     if songs is not None:
         data["songs"] = songs
@@ -154,12 +162,84 @@ def update_playlist(playlist_id: int, payload: PlaylistUpdate, user: User = Depe
     return {"playlist": playlist_data(playlist, db)}
 
 
+def _replace_playlist_image(playlist: Playlist, upload: UploadFile, current: str | None) -> str:
+    if not upload.filename:
+        raise HTTPException(status_code=422, detail={"code": "missing_file", "message": "Choose a picture"})
+    key, _ = save_upload(upload, IMAGE_TYPES, settings.max_cover_bytes)
+    if current:
+        storage.delete(current)
+    playlist.image_version = (playlist.image_version or 0) + 1
+    return key
+
+
+@router.post("/playlists/{playlist_id}/cover")
+def set_playlist_cover(playlist_id: int, file: UploadFile = File(...), user: User = Depends(current_user),
+                       db: Session = Depends(get_db)):
+    playlist = owned_playlist(playlist_id, user, db)
+    playlist.cover_key = _replace_playlist_image(playlist, file, playlist.cover_key)
+    db.commit()
+    return {"playlist": playlist_data(playlist, db)}
+
+
+@router.delete("/playlists/{playlist_id}/cover")
+def clear_playlist_cover(playlist_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    playlist = owned_playlist(playlist_id, user, db)
+    if playlist.cover_key:
+        storage.delete(playlist.cover_key)
+        playlist.cover_key = None
+        playlist.image_version = (playlist.image_version or 0) + 1
+        db.commit()
+    return {"playlist": playlist_data(playlist, db)}
+
+
+@router.get("/playlists/{playlist_id}/cover")
+def get_playlist_cover(playlist_id: int, request: Request, db: Session = Depends(get_db)):
+    playlist = db.get(Playlist, playlist_id)
+    if playlist is None or not playlist.cover_key:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No cover picture"})
+    return media_response(playlist.cover_key, guess_image_type(playlist.cover_key), request,
+                          cache_control="public, max-age=3600")
+
+
+@router.post("/playlists/{playlist_id}/banner")
+def set_playlist_banner(playlist_id: int, file: UploadFile = File(...), user: User = Depends(current_user),
+                        db: Session = Depends(get_db)):
+    playlist = owned_playlist(playlist_id, user, db)
+    playlist.banner_key = _replace_playlist_image(playlist, file, playlist.banner_key)
+    db.commit()
+    return {"playlist": playlist_data(playlist, db)}
+
+
+@router.delete("/playlists/{playlist_id}/banner")
+def clear_playlist_banner(playlist_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    playlist = owned_playlist(playlist_id, user, db)
+    if playlist.banner_key:
+        storage.delete(playlist.banner_key)
+        playlist.banner_key = None
+        playlist.image_version = (playlist.image_version or 0) + 1
+        db.commit()
+    return {"playlist": playlist_data(playlist, db)}
+
+
+@router.get("/playlists/{playlist_id}/banner")
+def get_playlist_banner(playlist_id: int, request: Request, db: Session = Depends(get_db)):
+    playlist = db.get(Playlist, playlist_id)
+    if playlist is None or not playlist.banner_key:
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "No banner picture"})
+    return media_response(playlist.banner_key, guess_image_type(playlist.banner_key), request,
+                          cache_control="public, max-age=3600")
+
+
 @router.delete("/playlists/{playlist_id}", status_code=204)
 def delete_playlist(playlist_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Deletes a playlist the caller owns; its entries go with it."""
     playlist = owned_playlist(playlist_id, user, db)
     for entry in db.scalars(select(PlaylistSong).where(PlaylistSong.playlist_id == playlist.id)).all():
         db.delete(entry)
+    if playlist.cover_key:
+        storage.delete(playlist.cover_key)
+    if playlist.banner_key:
+        storage.delete(playlist.banner_key)
     db.delete(playlist)
     db.commit()
     return Response(status_code=204)

@@ -3,19 +3,14 @@ package com.oru.app.ui.settings;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputFilter;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.oru.app.R;
-import com.oru.app.data.model.Artist;
 import com.oru.app.data.model.User;
 import com.oru.app.data.repository.AuthRepository;
 import com.oru.app.data.repository.Callback;
@@ -25,7 +20,6 @@ import com.oru.app.ui.about.AboutActivity;
 import com.oru.app.ui.auth.AuthActivity;
 import com.oru.app.ui.components.UiErrors;
 import com.oru.app.util.LazySession;
-import com.oru.app.util.MediaUrl;
 import com.oru.app.util.PickedFile;
 import com.oru.app.util.ThemeMode;
 
@@ -162,23 +156,22 @@ public class SettingsActivity extends AppCompatActivity {
         binding.accountBio.setText(hasBio ? user.bio.trim() : "");
         binding.accountBio.setVisibility(hasBio ? View.VISIBLE : View.GONE);
 
-        binding.profileSummary.setText(hasBio ? user.bio.trim()
-                : "Add a line about you");
-
         showAvatar();
 
         boolean artist = signedIn && user.isArtist();
-        binding.bannerCard.setVisibility(artist ? View.VISIBLE : View.GONE);
         binding.studioSummary.setText(artist
                 ? "Upload songs, publish them and make releases."
                 : "Upload your own songs and publish them.");
-        if (artist) {
-            com.oru.app.ui.components.Covers.load(binding.bannerImage,
-                    bannerPath(user), R.drawable.ic_music);
-            binding.removeBannerButton.setVisibility(hasBanner(user)
-                    ? View.VISIBLE
-                    : View.GONE);
-        }
+        // A banner is not an artist privilege any more: the wide picture sits
+        // behind every profile.
+        binding.bannerCard.setVisibility(View.VISIBLE);
+        com.oru.app.ui.components.Covers.loadVersioned(binding.bannerImage,
+                user != null ? user.artistBannerUrl() : null,
+                user != null ? user.imageVersion : 0, R.drawable.ic_image);
+        binding.bannerButton.setText(hasBanner(user) ? "Change banner" : "Add a banner");
+        binding.removeBannerButton.setVisibility(hasBanner(user)
+                ? View.VISIBLE
+                : View.GONE);
 
         binding.reportsButton.setVisibility("admin".equals(user != null
                 ? user.role : null) ? View.VISIBLE : View.GONE);
@@ -189,12 +182,8 @@ public class SettingsActivity extends AppCompatActivity {
                 : "Turn on notifications to see playback controls.");
     }
 
-    private String bannerPath(User user) {
-        return user != null ? user.artistBannerUrl() : null;
-    }
-
     private boolean hasBanner(User user) {
-        return bannerPath(user) != null;
+        return user != null && user.artistBannerUrl() != null;
     }
 
     private static String roleLabel(String role) {
@@ -303,11 +292,12 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void removeBanner() {
-        authRepo.deleteBanner(new Callback<Artist>() {
+        authRepo.deleteBanner(new Callback<User>() {
             @Override
-            public void onSuccess(Artist updated) {
+            public void onSuccess(User updated) {
                 runOnUiThread(() -> {
-                    loadUser();
+                    user = updated;
+                    showIdentity();
                     Toast.makeText(SettingsActivity.this,
                             "Banner removed", Toast.LENGTH_SHORT).show();
                 });
@@ -338,6 +328,8 @@ public class SettingsActivity extends AppCompatActivity {
                                 public void onSuccess(User updated) {
                                     runOnUiThread(() -> {
                                         user = updated;
+                                        session.updateIdentity(updated.displayName,
+                                                updated.avatarUrl);
                                         showIdentity();
                                         Toast.makeText(SettingsActivity.this,
                                                 "Picture updated",
@@ -356,11 +348,14 @@ public class SettingsActivity extends AppCompatActivity {
                             });
                 } else {
                     authRepo.uploadBanner(picked.file, picked.mime,
-                            new Callback<Artist>() {
+                            new Callback<User>() {
                                 @Override
-                                public void onSuccess(Artist updated) {
+                                public void onSuccess(User updated) {
                                     runOnUiThread(() -> {
-                                        loadUser();
+                                        user = updated;
+                                        session.updateIdentity(updated.displayName,
+                                                updated.avatarUrl);
+                                        showIdentity();
                                         Toast.makeText(SettingsActivity.this,
                                                 "Banner updated",
                                                 Toast.LENGTH_SHORT).show();
@@ -390,69 +385,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void editProfile() {
-        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-        LinearLayout form = new LinearLayout(this);
-        form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(pad, pad, pad, 0);
-
-        final EditText name = new EditText(this);
-        name.setHint("Display name");
-        name.setSingleLine(true);
-        name.setFilters(new InputFilter[] {new InputFilter.LengthFilter(80)});
-        if (user != null && user.displayName != null) {
-            name.setText(user.displayName);
-        }
-        form.addView(name);
-
-        final EditText bio = new EditText(this);
-        bio.setHint("Bio");
-        bio.setMinLines(2);
-        bio.setMaxLines(4);
-        bio.setFilters(new InputFilter[] {new InputFilter.LengthFilter(1000)});
-        if (user != null && user.bio != null) {
-            bio.setText(user.bio);
-        }
-        form.addView(bio);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Edit profile")
-                .setView(form)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.save, null)
-                .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                    String displayName = name.getText().toString().trim();
-                    if (displayName.isEmpty()) {
-                        name.setError("Display name cannot be empty");
-                        return;
-                    }
-                    dialog.dismiss();
-                    saveProfile(displayName,
-                            bio.getText().toString().trim());
-                }));
-        dialog.show();
-    }
-
-    private void saveProfile(String displayName, String bio) {
-        authRepo.updateProfile(displayName, bio, new Callback<User>() {
-            @Override
-            public void onSuccess(User updated) {
-                runOnUiThread(() -> {
+        com.oru.app.ui.components.ProfileEditor.show(this, user, authRepo,
+                updated -> {
                     user = updated;
+                    session.updateIdentity(updated.displayName,
+                            updated.avatarUrl);
                     showIdentity();
-                    Toast.makeText(SettingsActivity.this, "Profile saved",
-                            Toast.LENGTH_SHORT).show();
                 });
-            }
-
-            @Override
-            public void onFailure(Throwable error) {
-                runOnUiThread(() -> Toast.makeText(SettingsActivity.this,
-                        UiErrors.message(SettingsActivity.this, error),
-                        Toast.LENGTH_LONG).show());
-            }
-        });
     }
 
     /** Brings the main screen forward on one of its tabs. */

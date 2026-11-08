@@ -53,21 +53,18 @@ public interface ApiService {
     Call<android.graphics.Bitmap> getUserAvatar(
             @Path("userId") int userId); // image; handled specially
 
+    // The wide banner behind a profile. Every account has one, not just artists.
+    @Multipart
+    @POST("api/v1/listeners/me/banner")
+    Call<ApiResponse<User>> uploadBanner(@Part MultipartBody.Part file);
+
+    @DELETE("api/v1/listeners/me/banner")
+    Call<ApiResponse<User>> deleteBanner();
+
     // ---- Artists ----
 
     @POST("api/v1/artists/me")
     Call<ApiResponse<Artist>> createArtistProfile(@Body ArtistProfileCreate body);
-
-    @Multipart
-    @POST("api/v1/artists/me/banner")
-    Call<ApiResponse<Artist>> uploadBanner(@Part MultipartBody.Part file);
-
-    @DELETE("api/v1/artists/me/banner")
-    Call<ApiResponse<Artist>> deleteBanner();
-
-    @GET("api/v1/artists/{artistId}/banner")
-    Call<android.graphics.Bitmap> getArtistBanner(
-            @Path("artistId") int artistId);
 
     @GET("api/v1/artists")
     Call<ApiResponse<List<Artist>>> listArtists(
@@ -193,6 +190,11 @@ public interface ApiService {
     @GET("api/v1/listeners/me/likes")
     Call<ApiResponse<List<Song>>> getMyLikes();
 
+    // Recently played, newest first — the home screen's "Pick up where you left off".
+    @GET("api/v1/listeners/me/history")
+    Call<ApiResponse<List<Song>>> getListeningHistory(
+            @Query("limit") int limit);
+
     @GET("api/v1/listeners/me/following")
     Call<ApiResponse<List<Artist>>> getFollowing();
 
@@ -222,6 +224,27 @@ public interface ApiService {
     Call<ApiResponse<Void>> removeSongFromPlaylist(
             @Path("playlistId") int playlistId,
             @Path("songId") int songId);
+
+    // A playlist's own square cover and its wide banner.
+    @Multipart
+    @POST("api/v1/playlists/{playlistId}/cover")
+    Call<ApiResponse<Playlist>> uploadPlaylistCover(
+            @Path("playlistId") int playlistId,
+            @Part MultipartBody.Part file);
+
+    @DELETE("api/v1/playlists/{playlistId}/cover")
+    Call<ApiResponse<Playlist>> deletePlaylistCover(
+            @Path("playlistId") int playlistId);
+
+    @Multipart
+    @POST("api/v1/playlists/{playlistId}/banner")
+    Call<ApiResponse<Playlist>> uploadPlaylistBanner(
+            @Path("playlistId") int playlistId,
+            @Part MultipartBody.Part file);
+
+    @DELETE("api/v1/playlists/{playlistId}/banner")
+    Call<ApiResponse<Playlist>> deletePlaylistBanner(
+            @Path("playlistId") int playlistId);
 
     // The following feed is made of songs.
     @GET("api/v1/feed/following")

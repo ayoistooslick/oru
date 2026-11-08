@@ -4,12 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/paper_deep">
+    android:background="@color/paper">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/paper_deep">
+        android:background="@color/paper">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -22,10 +22,10 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
+        android:clipToPadding="false"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -33,77 +33,137 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="16dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="32dp">
+            android:paddingTop="8dp"
+            android:paddingBottom="28dp">
 
-            <!-- Your account -->
+            <!-- Who you are, as one card. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
-                <ImageView
-                    android:id="@+id/avatarImage"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:background="@color/paper_deep"
-                    android:contentDescription="Profile picture"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_artist" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/accountName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Oru.Title"
-                        android:textColor="@color/ink" />
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
 
-                    <TextView
-                        android:id="@+id/accountMeta"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Oru.Label"
-                        android:textColor="@color/ink_faint" />
+                        <ImageView
+                            android:id="@+id/avatarImage"
+                            android:layout_width="68dp"
+                            android:layout_height="68dp"
+                            android:background="@drawable/avatar_ring"
+                            android:clipToOutline="true"
+                            android:contentDescription="Your picture"
+                            android:padding="3dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_artist" />
 
-                    <TextView
-                        android:id="@+id/accountEmail"
-                        android:layout_width="match_parent"
+                        <ImageButton
+                            android:id="@+id/editAvatarButton"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_gravity="bottom|end"
+                            android:background="@drawable/bg_gear_flame"
+                            android:contentDescription="Change your picture"
+                            android:elevation="3dp"
+                            android:padding="6dp"
+                            android:src="@drawable/ic_edit"
+                            app:tint="@color/night" />
+
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/accountName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearance.Oru.Title"
+                            android:textColor="@color/ink" />
+
+                        <TextView
+                            android:id="@+id/accountMeta"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_soft" />
+
+                        <TextView
+                            android:id="@+id/accountEmail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/accountBio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingMultiplier="1.25"
+                    android:textAppearance="@style/TextAppearance.Oru.Body"
+                    android:textColor="@color/ink_soft"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/editProfileButton"
+                        style="@style/Widget.Oru.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Edit profile"
+                        app:icon="@drawable/ic_edit"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/night" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/removePictureButton"
+                        style="@style/Widget.Oru.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Remove picture"
+                        android:textColor="@color/ink_soft"
+                        android:visibility="gone" />
 
                 </LinearLayout>
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/accountBio"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/card_surface"
-                android:padding="18dp"
-                android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                android:textColor="@color/ink_soft"
-                android:visibility="gone" />
-
             <!-- Appearance -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="22dp"
+                android:layout_marginStart="4dp"
                 android:text="Appearance"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
@@ -111,25 +171,25 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_surface"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:padding="14dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Theme"
-                    android:textAppearance="@style/TextAppearance.Oru.Title"
+                    android:textAppearance="@style/TextAppearance.Oru.Body"
                     android:textColor="@color/ink" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Follow your phone, or keep ORU light or dark whatever the phone does."
+                    android:layout_marginTop="2dp"
+                    android:text="System follows your phone's dark mode."
                     android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                    android:textColor="@color/ink_soft" />
+                    android:textColor="@color/ink_faint" />
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/themeChipGroup"
@@ -137,6 +197,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     app:selectionRequired="true"
+                    app:singleLine="true"
                     app:singleSelection="true">
 
                     <com.google.android.material.chip.Chip
@@ -144,6 +205,7 @@
                         style="@style/Widget.Oru.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:checked="true"
                         android:text="System" />
 
                     <com.google.android.material.chip.Chip
@@ -164,95 +226,79 @@
 
             </LinearLayout>
 
-            <!-- Your pictures -->
+            <!-- Profile pictures -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Your pictures"
+                android:layout_marginTop="22dp"
+                android:layout_marginStart="4dp"
+                android:text="Pictures"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="A square picture shows beside your name everywhere on ORU."
-                android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                android:textColor="@color/ink_soft" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/card_surface"
-                android:orientation="horizontal"
-                android:padding="14dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/editAvatarButton"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Change picture"
-                    android:textAllCaps="false" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/removePictureButton"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="Remove"
-                    android:textAllCaps="false"
-                    android:textColor="@color/ink_soft"
-                    android:visibility="gone" />
-
-            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/bannerCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_surface"
                 android:orientation="vertical"
-                android:padding="14dp"
-                android:visibility="gone">
+                android:padding="14dp">
 
-                <ImageView
-                    android:id="@+id/bannerImage"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="88dp"
-                    android:background="@color/paper_deep"
-                    android:contentDescription="Artist banner"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_music" />
+                    android:layout_height="132dp"
+                    android:background="@drawable/artwork_rounded">
+
+                    <ImageView
+                        android:id="@+id/bannerImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToOutline="true"
+                        android:contentDescription="Your banner"
+                        android:scaleType="centerCrop" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Profile banner"
+                    android:textAppearance="@style/TextAppearance.Oru.Body"
+                    android:textColor="@color/ink" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="The wide picture behind your name, on your profile and artist page."
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_faint" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/bannerButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        style="@style/Widget.Oru.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Change banner"
-                        android:textAllCaps="false" />
+                        app:icon="@drawable/ic_image"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/flame_ink" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/removeBannerButton"
-                        style="@style/Widget.Material3.Button.TextButton"
+                        style="@style/Widget.Oru.Button.Text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="6dp"
                         android:text="Remove"
-                        android:textAllCaps="false"
                         android:textColor="@color/ink_soft"
                         android:visibility="gone" />
 
@@ -260,262 +306,245 @@
 
             </LinearLayout>
 
-            <!-- Your profile -->
+            <!-- Listening -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Your profile"
+                android:layout_marginTop="22dp"
+                android:layout_marginStart="4dp"
+                android:text="Listening"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
 
             <LinearLayout
-                android:id="@+id/editProfileButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
+                android:orientation="vertical"
+                android:padding="6dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/downloadsButton"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Name and about you"
-                        android:textAppearance="@style/TextAppearance.Oru.Body"
-                        android:textColor="@color/ink" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_download"
+                        app:tint="@color/flame_ink" />
 
-                    <TextView
-                        android:id="@+id/profileSummary"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Downloads"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Songs saved on this device"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
 
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
+                <LinearLayout
+                    android:id="@+id/permissionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_notifications"
+                        app:tint="@color/flame_ink" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Playback notifications"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink" />
+
+                        <TextView
+                            android:id="@+id/permissionSummary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
-            <!-- Music -->
+            <!-- Your work -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Music"
+                android:layout_marginTop="22dp"
+                android:layout_marginStart="4dp"
+                android:text="Your work"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
 
             <LinearLayout
-                android:id="@+id/studioButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
+                android:orientation="vertical"
+                android:padding="6dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/studioButton"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Your studio"
-                        android:textAppearance="@style/TextAppearance.Oru.Body"
-                        android:textColor="@color/ink" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_studio"
+                        app:tint="@color/flame_ink" />
 
-                    <TextView
-                        android:id="@+id/studioSummary"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Upload songs, publish them and make releases."
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Your studio"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink" />
+
+                        <TextView
+                            android:id="@+id/studioSummary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
 
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/reportsButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp"
-                android:visibility="gone">
-
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/reportsButton"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:visibility="gone">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Reports"
-                        android:textAppearance="@style/TextAppearance.Oru.Body"
-                        android:textColor="@color/ink" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_report"
+                        app:tint="@color/flame_ink" />
 
-                    <TextView
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Songs and profiles people have reported."
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Reports"
+                            android:textAppearance="@style/TextAppearance.Oru.Body"
+                            android:textColor="@color/ink" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Moderation queue"
+                            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                            android:textColor="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
 
                 </LinearLayout>
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
-
-            </LinearLayout>
-
-            <!-- App -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="App"
-                android:textAppearance="@style/TextAppearance.Oru.Label"
-                android:textColor="@color/ink_faint" />
-
-            <LinearLayout
-                android:id="@+id/downloadsButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Downloads"
-                    android:textAppearance="@style/TextAppearance.Oru.Body"
-                    android:textColor="@color/ink" />
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/permissionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Permissions &amp; storage"
-                        android:textAppearance="@style/TextAppearance.Oru.Body"
-                        android:textColor="@color/ink" />
-
-                    <TextView
-                        android:id="@+id/permissionSummary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
-
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/aboutButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/card_surface"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="About Oru"
-                    android:textAppearance="@style/TextAppearance.Oru.Body"
-                    android:textColor="@color/ink" />
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/ink_faint" />
 
             </LinearLayout>
 
             <!-- About -->
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="22dp"
+                android:layout_marginStart="4dp"
                 android:text="About"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
@@ -523,29 +552,78 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/card_surface"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:padding="6dp">
 
-                <TextView
+                <LinearLayout
+                    android:id="@+id/aboutButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="ORU is for musicians who are just starting out. One person builds it, and the ranking rules are written down in the docs where anyone can read them."
-                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                    android:textColor="@color/ink_soft" />
-
-                <TextView
-                    android:id="@+id/githubButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:background="?attr/selectableItemBackground"
-                    android:paddingVertical="4dp"
-                    android:text="github.com/ayoistooslick"
-                    android:textAppearance="@style/TextAppearance.Oru.Body"
-                    android:textColor="@color/flame_ink"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_music"
+                        app:tint="@color/flame_ink" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:text="About ORU"
+                        android:textAppearance="@style/TextAppearance.Oru.Body"
+                        android:textColor="@color/ink" />
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/githubButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_share"
+                        app:tint="@color/flame_ink" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:text="The developer"
+                        android:textAppearance="@style/TextAppearance.Oru.Body"
+                        android:textColor="@color/ink" />
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/ink_faint" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -554,23 +632,25 @@
                 style="@style/Widget.Oru.Button.Outlined"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="22dp"
                 android:text="Log out"
-                android:textAllCaps="false"
-                android:textColor="@color/flame" />
+                android:textColor="@color/flame_ink"
+                app:icon="@drawable/ic_logout"
+                app:iconGravity="textStart"
+                app:iconTint="@color/flame_ink"
+                app:strokeColor="@color/flame" />
 
             <TextView
                 android:id="@+id/versionText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Oru 1.0"
-                android:textAlignment="center"
+                android:gravity="center"
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
 
         </LinearLayout>
 
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

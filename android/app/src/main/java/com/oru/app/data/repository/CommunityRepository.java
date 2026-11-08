@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.oru.app.data.api.ApiCall;
 import com.oru.app.data.api.ApiService;
 import com.oru.app.data.model.*;
+import com.oru.app.data.api.Uploads;
 
 import java.util.List;
 
@@ -42,6 +43,12 @@ public class CommunityRepository {
 
     public void getMyLikes(Callback<List<Song>> cb) {
         ApiCall.enqueue(api.getMyLikes(), gson, "Couldn't load your likes", cb);
+    }
+
+    /** Recently played, newest first: the songs to pick back up. */
+    public void getListeningHistory(int limit, Callback<List<Song>> cb) {
+        ApiCall.enqueue(api.getListeningHistory(limit), gson,
+                "Couldn't load what you played", cb);
     }
 
     public void getFollowing(Callback<List<Artist>> cb) {
@@ -87,5 +94,31 @@ public class CommunityRepository {
             Callback<Void> cb) {
         ApiCall.enqueue(api.removeSongFromPlaylist(playlistId, songId), gson,
                 "Couldn't remove that song", cb);
+    }
+
+    /** The square artwork on the playlist. Owner only, enforced by the API. */
+    public void uploadPlaylistCover(int playlistId, java.io.File file,
+            String mime, Callback<Playlist> cb) {
+        ApiCall.enqueue(api.uploadPlaylistCover(playlistId,
+                        Uploads.file("file", file.getName(), mime, file)),
+                gson, "Couldn't upload that cover", cb);
+    }
+
+    public void deletePlaylistCover(int playlistId, Callback<Playlist> cb) {
+        ApiCall.enqueue(api.deletePlaylistCover(playlistId), gson,
+                "Couldn't remove that cover", cb);
+    }
+
+    /** The wide picture behind the playlist page. */
+    public void uploadPlaylistBanner(int playlistId, java.io.File file,
+            String mime, Callback<Playlist> cb) {
+        ApiCall.enqueue(api.uploadPlaylistBanner(playlistId,
+                        Uploads.file("file", file.getName(), mime, file)),
+                gson, "Couldn't upload that banner", cb);
+    }
+
+    public void deletePlaylistBanner(int playlistId, Callback<Playlist> cb) {
+        ApiCall.enqueue(api.deletePlaylistBanner(playlistId), gson,
+                "Couldn't remove that banner", cb);
     }
 }

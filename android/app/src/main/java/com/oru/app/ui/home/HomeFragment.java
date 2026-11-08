@@ -34,6 +34,9 @@ public class HomeFragment extends Fragment {
     private FragmentHomeBinding binding;
     private final FeedAdapter feedAdapter = new FeedAdapter();
     private MusicRepository musicRepo;
+    private com.oru.app.data.repository.CommunityRepository communityRepo;
+    /** Recently played, for the row that lets a listener pick the thread back up. */
+    private List<Song> recent;
 
     @Nullable
     @Override
@@ -72,6 +75,9 @@ public class HomeFragment extends Fragment {
             musicRepo = new MusicRepository(
                     com.oru.app.util.LazySession.getApiService(),
                     com.oru.app.util.LazySession.getGson());
+            communityRepo = new com.oru.app.data.repository.CommunityRepository(
+                    com.oru.app.util.LazySession.getApiService(),
+                    com.oru.app.util.LazySession.getGson());
         }
 
         loadHome(false);
@@ -86,6 +92,24 @@ public class HomeFragment extends Fragment {
         binding.homeGreeting.setText(greeting());
         binding.homeSubtitle.setText("Songs from who you follow, and what's new.");
 
+        // Recently played first: it is the cheapest way back into a listening
+        // session, and the other three loads follow it either way.
+        communityRepo.getListeningHistory(10, new Callback<List<Song>>() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                recent = songs;
+                loadRankings();
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                recent = null;
+                loadRankings();
+            }
+        });
+    }
+
+    private void loadRankings() {
         musicRepo.weeklyRankings(new Callback<List<RankingEntry>>() {
             @Override
             public void onSuccess(List<RankingEntry> rankings) {
@@ -149,6 +173,11 @@ public class HomeFragment extends Fragment {
 
         List<RecyclerView.Adapter<? extends RecyclerView.ViewHolder>> parts =
                 new ArrayList<>();
+        if (recent != null && !recent.isEmpty()) {
+            parts.add(new SectionAdapter("Pick up where you left off",
+                    "What you played last."));
+            parts.add(new RailAdapter(recent));
+        }
         if (discover != null && !discover.isEmpty()) {
             parts.add(new QuickGridAdapter(
                     discover.subList(0, Math.min(6, discover.size()))));

@@ -28,12 +28,35 @@ public class Playlist {
     @SerializedName("song_count")
     public int totalSongs;
 
-    /** The first track's artwork, since a playlist has none of its own. */
+    /**
+     * The playlist's own square artwork, or the first track's when it has none.
+     * {@link #hasCover} says which of the two this is.
+     */
     @SerializedName("cover_url")
     public String coverUrl;
 
+    /** The wide picture behind the playlist page, when one was uploaded. */
+    @SerializedName("banner_url")
+    public String bannerUrl;
+
+    @SerializedName("has_cover")
+    public boolean hasCover;
+
+    /** Bumped by the API whenever either picture is replaced. */
+    @SerializedName("image_version")
+    public int imageVersion;
+
     @SerializedName("owner")
     public Owner owner;
+
+    /** A stable, cache-busting address for the cover or banner artwork. */
+    public String coverUrlVersioned() {
+        return com.oru.app.util.MediaUrl.versioned(coverUrl, imageVersion);
+    }
+
+    public String bannerUrlVersioned() {
+        return com.oru.app.util.MediaUrl.versioned(bannerUrl, imageVersion);
+    }
 
     public int songCount() {
         if (songs != null) {

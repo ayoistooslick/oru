@@ -36,6 +36,15 @@ public class SessionManager {
                 .apply();
     }
 
+    /** Keeps the cached name and face in step after an edit or a new picture. */
+    public void updateIdentity(@Nullable String displayName,
+            @Nullable String avatarUrl) {
+        prefs.edit()
+                .putString(KEY_DISPLAY_NAME, displayName)
+                .putString(KEY_AVATAR, avatarUrl)
+                .apply();
+    }
+
     public void clearSession() {
         prefs.edit().clear().apply();
     }

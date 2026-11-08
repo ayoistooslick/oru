@@ -47,6 +47,16 @@ public class PlayerService extends MediaSessionService {
     private MediaSession mediaSession;
     private ExoPlayer player;
 
+    /** Fires when a sleep timer runs out; armed by the player's Sleep button. */
+    private final Handler sleepHandler = new Handler(Looper.getMainLooper());
+    private boolean sleepAtTrackEnd;
+    private final Runnable sleepStop = () -> {
+        sleepAtTrackEnd = false;
+        if (player != null) {
+            player.pause();
+        }
+    };
+
     private final Handler listenTicker = new Handler(Looper.getMainLooper());
     private final Runnable listenTick = new Runnable() {
         @Override
@@ -75,6 +85,11 @@ public class PlayerService extends MediaSessionService {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem item, int reason) {
                 remember(item);
+                // "End of this song" pauses as the next one would begin.
+                if (sleepAtTrackEnd && player != null) {
+                    sleepAtTrackEnd = false;
+                    player.pause();
+                }
             }
         });
 
@@ -118,6 +133,7 @@ public class PlayerService extends MediaSessionService {
                     .buildUpon()
                     .add(PlaybackCommands.SHUFFLE)
                     .add(PlaybackCommands.REPEAT)
+                    .add(PlaybackCommands.SLEEP_TIMER)
                     .build();
             return new MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                     .setAvailableSessionCommands(commands)
@@ -136,6 +152,12 @@ public class PlayerService extends MediaSessionService {
             }
             if (customCommand.equals(PlaybackCommands.REPEAT)) {
                 current.setRepeatMode(nextRepeatMode(current.getRepeatMode()));
+                return Futures.immediateFuture(
+                        new SessionResult(SessionResult.RESULT_SUCCESS));
+            }
+            if (customCommand.equals(PlaybackCommands.SLEEP_TIMER)) {
+                armSleepTimer(args != null
+                        ? args.getLong(PlaybackCommands.SLEEP_MINUTES, 0L) : 0L);
                 return Futures.immediateFuture(
                         new SessionResult(SessionResult.RESULT_SUCCESS));
             }
@@ -176,6 +198,17 @@ public class PlayerService extends MediaSessionService {
     @Override
     public MediaSession onGetSession(MediaSession.ControllerInfo controllerInfo) {
         return mediaSession;
+    }
+
+    /** Minutes until playback pauses; 0 cancels, -1 waits for the song to end. */
+    private void armSleepTimer(long minutes) {
+        sleepHandler.removeCallbacks(sleepStop);
+        sleepAtTrackEnd = false;
+        if (minutes > 0) {
+            sleepHandler.postDelayed(sleepStop, minutes * 60_000L);
+        } else if (minutes < 0) {
+            sleepAtTrackEnd = true;
+        }
     }
 
     /**
@@ -273,6 +306,7 @@ public class PlayerService extends MediaSessionService {
     @Override
     public void onDestroy() {
         listenTicker.removeCallbacks(listenTick);
+        sleepHandler.removeCallbacks(sleepStop);
         if (mediaSession != null) {
             mediaSession.release();
             mediaSession = null;

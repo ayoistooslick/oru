@@ -15,6 +15,10 @@ import com.oru.app.util.MediaUrl;
  * Lists used to leave their artwork empty, and a null or unreachable cover left
  * a blank square; every row now shows the image, the saved copy when the song is
  * downloaded, and a placeholder otherwise.
+ *
+ * Pictures that can be replaced (a playlist's cover, an account's banner) carry
+ * a version from the API. Glide keys its cache on the URL, so a replaced picture
+ * gets a new address and the old one is never shown again.
  */
 public final class Covers {
 
@@ -46,11 +50,29 @@ public final class Covers {
         load(view, path, R.drawable.ic_artist);
     }
 
+    /**
+     * A picture the server can replace, addressed by its path and the version
+     * the API reported with it.
+     */
+    public static void loadVersioned(ImageView view, String path, int version,
+            int placeholder) {
+        loadResolved(view, MediaUrl.versioned(path, version), placeholder);
+    }
+
+    public static void loadVersionedAvatar(ImageView view, String path,
+            int version) {
+        loadResolved(view, MediaUrl.versioned(path, version),
+                R.drawable.ic_artist);
+    }
+
     public static void load(ImageView view, String path, int placeholder) {
+        loadResolved(view, MediaUrl.of(path), placeholder);
+    }
+
+    private static void loadResolved(ImageView view, String url, int placeholder) {
         if (view == null) {
             return;
         }
-        String url = MediaUrl.of(path);
         view.setVisibility(View.VISIBLE);
         if (url == null) {
             Glide.with(view.getContext()).clear(view);

@@ -423,6 +423,29 @@ def record_listen(song_id: int, payload: ListeningCreate, user: User = Depends(c
     return {"recorded": True, "counted_for_discovery": counted}
 
 
+@router.get("/listeners/me/history")
+def listening_history(limit: int = 20, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Recently played, newest first, one row per song.
+
+    A song listened to three times is still one card: the library of the ear is
+    made of songs, not of plays.
+    """
+    safe_limit = min(max(limit, 1), 50)
+    latest = (
+        select(ListeningEvent.song_id, func.max(ListeningEvent.created_at).label("last_heard"))
+        .where(ListeningEvent.listener_id == user.id)
+        .group_by(ListeningEvent.song_id)
+        .subquery()
+    )
+    songs = db.scalars(
+        select(Song).join(latest, latest.c.song_id == Song.id)
+        .where(Song.status == "published")
+        .order_by(latest.c.last_heard.desc())
+        .limit(safe_limit)
+    ).unique().all()
+    return {"items": [song_data(song, db, user) for song in songs], "limit": safe_limit, "offset": 0}
+
+
 @router.post("/artists/me/releases", status_code=201)
 def create_release(payload: ReleaseCreate, artist: User = Depends(artist_user), db: Session = Depends(get_db)):
     songs = db.scalars(select(Song).where(Song.id.in_(payload.song_ids), Song.artist_id == artist.id)).all()

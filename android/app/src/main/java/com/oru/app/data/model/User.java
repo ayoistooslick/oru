@@ -31,6 +31,10 @@ public class User {
     @SerializedName("banner_url")
     public String bannerUrl;
 
+    /** Bumped by the API whenever the picture or the banner is replaced. */
+    @SerializedName("image_version")
+    public int imageVersion;
+
     @SerializedName("is_active")
     public boolean isActive;
 
@@ -51,7 +55,17 @@ public class User {
 
     /** The banner to show for this account, if it has one. */
     public String artistBannerUrl() {
-        return artistProfile != null ? artistProfile.bannerUrl : bannerUrl;
+        return bannerUrl != null ? bannerUrl
+                : artistProfile != null ? artistProfile.bannerUrl : null;
+    }
+
+    /** A cache-busting address for the avatar, so a new picture replaces the old. */
+    public String avatarUrlVersioned() {
+        return com.oru.app.util.MediaUrl.versioned(avatarUrl, imageVersion);
+    }
+
+    public String bannerUrlVersioned() {
+        return com.oru.app.util.MediaUrl.versioned(artistBannerUrl(), imageVersion);
     }
 
     /** The name on the artist page, when there is one. */

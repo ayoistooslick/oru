@@ -125,7 +125,9 @@ public class LibraryTileAdapter extends RecyclerView.Adapter<LibraryTileAdapter.
 
             if (tile.type == PLAYLIST) {
                 Playlist playlist = tile.playlist;
-                Covers.load(binding.tileArtwork, playlist.coverUrl);
+                // Versioned: a cover the owner replaced must not stay on screen.
+                Covers.loadVersioned(binding.tileArtwork, playlist.coverUrl,
+                        playlist.imageVersion, R.drawable.ic_playlist);
                 binding.tileTitle.setText(playlist.title);
                 binding.tileSubtitle.setText(tile.countLabel);
                 binding.getRoot().setOnClickListener(v -> {

@@ -19,8 +19,12 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), default="listener")
     display_name: Mapped[str] = mapped_column(String(80))
     bio: Mapped[str] = mapped_column(Text, default="")
-    # Everyone, listeners included, can put a face on their profile.
+    # Everyone, listeners included, can put a face and a wide banner on their
+    # profile. Bumping image_version changes the picture URL, so a replaced
+    # image is never served from an old cache.
     avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    banner_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    image_version: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     artist_profile: Mapped["ArtistProfile"] = relationship(back_populates="user", uselist=False)
@@ -125,6 +129,11 @@ class Playlist(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(100))
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)
+    # A cover is the square artwork; the banner is the wide picture behind the
+    # playlist page. Without them a playlist borrows its first song's cover.
+    cover_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    banner_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    image_version: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 

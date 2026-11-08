@@ -14,6 +14,21 @@ public final class MediaUrl {
     private MediaUrl() {
     }
 
+    /**
+     * The same address with a version tag appended.
+     *
+     * Replaceable pictures (covers, banners) keep their path, so an image loader
+     * would happily show the old one; the tag makes a replaced picture a new
+     * address. The API ignores the parameter, so a stale tag is harmless.
+     */
+    public static String versioned(String path, int version) {
+        String url = of(path);
+        if (url == null || version <= 0) {
+            return url;
+        }
+        return url + "&v=" + version;
+    }
+
     public static String of(String path) {
         if (path == null || path.isEmpty()) {
             return null;
