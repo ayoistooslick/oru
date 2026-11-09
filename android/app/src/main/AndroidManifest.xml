@@ -67,6 +67,23 @@
             </intent-filter>
         </activity>
 
+        <!-- Shared song and artist links: oru://song/12, oru://artist/4. The
+             web page fires these as Android intent URLs, so a listener who
+             has the app opens it instead of the browser. -->
+        <activity
+            android:name=".ui.OpenLinkActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Oru">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="oru" android:host="song" />
+                <data android:scheme="oru" android:host="artist" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".ui.artist.ArtistActivity"
             android:exported="false"

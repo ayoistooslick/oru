@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
-  ArrowRight,
   Check,
   Download,
   Headphones,
@@ -16,11 +15,9 @@ import {
 } from "../components/icons";
 import { OruLogo } from "../components/OruMark";
 import { motionSafe } from "../lib/motion";
+import { APK_URL } from "../lib/links";
 
 gsap.registerPlugin(ScrollTrigger);
-
-/** The install file. One link, one place, so an update is a single edit. */
-export const APK_URL = "https://files.catbox.moe/4k642q.zip";
 
 const FEATURES = [
   {
@@ -51,7 +48,7 @@ const FEATURES = [
   {
     icon: Share2,
     title: "Send a song to a friend",
-    body: "Share a track to WhatsApp or anywhere else. Whoever opens the link lands on it.",
+    body: "Share a track to WhatsApp or anywhere else. The link plays in the browser, and opens straight into the app for whoever has it installed.",
   },
 ];
 
@@ -84,8 +81,12 @@ const FAQ = [
     a: "Your account, uploads and playlists live on ORU's servers, not on the phone, so they are untouched by an update. Because each build is signed fresh, uninstall the old copy before installing a new one.",
   },
   {
-    q: "Is there a version for iPhone?",
-    a: "Not yet. ORU for Android is the app for now.",
+    q: "I am on an iPhone",
+    a: "Use ORU in your browser. The whole player, the studio and your library work there, on Safari too. Nothing to install, and the same account works everywhere.",
+  },
+  {
+    q: "What happens when I open a shared song link?",
+    a: "On a phone with the app installed, the link opens ORU and plays the song there. Anywhere else, the song plays on a page in your browser, so the person you sent it to hears it first and signs up later if they want.",
   },
 ];
 
@@ -208,10 +209,16 @@ export function Landing() {
             </Link>
             <a
               href={APK_URL}
+              className="hidden text-[14px] font-semibold text-ink-soft transition hover:text-ink sm:inline"
+            >
+              Android app
+            </a>
+            <Link
+              to="/listen"
               className="h-9 rounded-full bg-flame px-4 text-[13.5px] font-semibold leading-9 text-cream transition hover:bg-flame-ink press"
             >
-              Download
-            </a>
+              Listen free
+            </Link>
           </nav>
         </div>
       </header>
@@ -222,35 +229,36 @@ export function Landing() {
             <div data-hero-copy className="max-w-xl">
               <span className="mb-6 inline-flex items-center gap-2 rounded-full bg-flame-soft px-3.5 py-1.5 text-[12.5px] font-semibold text-flame-ink ring-1 ring-flame/30">
                 <span className="h-1.5 w-1.5 rounded-full bg-flame-ink" />
-                ORU for Android · version 1.0
+                On the web, and on Android
               </span>
               <h1 className="font-display text-[clamp(2.5rem,7vw,4.1rem)] font-extrabold leading-[1.02] tracking-[-0.03em]">
-                The whole of ORU, <span className="text-flame-ink">in your pocket</span>.
+                New music, <span className="text-flame-ink">wherever you are</span>.
               </h1>
               <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-ink-soft sm:text-[18px]">
-                Upload a song, publish it, and listen to what everyone else is making. The app carries the
-                whole thing: your studio, your playlists, and a player that keeps going with the screen off.
+                Upload a song, publish it, and listen to what everyone else is making. ORU runs in any
+                browser, on an iPhone or a laptop, and the Android app adds downloads and controls that
+                keep going with the screen off.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href={APK_URL}
+                <Link
+                  to="/listen"
                   className="inline-flex h-14 items-center gap-3 rounded-full bg-flame px-7 text-[16px] font-bold text-cream shadow-ember transition hover:bg-flame-ink press"
                 >
-                  <Download className="h-5 w-5" />
-                  Download for Android
-                </a>
+                  <Play className="h-5 w-5" fill="currentColor" />
+                  Listen in your browser
+                </Link>
                 <a
-                  href="#install"
+                  href={APK_URL}
                   className="inline-flex h-14 items-center gap-2 rounded-full border border-hair px-6 text-[15.5px] font-semibold text-ink transition hover:border-ink-soft hover:bg-ink/8"
                 >
-                  How to install
-                  <ArrowRight className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
+                  Get the Android app
                 </a>
               </div>
 
               <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px] text-ink-faint">
-                {["Android 7 and newer", "Free, no ads", "Sign in with Google"].map((item) => (
+                {["iPhone, laptop or Android", "Free, no ads", "Sign in with Google"].map((item) => (
                   <li key={item} className="inline-flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-flame-ink" />
                     {item}
@@ -271,11 +279,11 @@ export function Landing() {
             <div>
               <p className="label-caps">What's inside</p>
               <h2 className="mt-2 font-display text-[clamp(1.8rem,4.5vw,2.6rem)] font-extrabold tracking-[-0.025em]">
-                Everything the site did, and then the rest.
+                The same ORU, whichever screen you open it on.
               </h2>
             </div>
             <p className="max-w-sm text-[15px] leading-relaxed text-ink-soft">
-              The app is where ORU lives now. These are the parts you will use most.
+              One account, one library, one look. These are the parts you will use most.
             </p>
           </div>
 
@@ -303,9 +311,12 @@ export function Landing() {
         <Section className="border-t border-hair">
           <div id="install" className="scroll-mt-24" />
           <p className="label-caps">How to install</p>
-          <h2 className="mt-2 max-w-2xl font-display text-[clamp(1.8rem,4.5vw,2.6rem)] font-extrabold tracking-[-0.025em]">
-            Three taps and you are listening.
-          </h2>
+          <h2 className="mt-2 max-w-2xl font-display text-[clamp(1.8rem,4.5vw,2.6rem)] font-extrabold tracking-[-0.025em]">                Three taps and you are listening, on Android.
+              </h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-soft">
+                No phone? No problem. Everything below also works in a browser, so an iPhone or a laptop
+                needs no install at all.
+              </p>
 
           <ol className="mt-9 grid gap-4 sm:grid-cols-3">
             {STEPS.map((step, index) => (
@@ -393,14 +404,23 @@ export function Landing() {
             <p className="mx-auto mt-3 max-w-xl text-[16.5px] leading-relaxed text-cream/85">
               It takes about a minute to make an account. Your uploads stay private until you say otherwise.
             </p>
-            <a
-              href={APK_URL}
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-paper px-8 py-3.5 text-[15.5px] font-bold text-cream shadow-float transition hover:scale-[1.03] press"
-            >
-              <Download className="h-4 w-4" />
-              Download ORU for Android
-            </a>
-            <p className="mt-4 text-[13px] text-cream/70">Free · Android 7 and newer</p>
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      to="/listen"
+                      className="inline-flex items-center gap-2 rounded-full bg-paper px-8 py-3.5 text-[15.5px] font-bold text-cream shadow-float transition hover:scale-[1.03] press"
+                    >
+                      <Play className="h-4 w-4" fill="currentColor" />
+                      Start listening
+                    </Link>
+                    <a
+                      href={APK_URL}
+                      className="inline-flex items-center gap-2 rounded-full border border-cream/40 px-7 py-3.5 text-[15px] font-semibold text-cream transition hover:border-cream/70 press"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download for Android
+                    </a>
+                  </div>
+                  <p className="mt-4 text-[13px] text-cream/70">Free · Web, iPhone and Android 7 and newer</p>
           </div>
         </Section>
       </main>

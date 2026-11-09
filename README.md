@@ -1,11 +1,22 @@
 # ORU
 
-ORU is a music app for artists who are just starting out. It is an Android app now: listeners find
-new songs, artists upload their own, and the front page is scored so that small artists can still
-show up there.
+ORU is a music app for artists who are just starting out. Listeners find new songs, artists upload
+their own, and the front page is scored so that small artists can still show up there.
 
-[oru.freebuff.app](https://oru.freebuff.app) is the download page. Google will only sign people in
-inside a browser, so that site also hosts the one page the app needs: `/auth`.
+[oru.freebuff.app](https://oru.freebuff.app) is the product in a browser, and the same account and
+library work in the Android app. The browser is the whole client, not a landing page: an iPhone or a
+laptop needs no install. The app adds downloads and background playback.
+
+| | Browser | Android app |
+| --- | --- | --- |
+| Listen, search, like, playlists, follow | yes | yes |
+| Studio: record, upload, publish | yes | yes |
+| Downloads that play offline | no | yes |
+| Lock-screen and background controls | no | yes |
+| Google sign-in | inside the page | through the browser, then back |
+
+Google will only sign people in inside a browser, so the app borrows the site's `/auth` page for
+that step.
 
 Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `android` · `media3` ·
 `react` · `vite` · `self-hosted-s3`
@@ -19,7 +30,20 @@ Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `androi
   drafts, publish songs and releases, and see plays, likes and follows.
 - **Moderators** see reports from listeners and mark them resolved or dismissed.
 
-The web build is a download page plus the sign-in handoff. All product UI lives in `android/`.
+APK: <https://is.gd/WNgSQY>. Every CI run also attaches `oru.apk` to a `build-N` release.
+
+## Shared song links
+
+A song is shared as `https://oru.freebuff.app/song/<id>`.
+
+- The page is public and plays the song, so a link sent to an iPhone, a laptop or a phone without
+  the app still works.
+- On Android the page fires an `intent://song/<id>;package=com.oru.app` URL. Chrome opens the app
+  when it is installed and stays on the page when it is not, so no digital asset link (and no
+  signing-key fingerprint) is needed. `OpenLinkActivity` receives it, asks the listener to sign in
+  first if needed, and then plays the song.
+- The app also answers `oru://song/<id>` and `oru://artist/<id>` directly, which is what the share
+  sheet and other apps can hand it.
 
 ## Sign-in across two surfaces
 
@@ -50,9 +74,10 @@ Email and password still sign in natively, inside the app.
 app/                  FastAPI app. Routes are in app/api/, models in app/models.py
 api/index.py          production entrypoint used by the host. The host only routes /api, so
                       calls travel as /api?__path=/api/v1/... and app/main.py puts the path back
-src/                  the site: Landing.tsx (download page), Auth.tsx (sign-in handoff), About.tsx
-public/               icons and share images. sw.js is a self-destruct worker that retires the
-                      old web app's cache for anyone who installed it
+src/                  the web client: the whole player, studio, library and settings in React
+src/pages/Song.tsx    the public page a shared song link opens
+src/pages/Auth.tsx    Google sign-in and the one-time code the Android app trades for a session
+public/               icons and share images, plus the service worker that makes the site installable
 docs/API.md           every route with example requests
 docs/DECISIONS.md     why discovery and ranking work the way they do
 tests/                pytest suite

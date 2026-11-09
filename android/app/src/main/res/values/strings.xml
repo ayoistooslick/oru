@@ -50,4 +50,6 @@
     <string name="nav_follow">Follow</string>
     <string name="reports">Reports</string>
     <string name="nav_shares">Shares</string>
+    <string name="song_unavailable">That song is not available on ORU right now.</string>
+    <string name="open_in_app">Open in the ORU app</string>
 </resources>

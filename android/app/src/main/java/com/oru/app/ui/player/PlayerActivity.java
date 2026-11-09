@@ -691,9 +691,11 @@ public class PlayerActivity extends AppCompatActivity {
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
         send.putExtra(Intent.EXTRA_SUBJECT, currentSong.title);
+        // A song link, not an artist link: the page plays this song in the
+        // browser and opens the app straight into it on Android.
         send.putExtra(Intent.EXTRA_TEXT, currentSong.title + " by "
                 + currentSong.artistLabel() + " on ORU — "
-                + "https://oru.freebuff.app/artist/" + currentSong.artistId);
+                + "https://oru.freebuff.app/song/" + currentSong.id);
         startActivity(Intent.createChooser(send, "Share this song"));
     }
 

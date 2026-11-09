@@ -4,27 +4,29 @@
   --font-sans: "Outfit", "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 
-  /* Warm, editorial identity. Deep clay surfaces, cream ink and an ember
-     accent drawn from the ORU mark. */
-  --color-paper: #17120e;
-  --color-paper-deep: #0d0a07;
-  --color-card: #211a14;
-  --color-card-hi: #2c231b;
-  --color-ink: #f4efe7;
-  --color-ink-soft: #cbc0b2;
-  --color-ink-faint: #8d8173;
-  --color-hair: #382c22;
+  /* The same palette as the Android app, value for value: soft cream paper,
+     warm ink and the ember accent from the ORU mark. The two clients are one
+     product, so the tokens are copied from res/values/colors.xml rather than
+     invented here. */
+  --color-paper: #fdf8f1;
+  --color-paper-deep: #f5ece0;
+  --color-card: #ffffff;
+  --color-card-hi: #f7efe4;
+  --color-ink: #221a13;
+  --color-ink-soft: #6b5d4e;
+  --color-ink-faint: #837463;
+  --color-hair: #ebddcd;
   --color-flame: #e8552e;
-  --color-flame-ink: #ff6a44;
-  --color-flame-soft: rgba(232, 85, 46, 0.16);
-  --color-cream: #f4efe7;
-  --color-night: #0d0a07;
-  --color-night-soft: #17120e;
-  --color-night-hair: #382c22;
+  --color-flame-ink: #c2411d;
+  --color-flame-soft: #fce7de;
+  --color-cream: #fffdf9;
+  --color-night: #1b140f;
+  --color-night-soft: #f5ece0;
+  --color-night-hair: #ebddcd;
 
   --radius-card: 16px;
-  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 6px 18px rgba(34, 26, 19, 0.07);
+  --shadow-float: 0 14px 36px rgba(34, 26, 19, 0.14);
   --shadow-ember: 0 10px 30px rgba(232, 85, 46, 0.28);
 }
 

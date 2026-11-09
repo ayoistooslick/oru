@@ -183,7 +183,7 @@ public class FeedAdapter extends ListAdapter<Song, FeedAdapter.VH> {
 
         private void share(Context context, Song song) {
             Actions.share(context, song.title + " by " + song.artistLabel(),
-                    "https://oru.freebuff.app/artist/" + song.artistId);
+                    "https://oru.freebuff.app/song/" + song.id);
         }
 
         private void report(Context context, Song song) {

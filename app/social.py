@@ -102,6 +102,25 @@ def _page(path: str) -> tuple[str, str, str, str, str] | None:
 
         db = SessionLocal()
         try:
+            if route == "song":
+                song = db.get(Song, record_id)
+                if song is None or song.status != "published":
+                    return None
+                owner = db.get(User, song.artist_id)
+                stage = (
+                    owner.artist_profile.stage_name
+                    if owner and owner.artist_profile
+                    else (owner.display_name if owner else "an ORU artist")
+                )
+                title = f"{song.title} by {stage}"
+                description = (
+                    f"Listen to {song.title} by {stage} on ORU. It plays in the browser, free, "
+                    "no account needed to hear it."
+                )
+                image = f"/api/v1/songs/{song.id}/cover" if song.cover_key else DEFAULT_IMAGE
+                image_alt = f"Cover art for {song.title} by {stage}" if song.cover_key else DEFAULT_IMAGE_ALT
+                return title, description, image, image_alt, f"/song/{song.id}"
+
             if route == "release":
                 release = db.get(Release, record_id)
                 if release is None or release.status != "published":
