@@ -64,8 +64,9 @@ Email and password still sign in natively, inside the app.
 
 - Python 3.11+ with FastAPI, SQLAlchemy and Alembic. SQLite by default, PostgreSQL through
   `DATABASE_URL`.
-- React 19, TypeScript, Vite and Tailwind CSS 4 for the download page and the sign-in handoff. GSAP
-  for animation.
+- React 19, TypeScript, Vite and Tailwind CSS 4 for the browser client, which is the same product as
+  the app, with GSAP for animation. The palette and type tokens are copied from the app's
+  `res/values/colors.xml` and `themes.xml`.
 - Android in Java with native views, Retrofit, and Android Media3 for playback.
 
 ## Where things live
