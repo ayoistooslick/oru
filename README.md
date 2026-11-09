@@ -133,7 +133,15 @@ Copy `.env.example` to `.env`. The settings that matter:
 - `JWT_SECRET` - a long random value. Never reuse the example value in production.
 - `GOOGLE_CLIENT_ID` - the web client id. Sign-in is hidden until this is set, and the API checks
   every Google token against it.
-- `MEDIA_DIRECTORY` - where uploads land, `./data/media` by default.
+- `GITTY_BANK_API_KEY` - the media service key. With it set, every upload (audio, covers, avatars,
+  banners) goes to Gitty Bank and the database stores the public file URL it returns. Media
+  responses redirect to that URL, so Range requests still work and audio never streams through the
+  API. Uploads are public by design: never store anything confidential. Deletion needs the service's
+  owner session, so replacing artwork leaves the old file on the service.
+- `STORAGE` - `gitty`, `s3` or `local`. Leave it empty and the API picks Gitty Bank when
+  `GITTY_BANK_API_KEY` is set, otherwise S3 when it is configured, otherwise the local disk.
+- `MEDIA_DIRECTORY` - where local uploads land, `./data/media` by default. Only used when `STORAGE`
+  resolves to `local`; it does not survive a redeploy on ephemeral hosting.
 - `ADMIN_EMAILS` - addresses that get moderator access on registration. Keep it private.
 - `SITE_URL` - the public origin, for example `https://oru.freebuff.app`. Used for share links.
 

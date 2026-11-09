@@ -18,6 +18,7 @@ from app.api import accounts, community, maintenance, moderation, music
 from app.social import render_document, request_origin
 from app.config import BASE_DIR, settings
 from app.database import Base, engine
+from app.storage import storage
 
 logger = logging.getLogger("oru")
 
@@ -239,7 +240,7 @@ def build_app(api: FastAPI) -> FastAPI:
                 connection.execute(text("SELECT 1"))
         except Exception:
             return JSONResponse(status_code=503, content={"status": "unhealthy", "database": "unavailable"})
-        return {"status": "ok", "database": "ok"}
+        return {"status": "ok", "database": "ok", "media": storage.name}
 
     # The canonical prefix plus one for hosts that route the app beneath /api.
     root.mount("/api/v1", api)

@@ -11,9 +11,9 @@ import re
 from pathlib import Path
 
 from fastapi import HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 
-from app.storage import UploadTooLarge, storage
+from app.storage import StorageUnavailable, UploadTooLarge, storage
 
 AUDIO_TYPES = {
     ".mp3": {"audio/mpeg", "audio/mp3", "application/octet-stream"},
@@ -41,6 +41,8 @@ def save_upload(file: UploadFile, allowed: dict[str, set[str]], max_bytes: int) 
         key, size = storage.save(file.file, suffix, max_bytes)
     except UploadTooLarge:
         raise HTTPException(status_code=413, detail={"code": "file_too_large", "message": "The uploaded file is larger than the allowed limit"})
+    except StorageUnavailable:
+        raise HTTPException(status_code=503, detail={"code": "media_unavailable", "message": "Media storage is not reachable right now; try again in a moment"})
     if size == 0:
         storage.delete(key)
         raise HTTPException(status_code=400, detail={"code": "empty_file", "message": "The uploaded file is empty"})
@@ -73,6 +75,11 @@ def parse_range(header: str | None, total: int) -> tuple[int, int] | None:
 def media_response(key: str, media_type: str | None, request: Request, filename: str | None = None,
                    cache_control: str = "public, max-age=3600") -> Response:
     """Serve one stored file, honouring a Range request when the client sends one."""
+    if key.startswith(("http://", "https://")):
+        # The file lives on the media service; it answers Range requests itself,
+        # so a redirect keeps seeking working without streaming audio through us.
+        return RedirectResponse(key, status_code=302, headers={"Cache-Control": cache_control})
+
     local: Path | None = None
     try:
         local = storage.path_for(key)

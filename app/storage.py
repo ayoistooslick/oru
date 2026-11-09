@@ -1,10 +1,13 @@
 import base64
 import logging
+import mimetypes
 import os
 import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
+
+import httpx
 
 from app.config import settings
 
@@ -17,8 +20,14 @@ class UploadTooLarge(Exception):
     pass
 
 
+class StorageUnavailable(Exception):
+    """The media service could not be reached, or refused the upload."""
+
+
 class LocalStorage:
     """Small storage adapter used in development; media stays outside the database."""
+
+    name = "local"
 
     def __init__(self, root: str | None = None):
         self.root = Path(root or settings.media_directory).resolve()
@@ -75,6 +84,8 @@ class LocalStorage:
 
 class S3Storage:
     """Same interface, backed by an S3-compatible bucket for audio + cover images."""
+
+    name = "s3"
 
     def __init__(self) -> None:
         self.client = None
@@ -188,20 +199,136 @@ class S3Storage:
             )
 
 
-_storage: LocalStorage | S3Storage
-try:
-    if settings.storage == "s3" and S3Storage()._ready():
-        _storage = S3Storage()
-        log.info("using s3 storage in bucket %s", settings.s3_bucket_name)
-    else:
-        raise RuntimeError("s3 storage not configured")
-except Exception as e:
-    log.warning("s3 storage unavailable (%s); falling back to local storage", e)
-    _storage = LocalStorage()
-    log.info("using local storage in %s", _storage.root)
+class GittyBankStorage:
+    """Media lives in Gitty Bank, and the key for a file is its public URL.
+
+    The service is an upload API with one public download URL per file, so a key
+    in the database is that URL (``https://gitty-bank-api.onrender.com/f/med_x``).
+    Nothing streams through this app: the media responses redirect to it, which
+    keeps Range requests working because the service answers those itself, and
+    keeps audio out of the API's bandwidth.
+
+    Deletion needs the account owner's browser session, which this key cannot
+    give, so replaced artwork stays on the service. That is why nothing
+    confidential belongs in an upload.
+    """
+
+    TIMEOUT = 120.0
+    name = "gitty"
+
+    def __init__(self) -> None:
+        if not settings.gitty_bank_api_key:
+            raise RuntimeError("GITTY_BANK_API_KEY is not set")
+        self.base = settings.gitty_bank_base_url.rstrip("/")
+        self.token = settings.gitty_bank_api_key
+        self.root = None
+
+    def save(self, source: BinaryIO, suffix: str, max_bytes: int) -> tuple[str, int]:
+        data = source.read()
+        total = len(data)
+        if total > max_bytes:
+            raise UploadTooLarge
+        name = f"{uuid.uuid4().hex}{suffix}"
+        media_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        try:
+            response = httpx.post(
+                f"{self.base}/api/v1/upload",
+                headers={"Authorization": f"Bearer {self.token}"},
+                files={"file": (name, data, media_type)},
+                timeout=self.TIMEOUT,
+            )
+        except httpx.HTTPError as error:
+            raise StorageUnavailable(str(error)) from error
+        if response.status_code >= 400:
+            raise StorageUnavailable(f"upload refused with {response.status_code}: {response.text[:200]}")
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise StorageUnavailable("upload response was not JSON") from error
+        url = payload.get("url") or (f"{self.base}/f/{payload['id']}" if payload.get("id") else None)
+        if not url:
+            raise StorageUnavailable("upload response had no file URL")
+        return str(url), total
+
+    def path_for(self, key: str) -> Path:
+        raise FileNotFoundError
+
+    def delete(self, key: str) -> None:
+        if not key.startswith(("http://", "https://")):
+            return
+        log.info("leaving %s on the media service; it is deleted from the app's records only", key)
+
+    def read_bytes(self, key: str) -> bytes | None:
+        try:
+            response = httpx.get(key, timeout=self.TIMEOUT, follow_redirects=True)
+        except httpx.HTTPError as error:
+            log.warning("failed to read %r: %s", key, error)
+            return None
+        return response.content if response.status_code == 200 else None
+
+    def size(self, key: str) -> int | None:
+        try:
+            response = httpx.get(key, headers={"Range": "bytes=0-0"}, timeout=self.TIMEOUT,
+                                 follow_redirects=True)
+        except httpx.HTTPError as error:
+            log.warning("failed to stat %r: %s", key, error)
+            return None
+        content_range = response.headers.get("content-range", "")
+        if "/" in content_range:
+            try:
+                return int(content_range.rsplit("/", 1)[1])
+            except ValueError:
+                return None
+        return len(response.content) if response.status_code == 200 else None
+
+    def read_range(self, key: str, start: int, end: int) -> bytes | None:
+        try:
+            response = httpx.get(key, headers={"Range": f"bytes={start}-{end}"}, timeout=self.TIMEOUT,
+                                 follow_redirects=True)
+        except httpx.HTTPError as error:
+            log.warning("failed to read %r range: %s", key, error)
+            return None
+        return response.content if response.status_code in (200, 206) else None
 
 
-storage: LocalStorage | S3Storage = _storage
+def _choose_storage() -> LocalStorage | S3Storage | GittyBankStorage:
+    """Pick where uploads go: Gitty Bank when there is a key, else S3, else disk."""
+    mode = settings.storage.strip().lower()
+    if mode in ("", "auto"):
+        if settings.gitty_bank_api_key:
+            mode = "gitty"
+        elif S3Storage()._ready():
+            mode = "s3"
+        else:
+            mode = "local"
+    if mode == "local":
+        chosen = LocalStorage()
+        log.info("using local storage in %s", chosen.root)
+        return chosen
+    if mode == "gitty":
+        try:
+            chosen = GittyBankStorage()
+        except Exception as e:
+            log.warning("gitty bank unavailable (%s); falling back to local storage", e)
+        else:
+            log.info("using gitty bank storage at %s", chosen.base)
+            return chosen
+        return LocalStorage()
+    if mode == "s3":
+        try:
+            if S3Storage()._ready():
+                chosen = S3Storage()
+                log.info("using s3 storage in bucket %s", settings.s3_bucket_name)
+                return chosen
+            raise RuntimeError("s3 storage not configured")
+        except Exception as e:
+            log.warning("s3 storage unavailable (%s); falling back to local storage", e)
+            return LocalStorage()
+    log.warning("unknown storage mode %r; using local storage", mode)
+    return LocalStorage()
+
+
+storage: LocalStorage | S3Storage | GittyBankStorage = _choose_storage()
 
 
 def save(source: BinaryIO, suffix: str, max_bytes: int) -> tuple[str, int]:

@@ -40,7 +40,12 @@ class Settings(BaseSettings):
     aws_region: str = Field(default="us-east-1", validation_alias="AWS_REGION")
     s3_presigned_url_expiry: int = Field(default=3600, validation_alias="S3_PRESIGNED_URL_EXPIRY")
     allowed_origins_s3: str = Field(default="", validation_alias="ALLOWED_ORIGINS_S3")
-    storage: str = Field(default="local", validation_alias="STORAGE")
+    storage: str = Field(default="", validation_alias="STORAGE")
+    # Gitty Bank holds uploads and serves them from a public file URL. The key is
+    # a secret; the URLs it returns are public by design.
+    gitty_bank_api_key: str = Field(default="", validation_alias="GITTY_BANK_API_KEY")
+    gitty_bank_base_url: str = Field(default="https://gitty-bank-api.onrender.com",
+                                     validation_alias="GITTY_BANK_BASE_URL")
     cors_origins: list[str] = Field(default_factory=list, validation_alias="CORS_ORIGINS")
     allow_wildcard_cors: bool = Field(default=False, validation_alias="ALLOW_WILDCARD_CORS")
     admin_emails: str = Field(default="", validation_alias="ADMIN_EMAILS")
