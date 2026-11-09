@@ -18,6 +18,7 @@ public class SessionManager {
     private static final String KEY_HANDLE = "handle";
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_AVATAR = "avatar_url";
+    private static final String KEY_PENDING_LINK = "pending_link";
 
     private final SharedPreferences prefs;
 
@@ -75,5 +76,23 @@ public class SessionManager {
     @Nullable
     public String getAvatarUrl() {
         return prefs.getString(KEY_AVATAR, null);
+    }
+
+    /**
+     * A shared link that arrived while signed out. It has to survive the sign-in
+     * detour, including a trip through a browser for Google, so it lives here
+     * rather than in an intent that a new task would throw away.
+     */
+    public void setPendingLink(@Nullable String url) {
+        prefs.edit().putString(KEY_PENDING_LINK, url).apply();
+    }
+
+    @Nullable
+    public String takePendingLink() {
+        String link = prefs.getString(KEY_PENDING_LINK, null);
+        if (link != null) {
+            prefs.edit().remove(KEY_PENDING_LINK).apply();
+        }
+        return link;
     }
 }

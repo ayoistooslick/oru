@@ -336,20 +336,8 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     private void goHome() {
-        // A shared link started this detour; finish it now that there is an
-        // account to open the song with.
-        String pendingLink = getIntent() != null
-                ? getIntent().getStringExtra(com.oru.app.ui.OpenLinkActivity.EXTRA_PENDING_LINK)
-                : null;
-        if (pendingLink != null) {
-            Intent open = new Intent(this, com.oru.app.ui.OpenLinkActivity.class);
-            open.setData(android.net.Uri.parse(pendingLink));
-            open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(open);
-            finish();
-            return;
-        }
-
+        // MainActivity picks up any shared link that started this detour, so it
+        // works for a browser sign-in as well as this form.
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);

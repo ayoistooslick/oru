@@ -52,6 +52,15 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // A shared link that arrived before there was an account: finish it now
+        // that the sign-in is done, however it was done.
+        String pendingLink = session.takePendingLink();
+        if (pendingLink != null) {
+            Intent open = new Intent(this, OpenLinkActivity.class);
+            open.setData(android.net.Uri.parse(pendingLink));
+            startActivity(open);
+        }
+
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {

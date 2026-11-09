@@ -29,8 +29,6 @@ import com.oru.app.util.LazySession;
  */
 public class OpenLinkActivity extends AppCompatActivity {
 
-    public static final String EXTRA_PENDING_LINK = "pendingLink";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,9 +51,10 @@ public class OpenLinkActivity extends AppCompatActivity {
 
         SessionManager session = new SessionManager(this);
         if (!session.isSignedIn()) {
-            Intent auth = new Intent(this, AuthActivity.class);
-            auth.putExtra(EXTRA_PENDING_LINK, data.toString());
-            startActivity(auth);
+            // MainActivity opens this again once there is an account, whichever
+            // way the listener signed in.
+            session.setPendingLink(data.toString());
+            startActivity(new Intent(this, AuthActivity.class));
             finish();
             return;
         }
