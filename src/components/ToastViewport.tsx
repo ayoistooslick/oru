@@ -47,7 +47,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
   return (
     <div
       ref={ref}
-      className="pointer-events-auto flex w-full items-start gap-3 rounded-lg bg-[#2e2e2e] p-3.5 pr-5 shadow-float"
+      className="pointer-events-auto flex w-full items-start gap-3 rounded-lg border border-hair bg-card p-3.5 pr-5 shadow-float"
       role="status"
       aria-live="polite"
     >
