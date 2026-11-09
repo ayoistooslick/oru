@@ -224,17 +224,20 @@ class GittyBankStorage:
         self.root = None
 
     def save(self, source: BinaryIO, suffix: str, max_bytes: int) -> tuple[str, int]:
-        data = source.read()
-        total = len(data)
+        # Measure, then rewind: a song is streamed to the service from the spooled
+        # upload rather than read into memory, so large files do not double up.
+        source.seek(0, os.SEEK_END)
+        total = source.tell()
         if total > max_bytes:
             raise UploadTooLarge
+        source.seek(0)
         name = f"{uuid.uuid4().hex}{suffix}"
         media_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
         try:
             response = httpx.post(
                 f"{self.base}/api/v1/upload",
                 headers={"Authorization": f"Bearer {self.token}"},
-                files={"file": (name, data, media_type)},
+                files={"file": (name, source, media_type)},
                 timeout=self.TIMEOUT,
             )
         except httpx.HTTPError as error:

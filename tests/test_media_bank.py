@@ -42,7 +42,9 @@ def test_upload_sends_the_file_and_keeps_the_url(bank, monkeypatch):
     assert size == len(b"cover-bytes")
     assert seen["url"] == "https://bank.test/api/v1/upload"
     assert seen["headers"] == {"Authorization": "Bearer gbk_test"}
-    name, data, media_type = seen["file"]
+    name, payload, media_type = seen["file"]
+    # The upload is streamed from the file the API handed over, not copied first.
+    data = payload.read() if hasattr(payload, "read") else payload
     assert name.endswith(".png") and data == b"cover-bytes" and media_type == "image/png"
 
 
