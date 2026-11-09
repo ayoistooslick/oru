@@ -104,7 +104,7 @@ export function ArtistPage() {
             src={profile.avatar_url ?? null}
             alt={profile.stage_name}
             seed={profile.user_id}
-            className="h-32 w-32 shrink-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] sm:h-48 sm:w-48"
+            className="h-32 w-32 shrink-0 shadow-[0_18px_40px_-20px_rgba(34,26,19,0.5)] sm:h-48 sm:w-48"
             rounded="rounded-full"
           />
           <div className="min-w-0 flex-1">

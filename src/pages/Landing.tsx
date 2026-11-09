@@ -404,23 +404,23 @@ export function Landing() {
             <p className="mx-auto mt-3 max-w-xl text-[16.5px] leading-relaxed text-cream/85">
               It takes about a minute to make an account. Your uploads stay private until you say otherwise.
             </p>
-                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                    <Link
-                      to="/listen"
-                      className="inline-flex items-center gap-2 rounded-full bg-paper px-8 py-3.5 text-[15.5px] font-bold text-cream shadow-float transition hover:scale-[1.03] press"
-                    >
-                      <Play className="h-4 w-4" fill="currentColor" />
-                      Start listening
-                    </Link>
-                    <a
-                      href={APK_URL}
-                      className="inline-flex items-center gap-2 rounded-full border border-cream/40 px-7 py-3.5 text-[15px] font-semibold text-cream transition hover:border-cream/70 press"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download for Android
-                    </a>
-                  </div>
-                  <p className="mt-4 text-[13px] text-cream/70">Free · Web, iPhone and Android 7 and newer</p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/listen"
+                className="inline-flex items-center gap-2 rounded-full bg-cream px-8 py-3.5 text-[15.5px] font-bold text-ink shadow-float transition hover:scale-[1.03] press"
+              >
+                <Play className="h-4 w-4" fill="currentColor" />
+                Start listening
+              </Link>
+              <a
+                href={APK_URL}
+                className="inline-flex items-center gap-2 rounded-full border border-cream/40 px-7 py-3.5 text-[15px] font-semibold text-cream transition hover:border-cream/70 press"
+              >
+                <Download className="h-4 w-4" />
+                Download for Android
+              </a>
+            </div>
+            <p className="mt-4 text-[13px] text-cream/70">Free · Web, iPhone and Android 7 and newer</p>
           </div>
         </Section>
       </main>

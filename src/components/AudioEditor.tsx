@@ -65,13 +65,13 @@ export function AudioEditor({
 
     peaks.forEach((peak, index) => {
       const amplitude = Math.max(peak, 0.02) * (height / 2);
-      ctx.fillStyle = inSelection(index) ? "#e8552e" : "rgba(244,239,231,0.24)";
+      ctx.fillStyle = inSelection(index) ? "#e8552e" : "rgba(34,26,19,0.22)";
       ctx.fillRect(index * barWidth, height / 2 - amplitude, Math.max(barWidth - 1, 1), amplitude * 2);
     });
 
     const startX = (edit.start / (buffer?.duration || 1)) * width;
     const endX = (edit.end / (buffer?.duration || 1)) * width;
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillStyle = "rgba(253,248,241,0.62)";
     ctx.fillRect(0, 0, startX, height);
     ctx.fillRect(endX, 0, width - endX, height);
     ctx.fillStyle = "#e8552e";
