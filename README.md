@@ -32,18 +32,24 @@ Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `androi
 
 APK: <https://is.gd/WNgSQY>. Every CI run also attaches `oru.apk` to a `build-N` release.
 
-## Shared song links
+## Shared links
 
-A song is shared as `https://oru.freebuff.app/song/<id>`.
+A song is shared as `https://oru.freebuff.app/song/<id>`, an artist as `/artist/<id>`, a release as
+`/release/<id>` and a saved playlist as `/library/<id>`.
 
-- The page is public and plays the song, so a link sent to an iPhone, a laptop or a phone without
-  the app still works.
-- On Android the page fires an `intent://song/<id>;package=com.oru.app` URL. Chrome opens the app
-  when it is installed and stays on the page when it is not, so no digital asset link (and no
-  signing-key fingerprint) is needed. `OpenLinkActivity` receives it, asks the listener to sign in
-  first if needed, and then plays the song.
-- The app also answers `oru://song/<id>` and `oru://artist/<id>` directly, which is what the share
-  sheet and other apps can hand it.
+- Each page is public and plays or shows what it names, so a link sent to an iPhone, a laptop or a
+  phone without the app still works.
+- On Android, opening one of those pages hands it to the app the way Spotify does: the page fires
+  `intent://<kind>/<id>;package=com.oru.app`, Chrome opens the app when it is installed, and the
+  browser stays on the page when it is not. No digital asset link and no signing-key fingerprint is
+  needed, which matters because every CI build is signed fresh. `OpenLinkActivity` receives the
+  link, asks the listener to sign in first if needed, and then opens the song, artist, release or
+  playlist.
+- The hand-off only fires on the page a tab was opened on, so clicking around inside the site never
+  keeps throwing people into the app. If a browser blocks intent URLs, a small "Open this in the
+  ORU app" card offers the same thing on tap, with "Not now" to stay on the web.
+- The app also answers `oru://song/<id>`, `oru://artist/<id>`, `oru://release/<id>` and
+  `oru://playlist/<id>` directly, which is what the share sheet and other apps can hand it.
 
 ## Sign-in across two surfaces
 

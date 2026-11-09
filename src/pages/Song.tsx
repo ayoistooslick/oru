@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Download, Pause, Play, Share2 } from "../components/icons";
 import { mediaUrl, request } from "../lib/api";
-import { isAndroid, songIntentUrl, songWebUrl, APK_URL } from "../lib/links";
+import { songWebUrl, APK_URL } from "../lib/links";
 import { useResource } from "../hooks/useResource";
 import { Cover } from "../components/Cover";
 import { OruLogo } from "../components/OruMark";
@@ -20,9 +20,8 @@ function clock(seconds: number) {
  * A song someone shared, opened by whoever got the link.
  *
  * It is public so the song plays straight away on an iPhone, a laptop, or a
- * phone without ORU installed. On Android the app takes over instead: the
- * page fires an intent URL that opens ORU directly when it is installed and
- * quietly stays here when it is not.
+ * phone without ORU installed. On Android the app takes over instead, through
+ * the hand-off every page gets from OpenInApp.
  */
 export function SongLink() {
   const params = useParams();
@@ -32,7 +31,6 @@ export function SongLink() {
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [opening, setOpening] = useState(isAndroid());
 
   const result = useResource<{ song: Song }>(
     (signal) => request(`/songs/${songId}`, { signal }),
@@ -40,23 +38,6 @@ export function SongLink() {
   );
   const song = result.data?.song;
   const src = mediaUrl(song?.audio_url);
-
-  // Hand the link to the app once per tab. The fallback URL is this page, so a
-  // missing app simply leaves the listener here instead of a blank browser.
-  useEffect(() => {
-    if (!song || !isAndroid()) return;
-    const key = `oru-open-app-${song.id}`;
-    if (sessionStorage.getItem(key)) {
-      setOpening(false);
-      return;
-    }
-    sessionStorage.setItem(key, "1");
-    window.location.href = songIntentUrl(song.id, songWebUrl(song.id));
-    // Still here after a moment means the app never took over, so stop saying
-    // it is opening and let the page be the player.
-    const timer = window.setTimeout(() => setOpening(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, [song]);
 
   const toggle = () => {
     const audio = audioRef.current;
@@ -133,12 +114,6 @@ export function SongLink() {
       </header>
 
       <main className="mx-auto max-w-4xl px-5 pb-16">
-        {opening ? (
-          <div className="mb-6 flex items-center gap-2 rounded-xl bg-flame-soft px-4 py-3 text-[13.5px] font-semibold text-flame-ink">
-            <Spinner className="h-4 w-4" /> Opening this song in the ORU app…
-          </div>
-        ) : null}
-
         <div className="grid gap-8 pt-4 sm:grid-cols-[220px_1fr] sm:items-end">
           <Cover
             src={song.cover_url}
@@ -233,17 +208,6 @@ export function SongLink() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isAndroid() ? (
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = songIntentUrl(song.id, songWebUrl(song.id));
-                }}
-                className="inline-flex h-10 items-center rounded-full bg-flame px-5 text-[14px] font-bold text-cream transition hover:bg-flame-ink press"
-              >
-                Open in the app
-              </button>
-            ) : null}
             <a
               href={APK_URL}
               className="inline-flex h-10 items-center gap-2 rounded-full border border-hair px-5 text-[14px] font-semibold text-ink transition hover:border-ink-soft hover:bg-ink/8"

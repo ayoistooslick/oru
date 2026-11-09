@@ -20,8 +20,32 @@ export function songWebUrl(songId: number): string {
   return `${window.location.origin}/song/${songId}`;
 }
 
-export function songDeepLink(songId: number): string {
-  return `${APP_SCHEME}://song/${songId}`;
+/** A link with a screen on both sides of the fence. */
+export interface AppLink {
+  /** Where the app is sent, e.g. oru://song/12. */
+  app: string;
+  /** The page a browser without the app stays on. */
+  web: string;
+}
+
+/**
+ * The app address for a web path, or null when the app has no screen for it.
+ *
+ * Only pages that name something get a link: a shared song, an artist, a
+ * release, a playlist. The front door, the settings page and the studio stay
+ * in the browser, so landing on oru.freebuff.app never yanks anyone away.
+ */
+export function appLinkFor(pathname: string): AppLink | null {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length !== 2) return null;
+  const [kind, id] = parts;
+  if (!/^\d+$/.test(id)) return null;
+  if (kind === "song") return { app: `${APP_SCHEME}://song/${id}`, web: `/song/${id}` };
+  if (kind === "artist") return { app: `${APP_SCHEME}://artist/${id}`, web: `/artist/${id}` };
+  if (kind === "release") return { app: `${APP_SCHEME}://release/${id}`, web: `/release/${id}` };
+  // The app calls a saved playlist a playlist, whatever the URL says.
+  if (kind === "library") return { app: `${APP_SCHEME}://playlist/${id}`, web: `/library/${id}` };
+  return null;
 }
 
 /**
@@ -30,9 +54,15 @@ export function songDeepLink(songId: number): string {
  * https links need — which matters because every build is signed fresh.
  * Falls back to the web page when the app is not installed.
  */
-export function songIntentUrl(songId: number, fallback: string): string {
+export function intentUrl(link: AppLink, origin = window.location.origin): string {
+  const path = link.app.slice(`${APP_SCHEME}://`.length);
   return (
-    `intent://song/${songId}#Intent;scheme=${APP_SCHEME};package=${APP_PACKAGE};` +
-    `S.browser_fallback_url=${encodeURIComponent(fallback)};end`
+    `intent://${path}#Intent;scheme=${APP_SCHEME};package=${APP_PACKAGE};` +
+    `S.browser_fallback_url=${encodeURIComponent(`${origin}${link.web}`)};end`
   );
+}
+
+/** Hands the current page to the app, or leaves the browser where it is. */
+export function openInApp(link: AppLink): void {
+  window.location.href = intentUrl(link);
 }

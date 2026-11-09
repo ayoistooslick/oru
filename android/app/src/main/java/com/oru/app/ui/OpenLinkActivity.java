@@ -16,16 +16,18 @@ import com.oru.app.data.session.SessionManager;
 import com.oru.app.ui.auth.AuthActivity;
 import com.oru.app.ui.artist.ArtistActivity;
 import com.oru.app.ui.player.Playback;
+import com.oru.app.ui.playlist.PlaylistActivity;
+import com.oru.app.ui.release.ReleaseActivity;
 import com.oru.app.util.LazySession;
 
 /**
- * The app's side of a shared link, reached through oru://song/12 or
- * oru://artist/4.
+ * The app's side of a shared link, reached through oru://song/12,
+ * oru://artist/4, oru://release/7 or oru://playlist/3.
  *
- * The web page for a song fires an Android intent URL at this activity, so a
- * listener with the app installed lands in the app instead of the browser. It
- * has no layout: it either opens what the link names or sends the listener to
- * sign in first, and the link survives that detour.
+ * Every web page that names something fires an Android intent URL at this
+ * activity, so a listener with the app installed lands in the app instead of
+ * the browser. It has no layout: it either opens what the link names or sends
+ * the listener to sign in first, and the link survives that detour.
  */
 public class OpenLinkActivity extends AppCompatActivity {
 
@@ -72,13 +74,22 @@ public class OpenLinkActivity extends AppCompatActivity {
         if ("song".equals(host)) {
             openSong(id);
         } else if ("artist".equals(host)) {
-            Intent artist = new Intent(this, ArtistActivity.class);
-            artist.putExtra("artistId", id);
-            startActivity(artist);
-            finish();
+            open(ArtistActivity.class, "artistId", id);
+        } else if ("release".equals(host)) {
+            open(ReleaseActivity.class, "releaseId", id);
+        } else if ("playlist".equals(host)) {
+            open(PlaylistActivity.class, "playlistId", id);
         } else {
             goToMain();
         }
+    }
+
+    /** The other three screens all take the id their activity was built with. */
+    private void open(Class<? extends AppCompatActivity> screen, String idKey, int id) {
+        Intent intent = new Intent(this, screen);
+        intent.putExtra(idKey, id);
+        startActivity(intent);
+        finish();
     }
 
     private void openSong(int songId) {

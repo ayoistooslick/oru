@@ -81,6 +81,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="oru" android:host="song" />
                 <data android:scheme="oru" android:host="artist" />
+                <data android:scheme="oru" android:host="release" />
+                <data android:scheme="oru" android:host="playlist" />
             </intent-filter>
         </activity>
 

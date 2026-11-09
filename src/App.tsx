@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { Spinner } from "./components/ui";
 import { ToastViewport } from "./components/ToastViewport";
 import { StartupCapabilityGate } from "./components/StartupCapabilityGate";
+import { OpenInApp } from "./components/OpenInApp";
 import { OruMark } from "./components/OruMark";
 import { AuthProvider, useAuth } from "./state/AuthContext";
 import { LibraryProvider } from "./state/LibraryContext";
@@ -72,6 +73,7 @@ export default function App() {
       <AuthProvider>
         <PlayerProvider>
           <BrowserRouter>
+            <OpenInApp />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<AuthPage />} />
