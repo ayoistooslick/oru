@@ -157,7 +157,9 @@ def ensure_schema() -> None:
             "avatar_key": "ALTER TABLE users ADD COLUMN avatar_key VARCHAR(500)",
             "banner_key": "ALTER TABLE users ADD COLUMN banner_key VARCHAR(500)",
             "image_version": "ALTER TABLE users ADD COLUMN image_version INTEGER NOT NULL DEFAULT 0",
-            "notify_new_drops": "ALTER TABLE users ADD COLUMN notify_new_drops BOOLEAN NOT NULL DEFAULT 1",
+            # TRUE rather than 1: Postgres refuses an integer default on a
+            # boolean column, and SQLite accepts the keyword too.
+            "notify_new_drops": "ALTER TABLE users ADD COLUMN notify_new_drops BOOLEAN NOT NULL DEFAULT TRUE",
         },
         "artist_profiles": {
             "banner_key": "ALTER TABLE artist_profiles ADD COLUMN banner_key VARCHAR(500)",
