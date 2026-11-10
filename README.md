@@ -136,8 +136,10 @@ Copy `.env.example` to `.env`. The settings that matter:
 - `GITTY_BANK_API_KEY` - the media service key. With it set, every upload (audio, covers, avatars,
   banners) goes to Gitty Bank and the database stores the public file URL it returns. Media
   responses redirect to that URL, so Range requests still work and audio never streams through the
-  API. Uploads are public by design: never store anything confidential. Deletion needs the service's
-  owner session, so replacing artwork leaves the old file on the service.
+  API. Uploads are public by design: never store anything confidential. Removing a song, replacing
+  artwork or clearing an avatar calls `DELETE /api/v1/files/{id}`. The service only honours that for
+  a key with file-management rights; an upload-only key is answered "Owner session required" and
+  the file stays public, which is logged but never fails the user's action.
 - `STORAGE` - `gitty`, `s3` or `local`. Leave it empty and the API picks Gitty Bank when
   `GITTY_BANK_API_KEY` is set, otherwise S3 when it is configured, otherwise the local disk.
 - `MEDIA_DIRECTORY` - where local uploads land, `./data/media` by default. Only used when `STORAGE`

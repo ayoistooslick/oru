@@ -6,6 +6,7 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -199,6 +200,17 @@ class S3Storage:
             )
 
 
+def _bank_file_id(key: str) -> str | None:
+    """The service's file id, read back out of the public URL we stored."""
+    parts = urlsplit(key)
+    if parts.scheme not in ("http", "https"):
+        return None
+    path = parts.path.rstrip("/")
+    if not path.startswith("/f/"):
+        return None
+    return path[len("/f/"):] or None
+
+
 class GittyBankStorage:
     """Media lives in Gitty Bank, and the key for a file is its public URL.
 
@@ -208,9 +220,11 @@ class GittyBankStorage:
     keeps Range requests working because the service answers those itself, and
     keeps audio out of the API's bandwidth.
 
-    Deletion needs the account owner's browser session, which this key cannot
-    give, so replaced artwork stays on the service. That is why nothing
-    confidential belongs in an upload.
+    Deleting a file asks the service to remove it, but only a key with file
+    management rights is allowed to: the upload key answers "Owner session
+    required". A refusal is logged, never raised, because the app is already
+    forgetting the file at that point. That is also why nothing confidential
+    belongs in an upload.
     """
 
     TIMEOUT = 120.0
@@ -257,9 +271,23 @@ class GittyBankStorage:
         raise FileNotFoundError
 
     def delete(self, key: str) -> None:
-        if not key.startswith(("http://", "https://")):
+        file_id = _bank_file_id(key)
+        if file_id is None:
             return
-        log.info("leaving %s on the media service; it is deleted from the app's records only", key)
+        try:
+            response = httpx.delete(
+                f"{self.base}/api/v1/files/{file_id}",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=self.TIMEOUT,
+            )
+        except httpx.HTTPError as error:
+            log.warning("failed to delete %r: %s", key, error)
+            return
+        # 404 means the file is already gone, which is what we wanted anyway.
+        if response.status_code in (200, 202, 204, 404):
+            return
+        log.warning("media service kept %r (%s): %s", key, response.status_code,
+                    response.text[:200])
 
     def read_bytes(self, key: str) -> bytes | None:
         try:

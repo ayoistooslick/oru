@@ -91,6 +91,35 @@ def test_unreachable_service_is_offered_to_the_client_as_retryable(monkeypatch):
     assert getattr(caught.value, "status_code", None) == 503
 
 
+def test_delete_asks_the_service_to_remove_the_file(bank, monkeypatch):
+    seen = {}
+
+    def fake_delete(url, headers=None, timeout=None):
+        seen.update({"url": url, "headers": headers})
+        return httpx.Response(204)
+
+    monkeypatch.setattr(storage_module.httpx, "delete", fake_delete)
+    bank.delete("https://bank.test/f/med_7")
+
+    assert seen["url"] == "https://bank.test/api/v1/files/med_7"
+    assert seen["headers"] == {"Authorization": "Bearer gbk_test"}
+
+
+def test_delete_tolerates_a_refusal_and_an_already_missing_file(bank, monkeypatch):
+    codes = iter((403, 404))
+
+    def fake_delete(*args, **kwargs):
+        code = next(codes)
+        return httpx.Response(code, text='{"detail":"Owner session required for file management"}')
+
+    monkeypatch.setattr(storage_module.httpx, "delete", fake_delete)
+    # Neither may raise: the caller has already removed the row.
+    bank.delete("https://bank.test/f/med_8")
+    bank.delete("https://bank.test/f/med_9")
+    # Keys that are not files on the service are left alone, without a request.
+    bank.delete("a-local-file.mp3")
+
+
 def test_media_redirects_to_the_file_on_the_service():
     response = media_response("https://bank.test/f/med_1", "audio/mpeg", _request())
     assert response.status_code == 302
