@@ -131,7 +131,17 @@ The response says whether the event was stored and counted for discovery. The cl
 | GET | `/artists/me/posts` | Artist | Your own posts, including ones a moderator hid |
 | GET | `/artists/{artist_id}/posts` | Public | Read visible posts |
 
-The following feed currently lists new tracks, not a personalized notification stream. It does not include release artwork or delivery notifications.
+## Notifications
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/notifications?limit=50` | Signed in | New drops from artists you follow, newest first, plus `unread_count` |
+| GET | `/notifications/unread` | Signed in | Just the unread count, for polling the bell |
+| POST | `/notifications/{notification_id}/read` | Owner | Mark one notice read |
+| POST | `/notifications/read-all` | Signed in | Mark every notice read |
+| PATCH | `/notifications/settings` | Signed in | `{"enabled": false}` silences future drops |
+
+A notice is written for every follower when an artist publishes a song, publishes a release, or has a shared song approved. Each song or release is announced once per listener (`dedupe_key`), and `notify_new_drops` is on by default — following the artist is the real opt-in, and the switch only quiets future notices without unfollowing anyone. Existing notices stay readable after the switch is turned off.
 
 Post example:
 

@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, community, maintenance, moderation, music
+from app.api import accounts, community, maintenance, moderation, music, notifications
 from app.social import render_document, request_origin
 from app.config import BASE_DIR, settings
 from app.database import Base, engine
@@ -157,6 +157,7 @@ def ensure_schema() -> None:
             "avatar_key": "ALTER TABLE users ADD COLUMN avatar_key VARCHAR(500)",
             "banner_key": "ALTER TABLE users ADD COLUMN banner_key VARCHAR(500)",
             "image_version": "ALTER TABLE users ADD COLUMN image_version INTEGER NOT NULL DEFAULT 0",
+            "notify_new_drops": "ALTER TABLE users ADD COLUMN notify_new_drops BOOLEAN NOT NULL DEFAULT 1",
         },
         "artist_profiles": {
             "banner_key": "ALTER TABLE artist_profiles ADD COLUMN banner_key VARCHAR(500)",
@@ -205,6 +206,7 @@ def build_api() -> FastAPI:
     api.include_router(music.router)
     api.include_router(community.router)
     api.include_router(moderation.router)
+    api.include_router(notifications.router)
     api.include_router(maintenance.router)
     api.add_exception_handler(RequestValidationError, validation_error_handler)
     api.add_exception_handler(HTTPException, http_error_handler)

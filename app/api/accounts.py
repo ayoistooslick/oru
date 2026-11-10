@@ -77,7 +77,9 @@ def user_data(user: User) -> dict:
             # instead of building a link that misses the API prefix and 404s
             # into its own alt text.
             "banner_url": f"/api/v1/users/{user.id}/banner" if banner_key(user) else None,
-            "image_version": version}
+            "image_version": version,
+            # Settings reads this to draw its switch without a second request.
+            "notify_new_drops": bool(user.notify_new_drops)}
 
 
 def artist_data(artist: User, db: Session | None = None, viewer: User | None = None) -> dict:

@@ -80,5 +80,10 @@ class ShareDecision(BaseModel):
     action: Literal["approve", "reject"]
 
 
+class NotificationPreference(BaseModel):
+    """Whether new drops from followed artists should reach this listener."""
+    enabled: bool
+
+
 class ArtistPostCreate(BaseModel):
     body: str = Field(min_length=1, max_length=3000)

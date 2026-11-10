@@ -11,6 +11,8 @@ export interface User {
   avatar_url: string | null;
   /** Artists only: the wide picture behind their name. */
   banner_url: string | null;
+  /** New-drop notices from the artists they follow. Off only if they choose. */
+  notify_new_drops?: boolean;
 }
 
 export interface AuthResponse {
@@ -149,6 +151,25 @@ export interface Report {
   details: string;
   status: "open" | "reviewed" | "actioned";
   created_at: string;
+}
+
+export interface DropNotification {
+  id: number;
+  kind: "new_song" | "new_release";
+  created_at: string;
+  read_at: string | null;
+  artist: { id: number; name: string; handle: string; avatar_url: string | null } | null;
+  song: { id: number; title: string; cover_url: string | null; is_available: boolean } | null;
+  release: { id: number; title: string; kind: string; cover_url: string | null; is_available: boolean } | null;
+  /** Where the row goes, or null when the song has since come down. */
+  href: string | null;
+}
+
+export interface NotificationsPage {
+  items: DropNotification[];
+  unread_count: number;
+  limit: number;
+  offset: number;
 }
 
 export interface Paginated<T> {

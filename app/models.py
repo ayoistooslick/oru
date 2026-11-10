@@ -26,6 +26,9 @@ class User(Base):
     banner_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     image_version: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # On unless the listener turns it off. Only songs from artists they follow
+    # are ever announced, so following the artist is the real opt-in.
+    notify_new_drops: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     artist_profile: Mapped["ArtistProfile"] = relationship(back_populates="user", uselist=False)
 
@@ -137,6 +140,30 @@ class Follow(Base):
     __table_args__ = (CheckConstraint("listener_id != artist_id", name="ck_follow_not_self"),)
     listener_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     artist_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+
+class Notification(Base):
+    """A notice for one listener: an artist they follow put something out.
+
+    `dedupe_key` names the thing announced (`song:12`, `release:4`), so
+    re-publishing the same song or approving a share twice cannot ring the
+    bell twice. Read state lives here rather than in a separate table: a
+    notification is small and always read in one place.
+    """
+    __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "dedupe_key"),
+        Index("ix_notifications_user_created", "user_id", "created_at"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(24))
+    artist_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    song_id: Mapped[int | None] = mapped_column(ForeignKey("songs.id", ondelete="CASCADE"), nullable=True)
+    release_id: Mapped[int | None] = mapped_column(ForeignKey("releases.id", ondelete="CASCADE"), nullable=True)
+    dedupe_key: Mapped[str] = mapped_column(String(64))
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 

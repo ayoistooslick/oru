@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "../components/ui/icons";
+import { Bell, Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "../components/ui/icons";
 import { ApiError, mediaUrl, request, upload } from "../lib/api";
 import { Avatar } from "../components/media/Avatar";
 import { Page } from "../components/layout/Page";
@@ -24,6 +24,8 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(user?.display_name ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [saving, setSaving] = useState(false);
+  const [notifyDrops, setNotifyDrops] = useState(user?.notify_new_drops !== false);
+  const [savingNotify, setSavingNotify] = useState(false);
   const [hasStudio, setHasStudio] = useState<boolean | null>(null);
   const [showDeviceSetup, setShowDeviceSetup] = useState(false);
   const [avatarVersion, setAvatarVersion] = useState(0);
@@ -66,6 +68,29 @@ export function SettingsPage() {
       toasts.error("Could not save it", error instanceof Error ? error.message : "Try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleDrops = async () => {
+    if (!user) return;
+    const next = !notifyDrops;
+    setNotifyDrops(next);
+    setSavingNotify(true);
+    try {
+      const response = await request<{ notify_new_drops: boolean }>("/notifications/settings", {
+        method: "PATCH",
+        body: { enabled: next },
+      });
+      updateUser({ ...user, notify_new_drops: response.notify_new_drops });
+      toasts.saved(
+        next ? "New-drop notices on" : "New-drop notices off",
+        next ? "Songs and releases from artists you follow will reach you." : "You still follow them; the bell just stays quiet.",
+      );
+    } catch (error) {
+      setNotifyDrops(!next);
+      toasts.error("Could not change that", error instanceof Error ? error.message : "Try again.");
+    } finally {
+      setSavingNotify(false);
     }
   };
 
@@ -303,6 +328,47 @@ export function SettingsPage() {
             <span className="shrink-0 text-[14px] font-semibold text-flame-ink">Open</span>
           </Link>
         ) : null}
+      </section>
+
+      <section id="notifications" className="mb-8 scroll-mt-4">
+        <SectionHeader title="Notifications" />
+        <div className="rounded-xl bg-card p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-[15.5px] font-bold">
+                <Bell className="h-4 w-4 text-flame-ink" />
+                New drops from artists you follow
+              </p>
+              <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-ink-soft">
+                A notice in ORU when an artist you follow publishes a song or a release. Following them is the
+                opt-in; this switch only keeps the bell quiet.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={notifyDrops}
+              aria-label="New drops from artists you follow"
+              disabled={savingNotify}
+              onClick={() => void toggleDrops()}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-60 ${
+                notifyDrops ? "bg-flame" : "bg-ink/20"
+              }`}
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-paper shadow-sm transition-all ${
+                  notifyDrops ? "left-6" : "left-1"
+                }`}
+              />
+            </button>
+          </div>
+          <Link
+            to="/notifications"
+            className="mt-4 inline-block text-[13.5px] font-bold text-ink-soft underline underline-offset-4 hover:text-ink"
+          >
+            See your notifications
+          </Link>
+        </div>
       </section>
 
       <section className="mb-8">

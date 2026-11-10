@@ -30,7 +30,7 @@ Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `androi
   drafts, publish songs and releases, and see plays, likes and follows.
 - **Moderators** see reports from listeners and mark them resolved or dismissed.
 
-APK: <https://is.gd/WNgSQY>. Every CI run also attaches `oru.apk` to a `build-N` release.
+APK: <https://is.gd/qrRMnN>. Every CI run also attaches `oru.apk` to a `build-N` release.
 
 ## Shared links
 

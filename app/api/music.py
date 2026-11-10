@@ -11,6 +11,7 @@ from app.dependencies import artist_user, current_user, optional_current_user
 from app.models import ArtistProfile, ExternalShare, Follow, Genre, Like, ListeningEvent, PlaylistSong, Release, ReleaseSong, Song, SongFeature, SongGenre, User
 from app.schemas import ListeningCreate, ReleaseCreate, ShareDecision
 from app.services.discovery import discover_songs
+from app.services.notifications import announce_release, announce_song
 from app.storage import storage
 
 router = APIRouter(tags=["music"])
@@ -330,6 +331,9 @@ def decide_share(song_id: int, payload: ShareDecision, user: User = Depends(curr
     if payload.action == "approve":
         song.status = "published"
         song.published_at = datetime.now(timezone.utc)
+        # Approving is the moment a shared song first reaches listeners, so it
+        # is a drop for the artist's followers like any other.
+        announce_song(db, song)
         db.commit()
         db.refresh(song)
         return {"song": song_data(song, db, user)}
@@ -353,6 +357,7 @@ def publish_song(song_id: int, artist: User = Depends(artist_user), db: Session 
         raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Song not found"})
     song.status = "published"
     song.published_at = datetime.now(timezone.utc)
+    announce_song(db, song)
     db.commit()
     db.refresh(song)
     return {"song": song_data(song, db, artist)}
@@ -475,6 +480,7 @@ def publish_release(release_id: int, artist: User = Depends(artist_user), db: Se
     for song in db.scalars(select(Song).where(Song.id.in_(song_ids), Song.artist_id == artist.id)).all():
         song.status = "published"
         song.published_at = now
+    announce_release(db, release)
     db.commit()
     return {"release": release_data(release, db, song_ids)}
 

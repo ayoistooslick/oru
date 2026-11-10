@@ -57,7 +57,7 @@ is the same shape as production. The app is then at `http://127.0.0.1:8000`.
       song/              actions on a single song: share, report
       studio/            recording and trimming audio before upload
       ui/                icons, brand mark and the small shared primitives
-    state/               the four contexts: auth, library, player, toasts
+    state/               the five contexts: auth, library, notifications, player, toasts
     lib/                 API client, types, formatting, links, motion, PWA helpers
     hooks/               small reusable hooks
   ```

@@ -21,6 +21,7 @@ import { Avatar } from "../media/Avatar";
 import { OruLogo } from "../ui/OruMark";
 import { PlayerBar } from "../player/PlayerBar";
 import { NowPlaying } from "../player/NowPlaying";
+import { NotificationBell } from "./NotificationBell";
 import { OnlineStatusBanner } from "./OnlineStatusBanner";
 import { Tutorial } from "./Tutorial";
 
@@ -191,9 +192,12 @@ function TopBar() {
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
-      <Link to="/settings" className="rounded-full bg-paper-deep/80 p-1 transition hover:bg-paper-deep" aria-label="Your account">
-        <Avatar name="me" src={user?.avatar_url} size="h-7 w-7" />
-      </Link>
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <Link to="/settings" className="rounded-full bg-paper-deep/80 p-1 transition hover:bg-paper-deep" aria-label="Your account">
+          <Avatar name="me" src={user?.avatar_url} size="h-7 w-7" />
+        </Link>
+      </div>
     </div>
   );
 }
@@ -209,9 +213,12 @@ function MobileShell() {
         <Link to="/listen" aria-label="ORU home">
           <OruLogo />
         </Link>
-        <Link to="/settings" aria-label="Your account" className="flex items-center gap-2">
-          <Avatar name={user.display_name} src={user.avatar_url} size="h-8 w-8" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Link to="/settings" aria-label="Your account" className="flex items-center gap-2">
+            <Avatar name={user.display_name} src={user.avatar_url} size="h-8 w-8" />
+          </Link>
+        </div>
       </header>
     </>
   );

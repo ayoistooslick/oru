@@ -45,7 +45,23 @@ export const ArrowRight = makeIcon(
   </>,
 );
 
+export const Bell = makeIcon(
+  "Bell",
+  <>
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </>,
+);
+
 export const Check = makeIcon("Check", <path d="M20 6 9 17l-5-5" />);
+
+export const CheckCheck = makeIcon(
+  "CheckCheck",
+  <>
+    <path d="M18 6 7 17l-5-5" />
+    <path d="m22 10-7.5 7.5L13 16" />
+  </>,
+);
 
 export const ChevronDown = makeIcon("ChevronDown", <path d="m6 9 6 6 6-6" />);
 export const ChevronLeft = makeIcon("ChevronLeft", <path d="m15 18-6-6 6-6" />);

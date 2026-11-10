@@ -7,6 +7,7 @@ import { OpenInApp } from "./components/layout/OpenInApp";
 import { OruMark } from "./components/ui/OruMark";
 import { AuthProvider, useAuth } from "./state/AuthContext";
 import { LibraryProvider } from "./state/LibraryContext";
+import { NotificationsProvider } from "./state/NotificationsContext";
 import { PlayerProvider } from "./state/PlayerContext";
 import { ToastProvider } from "./state/ToastContext";
 import { Landing } from "./pages/Landing";
@@ -19,6 +20,7 @@ import { ArtistPage } from "./pages/Artist";
 import { ReleasePage } from "./pages/Release";
 import { SongLink } from "./pages/Song";
 import { Studio } from "./pages/Studio";
+import { NotificationsPage } from "./pages/Notifications";
 import { SettingsPage } from "./pages/Settings";
 import { Moderation } from "./pages/Moderation";
 import { SongSharing } from "./pages/SongSharing";
@@ -56,7 +58,9 @@ function RequireAuth() {
   }
   return (
     <LibraryProvider userId={user.id}>
-      <AppShell />
+      <NotificationsProvider>
+        <AppShell />
+      </NotificationsProvider>
     </LibraryProvider>
   );
 }
@@ -88,6 +92,7 @@ export default function App() {
                 <Route path="/artist/:artistId" element={<ArtistPage />} />
                 <Route path="/release/:releaseId" element={<ReleasePage />} />
                 <Route path="/studio" element={<Studio />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/moderation" element={<Moderation />} />
                 <Route path="/shares" element={<SongSharing />} />
