@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search as SearchIcon, X } from "../components/icons";
+import { Search as SearchIcon, X } from "../components/ui/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Genre, Paginated, Song } from "../lib/types";
-import { TrackRow } from "../components/TrackRow";
-import { Chip, EmptyState, Spinner } from "../components/ui";
-import { Cover } from "../components/Cover";
+import { TrackRow } from "../components/media/TrackRow";
+import { Chip, EmptyState, Spinner } from "../components/ui/primitives";
+import { Cover } from "../components/media/Cover";
 
 type Results = { songs: Paginated<Song>; artists: Paginated<Artist> };
 type SearchScope = "all" | "songs" | "artists";

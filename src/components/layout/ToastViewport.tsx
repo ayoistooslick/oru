@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import { useToasts, type ToastItem, type ToastKind } from "../state/ToastContext";
-import { OruMark } from "./OruMark";
-import { motionSafe } from "../lib/motion";
+import { useToasts, type ToastItem, type ToastKind } from "../../state/ToastContext";
+import { OruMark } from "../ui/OruMark";
+import { motionSafe } from "../../lib/motion";
 
 const META: Record<ToastKind, { label: string; tint: string }> = {
   saved: { label: "Saved", tint: "text-flame-ink" },

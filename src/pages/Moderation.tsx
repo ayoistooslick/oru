@@ -1,12 +1,12 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { EyeOff, Undo2, XCircle } from "../components/icons";
+import { EyeOff, Undo2, XCircle } from "../components/ui/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
 import type { Paginated, Report } from "../lib/types";
-import { Page } from "../components/Page";
-import { Button, Chip, EmptyState, Spinner } from "../components/ui";
+import { Page } from "../components/layout/Page";
+import { Button, Chip, EmptyState, Spinner } from "../components/ui/primitives";
 import { useAuth } from "../state/AuthContext";
 import { setAppBadge } from "../lib/pwa";
 import { useToasts } from "../state/ToastContext";

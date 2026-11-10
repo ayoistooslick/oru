@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check, ImagePlus, Music4 } from "../components/icons";
+import { Check, ImagePlus, Music4 } from "../components/ui/icons";
 import { request, upload } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { audioDuration } from "../lib/audio";
 import type { Artist, Paginated, Song } from "../lib/types";
-import { Button, EmptyState, Field, Spinner, TextArea } from "../components/ui";
-import { TrackRow } from "../components/TrackRow";
-import { Page } from "../components/Page";
+import { Button, EmptyState, Field, Spinner, TextArea } from "../components/ui/primitives";
+import { TrackRow } from "../components/media/TrackRow";
+import { Page } from "../components/layout/Page";
 import { useAuth } from "../state/AuthContext";
 import { useToasts } from "../state/ToastContext";
 

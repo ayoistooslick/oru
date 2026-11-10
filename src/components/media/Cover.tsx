@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { mediaUrl } from "../lib/api";
+import { mediaUrl } from "../../lib/api";
 
 const PALETTE = ["#e8552e", "#c96a3c", "#a8522f", "#d98c4a", "#b5563a", "#8a4a2c", "#e0a05a", "#c4703f"];
 

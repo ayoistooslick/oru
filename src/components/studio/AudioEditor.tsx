@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Scissors, X } from "./icons";
-import { decodeAudio, defaultEdit, renderEdit, toFile, waveformPeaks, type AudioEdit } from "../lib/audio";
-import { formatDuration } from "../lib/format";
+import { Pause, Play, Scissors, X } from "../ui/icons";
+import { decodeAudio, defaultEdit, renderEdit, toFile, waveformPeaks, type AudioEdit } from "../../lib/audio";
+import { formatDuration } from "../../lib/format";
 
 /**
  * The one screen between a recording and a published track. It is deliberately

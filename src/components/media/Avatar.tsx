@@ -1,5 +1,5 @@
-import { mediaUrl } from "../lib/api";
-import { initials } from "../lib/format";
+import { mediaUrl } from "../../lib/api";
+import { initials } from "../../lib/format";
 
 /** A profile picture when there is one, initials when there is not. */
 export function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | null; size?: string }) {

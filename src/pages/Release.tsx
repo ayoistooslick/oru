@@ -1,14 +1,14 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Play } from "../components/icons";
+import { ArrowLeft, Play } from "../components/ui/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
 import type { Artist, ReleaseDetail, Song } from "../lib/types";
-import { TrackRow } from "../components/TrackRow";
-import { Cover } from "../components/Cover";
-import { ReportButton } from "../components/ReportButton";
-import { ShareButton } from "../components/ShareButton";
-import { EmptyState, Spinner } from "../components/ui";
+import { TrackRow } from "../components/media/TrackRow";
+import { Cover } from "../components/media/Cover";
+import { ReportButton } from "../components/song/ReportButton";
+import { ShareButton } from "../components/song/ShareButton";
+import { EmptyState, Spinner } from "../components/ui/primitives";
 import { usePlayer } from "../state/PlayerContext";
 
 function Block({ label }: { label: string }) {

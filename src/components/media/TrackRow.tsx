@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Heart, Pause, Play, X } from "./icons";
-import { useLibrary } from "../state/LibraryContext";
-import { usePlayer } from "../state/PlayerContext";
-import { useToasts } from "../state/ToastContext";
-import type { Song } from "../lib/types";
-import { formatDuration } from "../lib/format";
+import { Heart, Pause, Play, X } from "../ui/icons";
+import { useLibrary } from "../../state/LibraryContext";
+import { usePlayer } from "../../state/PlayerContext";
+import { useToasts } from "../../state/ToastContext";
+import type { Song } from "../../lib/types";
+import { formatDuration } from "../../lib/format";
 import { Cover } from "./Cover";
 
 interface TrackRowProps {

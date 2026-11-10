@@ -1,64 +1,10 @@
-import { useState } from "react";
-import { Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from "./icons";
-import { useLibrary } from "../state/LibraryContext";
-import { usePlayer } from "../state/PlayerContext";
-import { formatDuration } from "../lib/format";
-import { Cover } from "./Cover";
+import { Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from "../ui/icons";
+import { useLibrary } from "../../state/LibraryContext";
+import { usePlayer } from "../../state/PlayerContext";
+import { Cover } from "../media/Cover";
+import { Scrubber } from "./Scrubber";
 
-export function Scrubber({
-  position,
-  duration,
-  onSeek,
-  className = "",
-  showTimes = true,
-}: {
-  position: number;
-  duration: number;
-  onSeek: (seconds: number) => void;
-  className?: string;
-  showTimes?: boolean;
-}) {
-  // While a finger or mouse holds the bar the thumb follows the hand, not the
-  // audio clock. Otherwise the next progress update snaps it back mid drag.
-  const [dragging, setDragging] = useState<number | null>(null);
-  const shown = dragging ?? position;
-  const percent = duration > 0 ? Math.min(100, (shown / duration) * 100) : 0;
-  const ready = duration > 0;
-
-  const move = (value: number) => {
-    const clamped = Math.max(0, Math.min(value, duration || 0));
-    setDragging(clamped);
-    onSeek(clamped);
-  };
-
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      {showTimes ? <span className="w-9 text-right text-[11.5px] tabular-nums text-ink-soft">{formatDuration(shown)}</span> : null}
-      <input
-        type="range"
-        min={0}
-        max={Math.max(duration, 1)}
-        step={0.1}
-        value={shown}
-        disabled={!ready}
-        onChange={(event) => move(Number(event.target.value))}
-        onPointerUp={() => setDragging(null)}
-        onPointerCancel={() => setDragging(null)}
-        onLostPointerCapture={() => setDragging(null)}
-        onKeyUp={() => setDragging(null)}
-        onBlur={() => setDragging(null)}
-        aria-label="Move through the song"
-        className="scrub min-h-6 flex-1 py-2 disabled:opacity-60"
-        style={{
-          background: `linear-gradient(to right, var(--color-flame) 0%, var(--color-flame) ${percent}%, #4a3d33 ${percent}%, #4a3d33 100%)`,
-        }}
-      />
-      {showTimes ? <span className="w-9 text-[11.5px] tabular-nums text-ink-soft">{formatDuration(duration)}</span> : null}
-    </div>
-  );
-}
-
-/** Spotify's bar: full width on desktop, a compact pill on phones. */
+/** The bar that stays above the tabs: compact on phones, three columns on desktop. */
 export function PlayerBar() {
   const {
     current,
@@ -117,7 +63,7 @@ export function PlayerBar() {
         <button
           type="button"
           onClick={toggle}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-flame text-cream shadow-ember press"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-flame text-night shadow-ember press"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5 translate-x-[1px]" fill="currentColor" />}
@@ -153,25 +99,16 @@ export function PlayerBar() {
             >
               <Shuffle className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={previous}
-              className="text-ink-soft transition hover:text-ink"
-              aria-label="Previous song"
-            >
+            <button type="button" onClick={previous} className="text-ink-soft transition hover:text-ink" aria-label="Previous song">
               <SkipBack className="h-5 w-5" fill="currentColor" />
             </button>
             <button
               type="button"
               onClick={toggle}
-              className="grid h-8 w-8 place-items-center rounded-full bg-flame text-cream transition hover:scale-105 press"
+              className="grid h-8 w-8 place-items-center rounded-full bg-flame text-night transition hover:scale-105 press"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying ? (
-                <Pause className="h-4 w-4" fill="currentColor" />
-              ) : (
-                <Play className="h-4 w-4 translate-x-[1px]" fill="currentColor" />
-              )}
+              {isPlaying ? <Pause className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4 translate-x-[1px]" fill="currentColor" />}
             </button>
             <button type="button" onClick={next} className="text-ink-soft transition hover:text-ink" aria-label="Next song">
               <SkipForward className="h-5 w-5" fill="currentColor" />
@@ -202,7 +139,7 @@ export function PlayerBar() {
             aria-label="Volume"
             className="scrub h-1 w-24"
             style={{
-              background: `linear-gradient(to right, var(--color-flame) 0%, var(--color-flame) ${volume * 100}%, #4a3d33 ${volume * 100}%, #4a3d33 100%)`,
+              background: `linear-gradient(to right, var(--color-flame) 0%, var(--color-flame) ${volume * 100}%, var(--color-hair) ${volume * 100}%, var(--color-hair) 100%)`,
             }}
           />
         </div>

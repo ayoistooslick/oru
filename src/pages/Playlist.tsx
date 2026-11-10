@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Globe2, Lock, Play, Plus, Search, Trash2, X } from "../components/icons";
+import { Globe2, Lock, Play, Plus, Search, Trash2, X } from "../components/ui/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Paginated, Playlist, Song } from "../lib/types";
-import { TrackRow } from "../components/TrackRow";
-import { Cover } from "../components/Cover";
-import { Button, EmptyState, Field, Spinner } from "../components/ui";
+import { TrackRow } from "../components/media/TrackRow";
+import { Cover } from "../components/media/Cover";
+import { Button, EmptyState, Field, Spinner } from "../components/ui/primitives";
 import { useAuth } from "../state/AuthContext";
 import { usePlayer } from "../state/PlayerContext";
 import { useToasts } from "../state/ToastContext";

@@ -234,6 +234,38 @@ export const Pause = makeIcon(
 
 export const Play = makeIcon("Play", <path d="m6 3 14 9-14 9V3z" />);
 
+export const PlaylistAdd = makeIcon(
+  "PlaylistAdd",
+  <>
+    <path d="M4 7h10" />
+    <path d="M4 12h10" />
+    <path d="M4 17h7" />
+    <path d="M17 13v8" />
+    <path d="M13 17h8" />
+  </>,
+);
+
+export const Queue = makeIcon(
+  "Queue",
+  <>
+    <path d="M4 7h11" />
+    <path d="M4 12h11" />
+    <path d="M4 17h7" />
+    <path d="M20 7v8" />
+    <circle cx="17.5" cy="17" r="2.5" />
+  </>,
+);
+
+export const Timer = makeIcon(
+  "Timer",
+  <>
+    <circle cx="12" cy="13.5" r="7.5" />
+    <path d="M12 10v4l2.5 2" />
+    <path d="M9 2.5h6" />
+    <path d="M12 2.5v2" />
+  </>,
+);
+
 export const Plus = makeIcon(
   "Plus",
   <>

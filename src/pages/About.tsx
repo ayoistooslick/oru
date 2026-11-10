@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Github, Globe } from "../components/icons";
-import { OruLogo, OruMark } from "../components/OruMark";
+import { ArrowLeft, Github, Globe } from "../components/ui/icons";
+import { OruLogo, OruMark } from "../components/ui/OruMark";
 
 const PORTRAIT = "https://res.cloudinary.com/dejkqmt3q/image/upload/v1791147133/linkforge/file_amiw7z.jpg";
 const PORTFOLIO = "https://ayoistooslick.netlify.app";

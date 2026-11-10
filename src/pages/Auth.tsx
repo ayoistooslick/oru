@@ -2,9 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, auth, setToken } from "../lib/api";
 import { useAuth } from "../state/AuthContext";
-import { OruLogo, OruMark } from "../components/OruMark";
-import { Check, Download } from "../components/icons";
-import { Spinner } from "../components/ui";
+import { OruLogo, OruMark } from "../components/ui/OruMark";
+import { Check, Download } from "../components/ui/icons";
+import { Spinner } from "../components/ui/primitives";
 
 /**
  * Sign-in for both clients.

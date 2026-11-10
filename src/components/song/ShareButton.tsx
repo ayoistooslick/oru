@@ -1,6 +1,6 @@
-import { Share2 } from "./icons";
-import { sharePage } from "../lib/pwa";
-import { useToasts } from "../state/ToastContext";
+import { Share2 } from "../ui/icons";
+import { sharePage } from "../../lib/pwa";
+import { useToasts } from "../../state/ToastContext";
 
 interface ShareButtonProps {
   title: string;

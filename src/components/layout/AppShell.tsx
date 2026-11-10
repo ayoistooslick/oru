@@ -12,15 +12,15 @@ import {
   Search as SearchIcon,
   Share2,
   ShieldCheck,
-} from "./icons";
-import { request } from "../lib/api";
-import { useResource } from "../hooks/useResource";
-import type { Paginated, Playlist } from "../lib/types";
-import { useAuth } from "../state/AuthContext";
-import { Avatar } from "./Avatar";
-import { OruLogo } from "./OruMark";
-import { PlayerBar } from "./PlayerBar";
-import { NowPlaying } from "./NowPlaying";
+} from "../ui/icons";
+import { request } from "../../lib/api";
+import { useResource } from "../../hooks/useResource";
+import type { Paginated, Playlist } from "../../lib/types";
+import { useAuth } from "../../state/AuthContext";
+import { Avatar } from "../media/Avatar";
+import { OruLogo } from "../ui/OruMark";
+import { PlayerBar } from "../player/PlayerBar";
+import { NowPlaying } from "../player/NowPlaying";
 import { OnlineStatusBanner } from "./OnlineStatusBanner";
 import { Tutorial } from "./Tutorial";
 

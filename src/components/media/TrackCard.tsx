@@ -1,7 +1,7 @@
-import { Pause, Play } from "./icons";
-import { usePlayer } from "../state/PlayerContext";
-import { useToasts } from "../state/ToastContext";
-import type { Song } from "../lib/types";
+import { Pause, Play } from "../ui/icons";
+import { usePlayer } from "../../state/PlayerContext";
+import { useToasts } from "../../state/ToastContext";
+import type { Song } from "../../lib/types";
 import { Cover } from "./Cover";
 
 /** A tile in a shelf: artwork, name, and a green play button on hover. */

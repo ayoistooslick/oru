@@ -24,6 +24,9 @@ interface PlayerValue {
   duration: number;
   volume: number;
   expanded: boolean;
+  sleepTimer: SleepTimer | null;
+  sleepRemaining: number;
+  setSleepTimer: (minutes: number | "song" | null) => void;
   playQueue: (songs: Song[], startIndex?: number) => void;
   playSong: (song: Song, queue?: Song[]) => void;
   toggle: () => void;
@@ -36,6 +39,14 @@ interface PlayerValue {
   setExpanded: (value: boolean) => void;
 }
 
+/** A timer that pauses playback after a set time, or when the song ends. */
+export interface SleepTimer {
+  endsAt: number | null;
+  atSongEnd: boolean;
+  /** The number of minutes chosen, so the sheet can show it as selected. */
+  minutes: number | null;
+}
+
 const PlayerContext = createContext<PlayerValue | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
@@ -45,6 +56,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const historyRef = useRef<number[]>([]);
   const repeatModeRef = useRef<"off" | "all" | "one">("off");
   const shuffleRef = useRef(false);
+  const sleepRef = useRef<SleepTimer | null>(null);
   const [queue, setQueue] = useState<Song[]>([]);
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,8 +67,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
   const [expanded, setExpanded] = useState(false);
+  const [sleepTimer, setSleepTimerState] = useState<SleepTimer | null>(null);
+  const [sleepRemaining, setSleepRemaining] = useState(0);
   repeatModeRef.current = repeatMode;
   shuffleRef.current = shuffle;
+  sleepRef.current = sleepTimer;
 
   const current = queue[index] ?? null;
 
@@ -179,6 +194,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (!reportedRef.current) {
         reportedRef.current = true;
         reportListen(current, (element.duration || 0) * 1000);
+      }
+      // "End of this song" stops here instead of moving on.
+      if (sleepRef.current?.atSongEnd) {
+        setSleepTimerState(null);
+        setSleepRemaining(0);
+        element.pause();
+        return;
       }
       if (repeatModeRef.current === "one") {
         element.currentTime = 0;
@@ -315,6 +337,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(seconds);
   }, []);
 
+  const setSleepTimer = useCallback((minutes: number | "song" | null) => {
+    if (minutes === null) {
+      setSleepTimerState(null);
+      setSleepRemaining(0);
+      return;
+    }
+    if (minutes === "song") {
+      setSleepTimerState({ endsAt: null, atSongEnd: true, minutes: null });
+      setSleepRemaining(0);
+      return;
+    }
+    setSleepTimerState({ endsAt: Date.now() + minutes * 60_000, atSongEnd: false, minutes });
+    setSleepRemaining(minutes * 60);
+  }, []);
+
+  // The clock only runs while a timed sleep is set; when it reaches zero the
+  // sound stops and the timer clears itself.
+  useEffect(() => {
+    const endsAt = sleepTimer?.endsAt;
+    if (!endsAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+      setSleepRemaining(left);
+      if (left === 0) {
+        audioRef.current?.pause();
+        setSleepTimerState(null);
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [sleepTimer?.endsAt]);
+
   const toggleShuffle = useCallback(() => setShuffle((value) => !value), []);
   const cycleRepeat = useCallback(
     () => setRepeatMode((value) => (value === "off" ? "all" : value === "all" ? "one" : "off")),
@@ -398,6 +453,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       duration,
       volume,
       expanded,
+      sleepTimer,
+      sleepRemaining,
+      setSleepTimer,
       playQueue,
       playSong,
       toggle,
@@ -421,6 +479,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       duration,
       volume,
       expanded,
+      sleepTimer,
+      sleepRemaining,
+      setSleepTimer,
       playQueue,
       playSong,
       toggle,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useAuth } from "../state/AuthContext";
+import { useAuth } from "../../state/AuthContext";
 
 interface Step {
   /** CSS selector for the real element this step points at. */

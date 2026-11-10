@@ -1,13 +1,13 @@
 import { Link, useParams } from "react-router-dom";
-import { Check, Pause, Play, UserPlus } from "../components/icons";
+import { Check, Pause, Play, UserPlus } from "../components/ui/icons";
 import { mediaUrl, request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import { formatTimeAgo } from "../lib/format";
 import type { Artist, ArtistPost, Paginated, Release, Song } from "../lib/types";
-import { TrackRow } from "../components/TrackRow";
-import { Cover } from "../components/Cover";
-import { ReportButton } from "../components/ReportButton";
-import { Button, EmptyState, Spinner } from "../components/ui";
+import { TrackRow } from "../components/media/TrackRow";
+import { Cover } from "../components/media/Cover";
+import { ReportButton } from "../components/song/ReportButton";
+import { Button, EmptyState, Spinner } from "../components/ui/primitives";
 import { useAuth } from "../state/AuthContext";
 import { useLibrary } from "../state/LibraryContext";
 import { usePlayer } from "../state/PlayerContext";

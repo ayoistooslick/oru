@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { appLinkFor, intentUrl, isAndroid } from "../lib/links";
-import { Headphones } from "./icons";
+import { appLinkFor, intentUrl, isAndroid } from "../../lib/links";
+import { Headphones } from "../ui/icons";
 
 /** Said once and the browser keeps the page for the rest of the visit. */
 const OFF_KEY = "oru-app-off";

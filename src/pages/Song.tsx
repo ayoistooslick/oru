@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Pause, Play, Share2 } from "../components/icons";
+import { ArrowLeft, Download, Pause, Play, Share2 } from "../components/ui/icons";
 import { mediaUrl, request } from "../lib/api";
 import { songWebUrl, APK_URL } from "../lib/links";
 import { useResource } from "../hooks/useResource";
-import { Cover } from "../components/Cover";
-import { OruLogo } from "../components/OruMark";
-import { Spinner } from "../components/ui";
+import { Cover } from "../components/media/Cover";
+import { OruLogo } from "../components/ui/OruMark";
+import { Spinner } from "../components/ui/primitives";
 import { useToasts } from "../state/ToastContext";
 import type { Song } from "../lib/types";
 

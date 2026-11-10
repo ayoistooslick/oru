@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { usePageEnter } from "../hooks/usePageEnter";
+import { usePageEnter } from "../../hooks/usePageEnter";
 
 interface PageProps {
   title: string;

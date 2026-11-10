@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, X } from "./icons";
+import { Mic, Square, X } from "../ui/icons";
 
 function clock(seconds: number): string {
   const whole = Math.floor(seconds);

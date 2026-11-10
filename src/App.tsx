@@ -1,10 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
-import { AppShell } from "./components/AppShell";
-import { Spinner } from "./components/ui";
-import { ToastViewport } from "./components/ToastViewport";
-import { StartupCapabilityGate } from "./components/StartupCapabilityGate";
-import { OpenInApp } from "./components/OpenInApp";
-import { OruMark } from "./components/OruMark";
+import { AppShell } from "./components/layout/AppShell";
+import { Spinner } from "./components/ui/primitives";
+import { ToastViewport } from "./components/layout/ToastViewport";
+import { StartupCapabilityGate } from "./components/layout/StartupCapabilityGate";
+import { OpenInApp } from "./components/layout/OpenInApp";
+import { OruMark } from "./components/ui/OruMark";
 import { AuthProvider, useAuth } from "./state/AuthContext";
 import { LibraryProvider } from "./state/LibraryContext";
 import { PlayerProvider } from "./state/PlayerContext";

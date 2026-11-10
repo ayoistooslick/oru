@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "./ui";
+import { Button } from "../ui/primitives";
 import {
   readBrowserCapabilityStatus,
   requestNotificationPermission,
   requestPersistentStorage,
   type BrowserCapabilityStatus,
-} from "../lib/browserCapabilities";
+} from "../../lib/browserCapabilities";
 
 interface BrowserCapabilitySetupPromptProps {
   /** Called when the user skips or dismisses this prompt. */

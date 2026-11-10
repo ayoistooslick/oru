@@ -12,8 +12,8 @@ import {
   Play,
   Share2,
   Upload,
-} from "../components/icons";
-import { OruLogo } from "../components/OruMark";
+} from "../components/ui/icons";
+import { OruLogo } from "../components/ui/OruMark";
 import { motionSafe } from "../lib/motion";
 import { APK_URL } from "../lib/links";
 

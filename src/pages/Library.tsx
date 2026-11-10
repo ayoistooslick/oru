@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Globe2, Heart, Lock, Play, Plus, Shuffle, X } from "../components/icons";
+import { Globe2, Heart, Lock, Play, Plus, Shuffle, X } from "../components/ui/icons";
 import { request } from "../lib/api";
 import { useResource } from "../hooks/useResource";
 import type { Artist, Paginated, Playlist } from "../lib/types";
-import { TrackCard } from "../components/TrackCard";
-import { TrackRow } from "../components/TrackRow";
-import { Cover } from "../components/Cover";
-import { Button, Chip, EmptyState, Field, Spinner } from "../components/ui";
+import { TrackCard } from "../components/media/TrackCard";
+import { TrackRow } from "../components/media/TrackRow";
+import { Cover } from "../components/media/Cover";
+import { Button, Chip, EmptyState, Field, Spinner } from "../components/ui/primitives";
 import { useToasts } from "../state/ToastContext";
 import { usePlayer } from "../state/PlayerContext";
 import type { Song } from "../lib/types";

@@ -45,6 +45,25 @@ is the same shape as production. The app is then at `http://127.0.0.1:8000`.
 - **Keep the existing structure.** Backend routes live in `app/api/`, React pages in `src/pages/`,
   shared state in `src/state/`, small helpers in `src/lib/`. Do not introduce a second way of doing
   the same thing (another router, another state library, another CSS framework).
+
+  ```
+  src/
+    App.tsx              routes and providers, nothing else
+    pages/               one file per screen, named after the route
+    components/
+      layout/            the shell: sidebar, top bar, tabs, page frame, toasts, banners
+      media/             artwork and user images: Cover, Avatar, TrackRow, TrackCard
+      player/            the player bar and the full now-playing screen, plus its sheets
+      song/              actions on a single song: share, report
+      studio/            recording and trimming audio before upload
+      ui/                icons, brand mark and the small shared primitives
+    state/               the four contexts: auth, library, player, toasts
+    lib/                 API client, types, formatting, links, motion, PWA helpers
+    hooks/               small reusable hooks
+  ```
+
+  A component that belongs to a screen stays in that page until a second screen needs it, then it
+  moves to the matching `components/` folder. Nothing new goes loose in `src/components/`.
 - **Backend changes come with tests.** Add a case in `tests/` that fails without your change. The
   suite has to stay green.
 - **Do not add a dependency casually.** If the change works with what is already installed, do that.
@@ -61,8 +80,10 @@ is the same shape as production. The app is then at `http://127.0.0.1:8000`.
 This part is strict, because ORU is meant to be usable by people with low literacy and cheap
 phones.
 
-- Warm clay surfaces (`#17120e` paper, `#211a14` cards), cream text (`#f4efe7`) and ember as the
-  accent (`#e8552e`). Use the existing Tailwind tokens and CSS variables instead of new colors.
+- Soft cream surfaces (`#fdf8f1` paper, `#ffffff` cards), warm ink text (`#221a13`) and ember as
+  the accent (`#e8552e`). These are the same values as `android/app/src/main/res/values/colors.xml`,
+  so the two clients stay one product. Use the existing Tailwind tokens and CSS variables instead
+  of new colors.
 - No Spotify logos, wordmarks or artwork. The look is borrowed, the brand is not.
 - Copy is short and plain. Everyday words, one idea per sentence, no jargon, no marketing tone.
 - No em dashes, en dashes or curly quotes anywhere in `src/`. Straight quotes and periods only.

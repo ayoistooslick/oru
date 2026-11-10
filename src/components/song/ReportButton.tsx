@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Flag, X } from "./icons";
-import { request } from "../lib/api";
-import { useToasts } from "../state/ToastContext";
+import { Flag, X } from "../ui/icons";
+import { request } from "../../lib/api";
+import { useToasts } from "../../state/ToastContext";
 
 type TargetType = "song" | "artist" | "post";
 

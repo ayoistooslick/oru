@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "../components/icons";
+import { Download, Github, ImagePlus, LogOut, Mic2, Trash2, User } from "../components/ui/icons";
 import { ApiError, mediaUrl, request, upload } from "../lib/api";
-import { Avatar } from "../components/Avatar";
-import { Page } from "../components/Page";
-import { Button, Field, SectionHeader, TextArea } from "../components/ui";
+import { Avatar } from "../components/media/Avatar";
+import { Page } from "../components/layout/Page";
+import { Button, Field, SectionHeader, TextArea } from "../components/ui/primitives";
 import { useAuth } from "../state/AuthContext";
 import { useToasts } from "../state/ToastContext";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
-import { BrowserCapabilitySetupPrompt } from "../components/BrowserCapabilitySetupPrompt";
+import { BrowserCapabilitySetupPrompt } from "../components/layout/BrowserCapabilitySetupPrompt";
 
 function roleLabel(role: string): string {
   if (role === "admin") return "Moderator";
