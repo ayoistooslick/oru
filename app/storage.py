@@ -220,11 +220,10 @@ class GittyBankStorage:
     keeps Range requests working because the service answers those itself, and
     keeps audio out of the API's bandwidth.
 
-    Deleting a file asks the service to remove it, but only a key with file
-    management rights is allowed to: the upload key answers "Owner session
-    required". A refusal is logged, never raised, because the app is already
-    forgetting the file at that point. That is also why nothing confidential
-    belongs in an upload.
+    Deleting a file asks the service to remove it, which any key with write
+    permission may do; a read-only key is refused. A refusal is logged, never
+    raised, because the app has already forgotten the file at that point, and
+    nothing confidential belongs in an upload either way.
     """
 
     TIMEOUT = 120.0
