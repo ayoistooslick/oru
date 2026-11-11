@@ -57,10 +57,15 @@ that has ORU installed lands on the screen it names instead of a browser.
   Chrome opens the app when it is installed and reloads the page when it is not, with a
   `sessionStorage` key stopping a browser without the app from retrying. No digital asset link and no
   signing-key fingerprint is needed, which matters because every CI build is signed fresh.
-- A release build is also verified for App Links: `https://oru.freebuff.app/.well-known/assetlinks.json`
-  carries the SHA-256 of the release certificate, so Android hands those links to the app itself,
-  with no browser frame at all. Verification happens at install time against the certificate, so a
-  debug-signed test build falls back to the hand-off above.
+- A release build also asks Android to verify App Links: `AndroidManifest.xml` declares
+  `autoVerify` for `oru.freebuff.app`, and the fingerprint it checks against the release certificate
+  is published at `/.well-known/assetlinks.json` (served by the API, see `app/assetlinks.py`, with
+  `public/.well-known/assetlinks.json` for hosts that serve dot-directories).
+- **Verification does not currently pass.** The static host answers that path with the single-page
+  fallback (`text/html`), and it ignores `_redirects`, so Android rejects the association and keeps
+  opening links in the browser, where the hand-off above takes over. Everything is in place for the
+  moment the file can be served as `application/json` at that exact path — that is the one change
+  needed for zero-frame link opening.
 - Android only fires the hand-off on the page a tab was opened on, so clicking around inside the
   site never keeps throwing people into the app. Browsers that cannot resolve intent addresses
   (Firefox and its forks) get the bare `oru://` scheme instead; the app answers that directly.
@@ -192,7 +197,9 @@ publishes it as both a workflow artifact and a GitHub release asset.
 
 - Pushes to `main` create a **pre-release** tagged `build-<run number>`, so `/releases/latest`
   keeps pointing at a tagged release instead of whichever commit ran last.
-- Pushing a tag like `v1.1.0` creates the release with that tag.
+- Tag pushes publish nothing from CI. Stable releases are cut by hand with the release key
+  (`gh release create v1.1.0 oru.apk --target main`), because a debug-signed APK attached to a tag
+  would replace the signed one, break App Links and break clean upgrades.
 - The current raw APK is at `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
 
 ### Signing
