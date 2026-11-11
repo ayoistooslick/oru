@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import inspect, text
 
 from app.api import accounts, community, maintenance, moderation, music, notifications
+from app.assetlinks import ASSETLINKS
 from app.social import render_document, request_origin
 from app.config import BASE_DIR, settings
 from app.database import Base, engine
@@ -252,6 +253,15 @@ def build_app(api: FastAPI) -> FastAPI:
 
     # The manifest and the worker need types and cache rules of their own;
     # the generic asset route below would guess wrong for a .webmanifest file.
+    # App Links verification, for hosts that cannot serve files inside a
+    # hidden directory; public/_redirects points this path here.
+    @root.get("/.well-known/assetlinks.json", include_in_schema=False)
+    def asset_links():
+        return JSONResponse(
+            ASSETLINKS,
+            headers={"Cache-Control": "public, max-age=300"},
+        )
+
     @root.get("/manifest.webmanifest", include_in_schema=False)
     def web_manifest():
         return FileResponse(

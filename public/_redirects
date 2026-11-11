@@ -1,0 +1,4 @@
+# Android verifies App Links by fetching this exact path. The static upload
+# skips files inside hidden directories, so the document is served by the API
+# (app/assetlinks.py) and proxied here, unchanged in body and content type.
+/.well-known/assetlinks.json  /api?__path=/.well-known/assetlinks.json  200
