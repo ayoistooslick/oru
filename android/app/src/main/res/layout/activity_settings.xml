@@ -422,6 +422,56 @@
 
             </LinearLayout>
 
+            <!-- New drops from the artists this listener follows. Following is
+                 the opt-in; this switch only silences future notices. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/card_surface"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_notifications"
+                    app:tint="@color/flame_ink" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="New drops"
+                        android:textAppearance="@style/TextAppearance.Oru.Body"
+                        android:textColor="@color/ink" />
+
+                    <TextView
+                        android:id="@+id/dropNotificationsSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="When an artist you follow releases something"
+                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                        android:textColor="@color/ink_faint" />
+
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/dropNotificationsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="New drops from artists you follow" />
+
+            </LinearLayout>
+
             <!-- Your work -->
             <TextView
                 android:layout_width="match_parent"

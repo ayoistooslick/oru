@@ -9,9 +9,12 @@ tsconfig.tsbuildinfo
 *.db-shm
 *.db-wal
 
-# Android signing keys are private. CI generates its own when none is set.
+# Android signing keys are private: CI reads them from repository secrets and
+# local builds read android/keystore.properties. Neither is committed.
 *.keystore
 *.jks
+android/keystore.properties
+android/keystore/
 
 # Android Gradle build outputs and machine-local SDK config.
 android/.gradle/

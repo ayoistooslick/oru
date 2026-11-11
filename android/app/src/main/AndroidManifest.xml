@@ -67,9 +67,10 @@
             </intent-filter>
         </activity>
 
-        <!-- Shared song and artist links: oru://song/12, oru://artist/4. The
-             web page fires these as Android intent URLs, so a listener who
-             has the app opens it instead of the browser. -->
+        <!-- Every oru.freebuff.app page, addressed in the app's own scheme.
+             The web hands links over as Android intent URLs, so a listener who
+             has the app opens it instead of the browser, on the screen the
+             link named. Hosts mirror appLinkFor() in src/lib/links.ts. -->
         <activity
             android:name=".ui.OpenLinkActivity"
             android:exported="true"
@@ -79,10 +80,36 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Content: oru://song/12, oru://artist/4, oru://release/7,
+                     oru://playlist/3 -->
                 <data android:scheme="oru" android:host="song" />
                 <data android:scheme="oru" android:host="artist" />
                 <data android:scheme="oru" android:host="release" />
                 <data android:scheme="oru" android:host="playlist" />
+                <!-- Tabs and the screens behind them -->
+                <data android:scheme="oru" android:host="listen" />
+                <data android:scheme="oru" android:host="library" />
+                <data android:scheme="oru" android:host="search" />
+                <data android:scheme="oru" android:host="studio" />
+                <data android:scheme="oru" android:host="notifications" />
+                <data android:scheme="oru" android:host="settings" />
+                <data android:scheme="oru" android:host="shares" />
+                <data android:scheme="oru" android:host="moderation" />
+                <data android:scheme="oru" android:host="about" />
+            </intent-filter>
+
+            <!-- Verified App Links: the site's own addresses open the app
+                 directly, with no browser frame and no chooser. Android checks
+                 https://oru.freebuff.app/.well-known/assetlinks.json against the
+                 signing certificate at install time; the fingerprint there is
+                 the release key in android/keystore. The oru:// filter above
+                 stays as the fallback for builds signed with another key and
+                 for browsers that refuse intent addresses. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="oru.freebuff.app" />
             </intent-filter>
         </activity>
 
@@ -158,6 +185,12 @@
 
         <activity
             android:name=".ui.about.AboutActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Oru" />
+
+        <!-- The bell: drops from the artists this listener follows. -->
+        <activity
+            android:name=".ui.notifications.NotificationsActivity"
             android:exported="false"
             android:theme="@style/Theme.Oru" />
 

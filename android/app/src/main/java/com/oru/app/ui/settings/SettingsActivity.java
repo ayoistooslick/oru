@@ -11,9 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.oru.app.R;
+import com.oru.app.data.model.NotificationPreference;
 import com.oru.app.data.model.User;
 import com.oru.app.data.repository.AuthRepository;
 import com.oru.app.data.repository.Callback;
+import com.oru.app.data.repository.NotificationsRepository;
 import com.oru.app.data.session.SessionManager;
 import com.oru.app.databinding.ActivitySettingsBinding;
 import com.oru.app.ui.about.AboutActivity;
@@ -32,7 +34,10 @@ public class SettingsActivity extends AppCompatActivity {
 
     private ActivitySettingsBinding binding;
     private AuthRepository authRepo;
+    private NotificationsRepository notificationsRepo;
     private SessionManager session;
+    /** Set while the switch is being filled in, so that is not a tap. */
+    private boolean bindingDrops;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     private User user;
@@ -60,6 +65,8 @@ public class SettingsActivity extends AppCompatActivity {
         session = new SessionManager(this);
         authRepo = new AuthRepository(LazySession.getApiService(), session,
                 LazySession.getGson());
+        notificationsRepo = new NotificationsRepository(
+                LazySession.getApiService(), LazySession.getGson());
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         bindTheme();
@@ -79,6 +86,12 @@ public class SettingsActivity extends AppCompatActivity {
                 new Intent(this, AboutActivity.class)));
         binding.githubButton.setOnClickListener(v -> openDeveloper());
         binding.signOutButton.setOnClickListener(v -> signOut());
+        binding.dropNotificationsSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (bindingDrops) {
+                return;
+            }
+            saveDropPreference(checked);
+        });
 
         binding.toolbar.inflateMenu(R.menu.settings_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -135,6 +148,10 @@ public class SettingsActivity extends AppCompatActivity {
         binding.accountName.setText(signedIn
                 ? (user.displayName != null ? user.displayName : user.handle)
                 : "");
+        bindingDrops = true;
+        binding.dropNotificationsSwitch.setChecked(!signedIn || user.notifyNewDrops);
+        binding.dropNotificationsSwitch.setEnabled(signedIn);
+        bindingDrops = false;
         StringBuilder meta = new StringBuilder();
         if (signedIn) {
             if (user.handle != null) {
@@ -206,6 +223,47 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     /** Android hides the notification switch deep in settings; take them there. */
+    /**
+     * The same switch the web has: following is the opt-in, this only silences
+     * future notices, and old ones stay under the bell. A failed save puts the
+     * switch back where it was rather than lying about the account.
+     */
+    private void saveDropPreference(boolean enabled) {
+        if (user != null) {
+            user.notifyNewDrops = enabled;
+        }
+        binding.dropNotificationsSwitch.setEnabled(false);
+        notificationsRepo.setDropsEnabled(enabled, new Callback<NotificationPreference>() {
+            @Override
+            public void onSuccess(NotificationPreference saved) {
+                runOnUiThread(() -> {
+                    if (binding == null) return;
+                    binding.dropNotificationsSwitch.setEnabled(true);
+                    if (user != null && saved != null) {
+                        user.notifyNewDrops = saved.notifyNewDrops;
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Throwable error) {
+                runOnUiThread(() -> {
+                    if (binding == null) return;
+                    bindingDrops = true;
+                    binding.dropNotificationsSwitch.setChecked(!enabled);
+                    bindingDrops = false;
+                    binding.dropNotificationsSwitch.setEnabled(true);
+                    if (user != null) {
+                        user.notifyNewDrops = !enabled;
+                    }
+                    Toast.makeText(SettingsActivity.this,
+                            UiErrors.message(SettingsActivity.this, error),
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
     private void openAppSettings() {
         Intent intent = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());

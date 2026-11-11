@@ -78,16 +78,43 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
 
-      - name: Build the native APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
-
-      # Debug build: signed with the runner's auto-generated debug key, which
-      # is fine for sideloading but does not upgrade cleanly over an earlier
-      # Oru install signed with a different key.
-      - name: Stage the APK
+      # The release key lives in repository secrets, never in the repository:
+      # the App Links fingerprint in public/.well-known/assetlinks.json is tied
+      # to it, so every build that should verify has to be signed with this one
+      # certificate. Without the secret the job still produces a debug-signed
+      # test build and says so, instead of publishing an APK that pretends to
+      # be the release.
+      - name: Prepare the release signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk oru.apk
-          ls -lh oru.apk
+          if [ -n "$KEYSTORE" ]; then
+            mkdir -p android/keystore
+            printf '%s' "$KEYSTORE" | base64 -d > android/keystore/oru-release.jks
+            {
+              echo "ORU_KEYSTORE_FILE=keystore/oru-release.jks"
+              echo "ORU_STORE_PASSWORD=$STORE_PASSWORD"
+              echo "ORU_KEY_ALIAS=${KEY_ALIAS:-oru}"
+              echo "ORU_KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}"
+            } >> "$GITHUB_ENV"
+          else
+            echo "No release key in secrets: building a debug-signed test APK (App Links will not verify on it)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build the native APK
+        run: |
+          cd android
+          if [ -n "$ORU_KEYSTORE_FILE" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../oru.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../oru.apk
+          fi
+          ls -lh ../oru.apk
 
       - name: Upload the APK as a run artifact
         uses: actions/upload-artifact@v7
@@ -96,12 +123,19 @@ jobs:
           path: oru.apk
           if-no-files-found: error
 
+      # Builds from main are test builds and are marked pre-release, so
+      # /releases/latest/download/oru.apk keeps pointing at a tagged, signed
+      # release rather than at whichever commit ran last.
       - name: Publish a release with the APK attached
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
           name: ${{ github.ref_type == 'tag' && github.ref_name || format('Build {0}', github.run_number) }}
-          body: Native Android APK built from commit ${{ github.sha }}. Download the APK and install it on a phone to try the build. Uninstall any previously installed Oru build first — debug signing keys differ between runs.
+          prerelease: ${{ github.ref_type != 'tag' }}
+          body: |
+            Native Android APK built from commit ${{ github.sha }}.
+
+            ${{ env.ORU_KEYSTORE_FILE != '' && 'Signed with the ORU release key: this build installs over earlier releases and can verify App Links.' || 'Debug-signed test build: uninstall any earlier Oru build first, and expect oru.freebuff.app links to open the browser before the app.' }}
           files: |
             oru.apk
           fail_on_unmatched_files: true
@@ -122,6 +156,7 @@ jobs:
             echo "https://github.com/${{ github.repository }}/releases/latest/download/oru.apk"
             echo ""
             echo "The *oru-android* artifact above is a zip because GitHub wraps every"
-            echo "artifact; use the link instead. Uninstall an earlier Oru build first,"
-            echo "since each run signs with a fresh debug key."
+            echo "artifact; use the link instead. Test builds are debug-signed, so"
+            echo "uninstall an earlier Oru build first; tagged releases are signed with"
+            echo "the ORU release key and install as updates."
           } >> "$GITHUB_STEP_SUMMARY"

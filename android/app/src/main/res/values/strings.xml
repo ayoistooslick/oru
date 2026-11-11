@@ -52,4 +52,12 @@
     <string name="nav_shares">Shares</string>
     <string name="song_unavailable">That song is not available on ORU right now.</string>
     <string name="open_in_app">Open in the ORU app</string>
+
+    <!-- Drops: new music from the artists this listener follows -->
+    <string name="notifications_title">Drops</string>
+    <string name="notifications_mark_all">Mark all read</string>
+    <string name="notifications_empty">Nothing new yet</string>
+    <string name="notifications_empty_hint">Follow an artist and their next song or release lands here.</string>
+    <string name="notification_unavailable">That drop is no longer on ORU.</string>
+    <string name="menu_notifications">Drops</string>
 </resources>

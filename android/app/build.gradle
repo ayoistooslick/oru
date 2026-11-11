@@ -2,6 +2,23 @@ plugins {
     id 'com.android.application'
 }
 
+// Release signing. The key itself is never committed: a local build reads
+// android/keystore.properties (git-ignored), and CI assembles the same file
+// from repository secrets before Gradle runs. Without either, release builds
+// are left unsigned on purpose rather than silently signed with a throwaway
+// key, because App Links only verify against one stable certificate.
+def releaseProps = new Properties()
+def releasePropsFile = rootProject.file('keystore.properties')
+if (releasePropsFile.exists()) {
+    releasePropsFile.withInputStream { releaseProps.load(it) }
+}
+
+def releaseKeyPath = System.getenv('ORU_KEYSTORE_FILE') ?: releaseProps.getProperty('storeFile')
+def releaseStorePassword = System.getenv('ORU_STORE_PASSWORD') ?: releaseProps.getProperty('storePassword')
+def releaseKeyAlias = System.getenv('ORU_KEY_ALIAS') ?: releaseProps.getProperty('keyAlias')
+def releaseKeyPassword = System.getenv('ORU_KEY_PASSWORD') ?: releaseProps.getProperty('keyPassword')
+def hasReleaseKey = releaseKeyPath != null && releaseStorePassword != null && releaseKeyAlias != null
+
 android {
     namespace 'com.oru.app'
     compileSdk 34
@@ -10,16 +27,32 @@ android {
         applicationId "com.oru.app"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        // 1.1: every oru.freebuff.app link opens the app on the screen it
+        // names, and the app finally has a Drops screen of its own.
+        versionCode 2
+        versionName "1.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseKey) {
+                storeFile rootProject.file(releaseKeyPath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseKey) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

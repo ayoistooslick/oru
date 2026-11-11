@@ -22,16 +22,8 @@ public class SearchActivity extends AppCompatActivity {
         binding = ActivitySearchBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // SearchFragment handles the rest; it reads query from intent if present.
-        com.oru.app.ui.search.SearchFragment fragment =
-                (com.oru.app.ui.search.SearchFragment) getSupportFragmentManager()
-                        .findFragmentById(R.id.searchFragment);
-        if (fragment != null && getIntent() != null) {
-            String query = getIntent().getStringExtra("query");
-            if (query != null && !query.isEmpty()) {
-                // Fragment exposes a search method; inject when available.
-            }
-        }
+        // The fragment reads the "query" extra itself and starts the search, so
+        // a link to a search lands on results rather than an empty box.
     }
 
     @Override

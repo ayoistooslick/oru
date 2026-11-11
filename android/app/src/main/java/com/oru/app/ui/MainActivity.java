@@ -198,6 +198,11 @@ public class MainActivity extends AppCompatActivity {
                 com.oru.app.ui.components.Actions.openArtist(this, account.id);
                 return true;
             }
+            if (id == R.id.menu_notifications) {
+                startActivity(new Intent(this,
+                        com.oru.app.ui.notifications.NotificationsActivity.class));
+                return true;
+            }
             if (id == R.id.menu_settings) {
                 startActivity(new Intent(this,
                         com.oru.app.ui.settings.SettingsActivity.class));

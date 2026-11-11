@@ -19,6 +19,10 @@ public class User {
     @SerializedName("display_name")
     public String displayName;
 
+    /** Whether a followed artist's next drop should appear under the bell. */
+    @SerializedName("notify_new_drops")
+    public boolean notifyNewDrops = true;
+
     @SerializedName("bio")
     public String bio;
 

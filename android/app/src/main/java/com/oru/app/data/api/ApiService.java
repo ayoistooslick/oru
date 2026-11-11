@@ -296,6 +296,28 @@ public interface ApiService {
     Call<ApiResponse<Void>> shareDecision(
             @Path("songId") int songId, @Body ShareDecision body);
 
+    // ---- Notifications ----
+    // These answer with bare objects ({"items": .., "unread_count": ..}), not
+    // the {"data": ..} envelope, so they are read with enqueuePlain.
+
+    @GET("api/v1/notifications")
+    Call<com.oru.app.data.model.NotificationsPage> listNotifications(
+            @Query("limit") int limit);
+
+    @GET("api/v1/notifications/unread")
+    Call<com.oru.app.data.model.NotificationsPage.Unread> unreadNotifications();
+
+    @POST("api/v1/notifications/{notificationId}/read")
+    Call<com.oru.app.data.model.NotificationsPage.Read> readNotification(
+            @Path("notificationId") int notificationId);
+
+    @POST("api/v1/notifications/read-all")
+    Call<com.oru.app.data.model.NotificationsPage.Marked> readAllNotifications();
+
+    @PATCH("api/v1/notifications/settings")
+    Call<com.oru.app.data.model.NotificationPreference> setDropNotifications(
+            @Body com.oru.app.data.model.NotificationPreference body);
+
     // ---- Moderation ----
 
     @POST("api/v1/reports")

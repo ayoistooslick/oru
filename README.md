@@ -32,24 +32,43 @@ Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `androi
 
 APK: <https://is.gd/qrRMnN>. Every CI run also attaches `oru.apk` to a `build-N` release.
 
-## Shared links
+## Links open in the app
 
-A song is shared as `https://oru.freebuff.app/song/<id>`, an artist as `/artist/<id>`, a release as
-`/release/<id>` and a saved playlist as `/library/<id>`.
+Every page on the site has an address in the app's own scheme, so a link opened on an Android phone
+that has ORU installed lands on the screen it names instead of a browser.
+
+| Web page | App link | App screen |
+| --- | --- | --- |
+| `/song/<id>` | `oru://song/<id>` | the player, on that song |
+| `/artist/<id>` | `oru://artist/<id>` | the artist page |
+| `/release/<id>` | `oru://release/<id>` | the release |
+| `/library/<id>` | `oru://playlist/<id>` | the playlist |
+| `/search?q=…` | `oru://search?q=…` | search, already run |
+| `/listen`, `/library`, `/shares`, `/studio` | `oru://<tab>` | that tab |
+| `/notifications` | `oru://notifications` | Drops |
+| `/settings`, `/moderation`, `/about` | `oru://<screen>` | that screen |
 
 - Each page is public and plays or shows what it names, so a link sent to an iPhone, a laptop or a
   phone without the app still works.
-- On Android, opening one of those pages hands it to the app the way Spotify does: the page fires
-  `intent://<kind>/<id>;package=com.oru.app`, Chrome opens the app when it is installed, and the
-  browser stays on the page when it is not. No digital asset link and no signing-key fingerprint is
-  needed, which matters because every CI build is signed fresh. `OpenLinkActivity` receives the
-  link, asks the listener to sign in first if needed, and then opens the song, artist, release or
-  playlist.
-- The hand-off only fires on the page a tab was opened on, so clicking around inside the site never
-  keeps throwing people into the app. If a browser blocks intent URLs, a small "Open this in the
-  ORU app" card offers the same thing on tap, with "Not now" to stay on the web.
-- The app also answers `oru://song/<id>`, `oru://artist/<id>`, `oru://release/<id>` and
-  `oru://playlist/<id>` directly, which is what the share sheet and other apps can hand it.
+- On Android the hand-off happens twice, deliberately. A script in `index.html` fires
+  `intent://<kind>/<id>;package=com.oru.app` before the bundle loads, so the app usually opens before
+  the browser paints a frame of the same song; `OpenInApp` repeats it if that script was skipped.
+  Chrome opens the app when it is installed and reloads the page when it is not, with a
+  `sessionStorage` key stopping a browser without the app from retrying. No digital asset link and no
+  signing-key fingerprint is needed, which matters because every CI build is signed fresh.
+- A release build is also verified for App Links: `https://oru.freebuff.app/.well-known/assetlinks.json`
+  carries the SHA-256 of the release certificate, so Android hands those links to the app itself,
+  with no browser frame at all. Verification happens at install time against the certificate, so a
+  debug-signed test build falls back to the hand-off above.
+- Android only fires the hand-off on the page a tab was opened on, so clicking around inside the
+  site never keeps throwing people into the app. Browsers that cannot resolve intent addresses
+  (Firefox and its forks) get the bare `oru://` scheme instead; the app answers that directly.
+- `OpenLinkActivity` is the single place links are resolved. It keeps the link across a sign-in,
+  then opens the song, artist, release, playlist, search or tab it names. A link that names
+  something gone falls back to the home tab with a short explanation.
+- `src/lib/links.ts` holds the mapping; the table in `index.html` mirrors it for the pre-paint
+  script, and the intent filters in `AndroidManifest.xml` mirror it on the app side. Adding a route
+  means editing all three.
 
 ## Sign-in across two surfaces
 
@@ -170,8 +189,31 @@ It is not a WebView or Trusted Web Activity. It talks to the same ORU API as the
 CI (`.github/workflows/ci.yml`) runs backend and frontend checks, builds the native debug APK, and
 publishes it as both a workflow artifact and a GitHub release asset.
 
-- Pushes to `main` create a release tagged `build-<run number>`.
-- Pushing a tag like `v1.0.0` creates a release with that tag instead.
+- Pushes to `main` create a **pre-release** tagged `build-<run number>`, so `/releases/latest`
+  keeps pointing at a tagged release instead of whichever commit ran last.
+- Pushing a tag like `v1.1.0` creates the release with that tag.
 - The current raw APK is at `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
-- CI uses a per-run debug signing key, so uninstall an APK from a prior CI run before installing a
-  newer one. Configure a stable release keystore before Play Store use.
+
+### Signing
+
+Two keys exist, and only one of them ships:
+
+- **Release key** (`android/keystore/oru-release.jks`, git-ignored). Signs tagged releases. Its
+  SHA-256 is the fingerprint in `public/.well-known/assetlinks.json`, which is what makes
+  `https://oru.freebuff.app/...` links open the app directly. Replacing the key means updating that
+  file and every install will need one uninstall, so keep a backup.
+- **Debug key** (per CI run). Signs `build-<n>` test builds only. App Links do not verify on them and
+  they do not install over a release build.
+
+CI signs with the release key when these repository secrets are set, and otherwise publishes a
+clearly-labelled debug build:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/keystore/oru-release.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | store password |
+| `ANDROID_KEY_ALIAS` | `oru` |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+Locally, `android/keystore.properties` supplies the same four values; `assembleRelease` then produces
+`android/app/build/outputs/apk/release/app-release.apk`.

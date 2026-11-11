@@ -98,6 +98,24 @@ public class SearchFragment extends Fragment {
         loadGenres();
         refreshChips();
         loadDiscover();
+
+        // A search link carries its words: oru://search?q=… opens on the
+        // results instead of an empty box. Read once, so coming back to the
+        // tab later keeps whatever is in the box.
+        if (savedInstanceState == null) {
+            String seeded = seededQuery();
+            if (seeded != null && !seeded.trim().isEmpty()) {
+                setQuery(seeded.trim());
+            }
+        }
+    }
+
+    /** The query this screen was opened with, if it was opened by a link. */
+    private String seededQuery() {
+        if (getActivity() == null || getActivity().getIntent() == null) {
+            return null;
+        }
+        return getActivity().getIntent().getStringExtra("query");
     }
 
     /** The genre shortcuts the web shows above an empty search box. */

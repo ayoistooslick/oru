@@ -53,6 +53,31 @@ public final class ApiCall {
         });
     }
 
+    /**
+     * The same handling for the few endpoints that answer with a bare object
+     * instead of the {\"data\": …} envelope — the notification lists, the
+     * unread count, and the read receipts.
+     */
+    public static <T> void enqueuePlain(retrofit2.Call<T> call, Gson gson,
+            String fallback, Callback<T> cb) {
+        call.enqueue(new retrofit2.Callback<T>() {
+            @Override
+            public void onResponse(retrofit2.Call<T> ignored,
+                    retrofit2.Response<T> response) {
+                if (!response.isSuccessful()) {
+                    cb.onFailure(error(gson, response, fallback));
+                    return;
+                }
+                cb.onSuccess(response.body());
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<T> ignored, Throwable t) {
+                cb.onFailure(t);
+            }
+        });
+    }
+
     /** Reads the API's error envelope out of an unsuccessful reply. */
     public static Throwable error(Gson gson, retrofit2.Response<?> response,
             String fallback) {

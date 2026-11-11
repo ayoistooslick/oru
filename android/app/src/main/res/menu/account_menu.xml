@@ -11,6 +11,10 @@
         android:title="Your artist page" />
 
     <item
+        android:id="@+id/menu_notifications"
+        android:title="@string/menu_notifications" />
+
+    <item
         android:id="@+id/menu_settings"
         android:title="Settings" />
 
