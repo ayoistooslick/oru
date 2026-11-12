@@ -4,7 +4,7 @@
  * The APK lives behind one short link so a new build is a single edit here
  * instead of a hunt through the pages.
  */
-export const APK_URL = "https://is.gd/nTgyHA";
+export const APK_URL = "https://is.gd/xvGD0Y";
 
 /** The scheme the Android app registers, e.g. oru://song/12. */
 export const APP_SCHEME = "oru";
