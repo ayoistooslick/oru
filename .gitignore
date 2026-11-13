@@ -36,3 +36,7 @@ htmlcov/
 
 # Promo build scratch space (fonts, frames, soundtrack).
 .promo/
+
+# Remotion tour project: dependencies and captured frames are local artefacts.
+video/node_modules/
+video/public/frames/

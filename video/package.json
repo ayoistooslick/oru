@@ -1,0 +1,12 @@
+{
+  "name": "oru-tour-video",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "4.0.240",
+    "react": "19",
+    "react-dom": "19",
+    "remotion": "4.0.240"
+  }
+}
