@@ -993,7 +993,7 @@ public class PlayerActivity extends AppCompatActivity {
                 return "The server could not send this song. Try again in a moment.";
             }
         }
-        switch (error.getErrorCode()) {
+        switch (error.errorCode) {
             case PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED:
             case PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT:
                 return "Could not reach this song's audio. "
