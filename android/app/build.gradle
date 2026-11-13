@@ -27,10 +27,12 @@ android {
         applicationId "com.oru.app"
         minSdk 24
         targetSdk 34
-        // 1.1: every oru.freebuff.app link opens the app on the screen it
-        // names, and the app finally has a Drops screen of its own.
-        versionCode 2
-        versionName "1.1.0"
+        // 1.2: the fixes from the first round of listener feedback — the safe
+        // area under the status bar, the search field, the player's slider and
+        // error messages, the artist header, and Google sign-in in a Custom Tab.
+        // The version has to move for an APK to install over 1.1.0.
+        versionCode 3
+        versionName "1.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -109,6 +111,10 @@ dependencies {
     // Preferences
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+
+    // Google sign-in opens in a Custom Tab: the sign-in page stays inside the
+    // app's own window instead of throwing the person out to a browser.
+    implementation 'androidx.browser:browser:1.8.0'
 
     // Google sign-in through Credential Manager
     implementation 'androidx.credentials:credentials:1.2.2'

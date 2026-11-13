@@ -18,25 +18,45 @@
             app:title="@string/nav_search"
             app:titleTextColor="@color/ink" />
 
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- One line of text in one box. The floating hint of a
+             TextInputLayout sat on the same baseline as what was typed, which
+             is what made the box look like two overlapping labels. -->
+        <FrameLayout
             android:id="@+id/searchInputLayout"
-            style="@style/Widget.Oru.TextInputLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="50dp"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="8dp"
-            android:hint="Search songs, artists, playlists"
-            app:startIconDrawable="@drawable/ic_search">
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_search_field">
 
-            <com.google.android.material.textfield.TextInputEditText
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="16dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_search"
+                app:tint="@color/ink_faint" />
+
+            <EditText
                 android:id="@+id/searchEditText"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text"
+                android:layout_height="match_parent"
+                android:autofillHints=""
+                android:background="@null"
+                android:gravity="center_vertical"
+                android:hint="Search songs, artists, playlists"
                 android:imeOptions="actionSearch"
-                android:maxLines="1" />
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingStart="46dp"
+                android:paddingEnd="18dp"
+                android:singleLine="true"
+                android:textColor="@color/ink"
+                android:textColorHint="@color/ink_faint"
+                android:textSize="15sp" />
 
-        </com.google.android.material.textfield.TextInputLayout>
+        </FrameLayout>
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/filterChipGroup"

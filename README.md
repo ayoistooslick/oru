@@ -82,7 +82,8 @@ that has ORU installed lands on the screen it names instead of a browser.
 
 Google refuses to sign a native app in directly, so the app sends the browser to `/auth`:
 
-1. The app opens `https://oru.freebuff.app/auth?client=android` in the browser.
+1. The app opens `https://oru.freebuff.app/auth?client=android` in a Custom Tab, so the page
+   slides over the app instead of leaving for a separate browser.
 2. The page finishes Google sign-in (Google Identity Services) with the same client id the API
    verifies.
 3. The page asks the API for a **one-time code** (`POST /auth/handoff`) and redirects to

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An artist who never uploaded a banner gets the ember wash and a quiet
+     music mark, not a grey rectangle that reads as a failed load. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:startColor="@color/flame_soft"
+                android:centerColor="@color/card_hi"
+                android:endColor="@color/paper_deep"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:drawable="@drawable/ic_music"
+        android:gravity="center" />
+
+</layer-list>

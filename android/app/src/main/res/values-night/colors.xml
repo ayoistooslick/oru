@@ -40,5 +40,10 @@
     <color name="divider">@color/hair</color>
     <color name="shimmer_base">#1F1712</color>
     <color name="shimmer_highlight">#3A2B22</color>
+
+    <!-- The same header gradients as the day palette, made of the night
+         surfaces so a banner melts into the page instead of washing it grey. -->
+    <color name="banner_fade">#990D0A07</color>
+    <color name="banner_fade_soft">#6617120E</color>
     <color name="ember">#E8552E</color>
 </resources>

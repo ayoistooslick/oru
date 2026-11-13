@@ -53,42 +53,50 @@
             app:layout_constraintStart_toEndOf="@id/typeIcon"
             app:layout_constraintTop_toTopOf="@id/typeIcon" />
 
+        <!-- Every line of text ends at the like button. The buttons used to sit
+             on top of the title and the duration, which is why a long title ran
+             underneath the heart. -->
         <TextView
             android:id="@+id/titleText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="2"
             android:textAppearance="@style/TextAppearance.Oru.Body"
             android:textColor="@color/ink"
             app:layout_constraintTop_toBottomOf="@id/typeLabel"
             app:layout_constraintStart_toEndOf="@id/artworkImage"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/likeButton" />
 
         <TextView
             android:id="@+id/subtitleText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:textAppearance="@style/TextAppearance.Oru.BodySoft"
             android:textColor="@color/ink_soft"
             app:layout_constraintTop_toBottomOf="@id/titleText"
             app:layout_constraintStart_toEndOf="@id/artworkImage"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/likeButton" />
 
         <TextView
             android:id="@+id/metaText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textAppearance="@style/TextAppearance.Oru.Label"
             android:textColor="@color/ink_faint"
             app:layout_constraintTop_toBottomOf="@id/subtitleText"
             app:layout_constraintStart_toEndOf="@id/artworkImage"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/likeButton" />
 
         <ImageButton
             android:id="@+id/likeButton"
@@ -106,13 +114,14 @@
 
         <ImageButton
             android:id="@+id/playButton"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_play"
-            android:scaleType="center"
-            android:tint="@color/ink"
             android:contentDescription="@string/play"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_play"
+            android:tint="@color/ink"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/itemRoot"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/track_row_height"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/track_row_height"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingHorizontal="16dp"
@@ -36,9 +37,12 @@
         android:layout_marginStart="12dp"
         android:orientation="vertical">
 
+        <!-- match_parent, not wrap_content: a wrap_content line measures to its
+             full text and then runs under the play button instead of ending in
+             an ellipsis. -->
         <TextView
             android:id="@+id/titleText"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"

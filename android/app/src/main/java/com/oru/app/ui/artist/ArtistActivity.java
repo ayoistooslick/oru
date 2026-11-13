@@ -123,6 +123,7 @@ public class ArtistActivity extends AppCompatActivity {
 
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.errorView.getRoot().setVisibility(View.GONE);
+        binding.contentScroll.setVisibility(View.GONE);
 
         musicRepo.getArtist(artistId, new Callback<Artist>() {
             @Override
@@ -176,10 +177,13 @@ public class ArtistActivity extends AppCompatActivity {
         updateFollowButton(following);
 
         // Covers applies the API's media path rules; a bare path never loads.
+        // The fallback is the ember wash, so an artist without a banner gets a
+        // deliberate header instead of an empty grey one.
         com.oru.app.ui.components.Covers.load(binding.bannerImage, a.bannerUrl,
-                R.drawable.ic_music);
+                R.drawable.bg_banner_fallback);
         com.oru.app.ui.components.Covers.loadAvatar(binding.avatarImage,
                 a.avatarUrl);
+        binding.contentScroll.setVisibility(View.VISIBLE);
     }
 
     private void loadContent(int artistId) {

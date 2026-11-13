@@ -121,21 +121,30 @@
                 android:textAppearance="@style/TextAppearance.Oru.Label"
                 android:textColor="@color/ink_faint" />
 
+            <!-- No step size: steps of one percent drew a hundred tick marks
+                 across the track and read as a dotted line. -->
             <com.google.android.material.slider.Slider
                 android:id="@+id/progressSlider"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="8dp"
                 android:valueFrom="0"
                 android:valueTo="100"
-                android:stepSize="1"
+                app:haloColor="@color/flame_soft"
+                app:haloRadius="16dp"
+                app:labelBehavior="gone"
                 app:thumbColor="@color/flame"
+                app:thumbElevation="0dp"
+                app:thumbRadius="7dp"
+                app:tickVisible="false"
                 app:trackColorActive="@color/flame"
-                app:trackColorInactive="@color/hair" />
+                app:trackColorInactive="@color/hair"
+                app:trackHeight="4dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -231,12 +240,15 @@
                 android:layout_marginTop="22dp"
                 android:background="@color/hair" />
 
-            <!-- The four things listeners reach for beyond play. -->
+            <!-- The four things listeners reach for beyond play. The labels get
+                 their own line under the icons and the row ends above the
+                 gesture bar, so nothing is clipped at the bottom edge. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 android:orientation="horizontal"
+                android:paddingBottom="8dp"
                 android:weightSum="4">
 
                 <LinearLayout
@@ -259,6 +271,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:layout_marginBottom="2dp"
                         android:text="Add"
                         android:textColor="@color/ink_faint"
                         android:textSize="11sp" />
@@ -285,6 +299,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:layout_marginBottom="2dp"
                         android:text="Queue"
                         android:textColor="@color/ink_faint"
                         android:textSize="11sp" />
@@ -311,6 +327,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:layout_marginBottom="2dp"
                         android:text="Share"
                         android:textColor="@color/ink_faint"
                         android:textSize="11sp" />
@@ -338,6 +356,8 @@
                         android:id="@+id/sleepTimerLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:layout_marginBottom="2dp"
                         android:text="Sleep"
                         android:textColor="@color/ink_faint"
                         android:textSize="11sp" />

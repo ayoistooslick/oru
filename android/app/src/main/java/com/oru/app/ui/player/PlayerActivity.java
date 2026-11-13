@@ -13,7 +13,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
@@ -21,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.slider.Slider;
+import com.google.android.material.snackbar.Snackbar;
 import com.oru.app.R;
 import com.oru.app.data.offline.Downloads;
 import com.oru.app.data.model.LikeResult;
@@ -79,16 +82,15 @@ public class PlayerActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onPlayerError(@NonNull androidx.media3.common.PlaybackException error) {
-            // A broken stream used to fail silently; say what happened.
+        public void onPlayerError(@NonNull PlaybackException error) {
+            // A broken stream used to fail silently. Say what happened in words
+            // a listener can act on: the old message printed the player's own
+            // error code across the scrubbing bar.
             if (binding == null) {
                 return;
             }
-            Toast.makeText(PlayerActivity.this,
-                    "This song couldn't play (" + error.getErrorCodeName()
-                            + "). Try again.",
-                    Toast.LENGTH_LONG).show();
             updatePlayPauseButtons();
+            showPlaybackProblem(error);
         }
 
         @Override
@@ -950,6 +952,58 @@ public class PlayerActivity extends AppCompatActivity {
                 loadSongById(songId);
             }
         });
+    }
+
+    /**
+     * A playback failure, said plainly, with the one thing that helps: the next
+     * track when there is one, otherwise another try.
+     */
+    private void showPlaybackProblem(PlaybackException error) {
+        if (binding == null) {
+            return;
+        }
+        Snackbar notice = Snackbar.make(binding.getRoot(),
+                describePlaybackError(error), Snackbar.LENGTH_LONG);
+        if (queue != null && queue.size() > 1) {
+            notice.setAction("Next", v -> skip(1));
+        } else {
+            notice.setAction("Retry", v -> {
+                if (player != null) {
+                    player.prepare();
+                    player.play();
+                }
+            });
+        }
+        notice.show();
+    }
+
+    private String describePlaybackError(PlaybackException error) {
+        Throwable cause = error.getCause();
+        if (cause instanceof HttpDataSource.InvalidResponseCodeException) {
+            int code = ((HttpDataSource.InvalidResponseCodeException) cause)
+                    .responseCode;
+            if (code == 404 || code == 410) {
+                return "This song's audio is no longer on the server. "
+                        + "It may have been removed by its artist.";
+            }
+            if (code == 401 || code == 403) {
+                return "This song's audio is not available to play right now.";
+            }
+            if (code >= 500) {
+                return "The server could not send this song. Try again in a moment.";
+            }
+        }
+        switch (error.getErrorCode()) {
+            case PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED:
+            case PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT:
+                return "Could not reach this song's audio. "
+                        + "Check your connection and try again.";
+            case PlaybackException.ERROR_CODE_DECODING_FAILED:
+            case PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED:
+                return "This song's file is damaged and cannot be played.";
+            default:
+                return "This song could not play. Try it again, or pick another.";
+        }
     }
 
     @Override

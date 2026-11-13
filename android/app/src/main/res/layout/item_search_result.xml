@@ -4,10 +4,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/itemRoot"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/track_row_height"
+    android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
+    android:minHeight="@dimen/track_row_height"
     android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp">
+    android:paddingVertical="10dp">
 
     <ImageView
         android:id="@+id/artworkImage"
@@ -41,30 +42,39 @@
         android:textColor="@color/ink"
         app:layout_constraintStart_toEndOf="@id/typeIcon"
         app:layout_constraintTop_toTopOf="@id/artworkImage"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginStart="4dp" />
+        app:layout_constraintEnd_toStartOf="@id/typeLabel"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="8dp" />
 
+    <!-- 0dp with only a start constraint measures to zero width, which is why
+         the artist line and the duration never appeared under a result. -->
     <TextView
         android:id="@+id/subtitleText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="8dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:textAppearance="@style/TextAppearance.Oru.Label"
         android:textColor="@color/ink_faint"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/titleText"
-        app:layout_constraintTop_toBottomOf="@id/titleText"
-        android:layout_marginTop="2dp" />
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
 
     <TextView
         android:id="@+id/metaText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:textAppearance="@style/TextAppearance.Oru.Label"
         android:textColor="@color/ink_faint"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/subtitleText"
-        app:layout_constraintTop_toBottomOf="@id/subtitleText"
-        android:layout_marginTop="1dp" />
+        app:layout_constraintTop_toBottomOf="@id/subtitleText" />
 
     <TextView
         android:id="@+id/typeLabel"
@@ -72,7 +82,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="@style/TextAppearance.Oru.Label"
         android:textColor="@color/ember"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBaseline_toBaselineOf="@id/titleText"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

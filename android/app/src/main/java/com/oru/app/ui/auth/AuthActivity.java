@@ -142,8 +142,10 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     /**
-     * Google only signs people in inside a browser, so the button leaves for
-     * ORU's own page. That page finishes the sign-in and returns through
+     * Google only signs people in inside a browser, so the button opens ORU's
+     * own page in a Custom Tab: the page slides over the app with the app's
+     * colours instead of leaving for a separate browser, the way Telegram and
+     * Spotify hand off. That page finishes the sign-in and returns through
      * oru://auth with a one-time code, which AuthCallbackActivity trades for
      * the session.
      */
@@ -155,18 +157,33 @@ public class AuthActivity extends AppCompatActivity {
             return;
         }
         clearError();
-        String url = com.oru.app.data.api.ApiClient.origin()
-                + "/auth?mode=signin&client=android";
-        Intent browser = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
-        browser.addCategory(Intent.CATEGORY_BROWSABLE);
+        android.net.Uri url = android.net.Uri.parse(
+                com.oru.app.data.api.ApiClient.origin()
+                        + "/auth?mode=signin&client=android");
         try {
-            startActivity(browser);
+            androidx.browser.customtabs.CustomTabsIntent tab =
+                    new androidx.browser.customtabs.CustomTabsIntent.Builder()
+                            .setShowTitle(true)
+                            .setUrlBarHidingEnabled(true)
+                            .setToolbarColor(getColor(R.color.paper_deep))
+                            .build();
+            tab.launchUrl(this, url);
             Snackbar.make(binding.getRoot(),
-                    "Finish signing in with Google in the browser, then come back to ORU.",
+                    "Finish signing in, then you are back in ORU.",
                     Snackbar.LENGTH_LONG).show();
-        } catch (android.content.ActivityNotFoundException error) {
-            setError("This phone has no browser to finish Google sign-in. "
-                    + "Use your email and password instead.");
+        } catch (RuntimeException noCustomTab) {
+            // A phone without a Custom Tab provider still has a browser.
+            Intent browser = new Intent(Intent.ACTION_VIEW, url);
+            browser.addCategory(Intent.CATEGORY_BROWSABLE);
+            try {
+                startActivity(browser);
+                Snackbar.make(binding.getRoot(),
+                        "Finish signing in, then come back to ORU.",
+                        Snackbar.LENGTH_LONG).show();
+            } catch (android.content.ActivityNotFoundException error) {
+                setError("This phone has no browser to finish Google sign-in. "
+                        + "Use your email and password instead.");
+            }
         }
     }
 

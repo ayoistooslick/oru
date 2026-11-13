@@ -4,6 +4,6 @@
         android:angle="90"
         android:startColor="@android:color/transparent"
         android:endColor="@color/paper_deep"
-        android:centerColor="#99F5ECE0"
+        android:centerColor="@color/banner_fade"
         android:type="linear" />
 </shape>
