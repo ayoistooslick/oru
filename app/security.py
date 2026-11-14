@@ -18,8 +18,17 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    expires = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
-    return jwt.encode({"sub": str(user_id), "exp": expires}, settings.jwt_secret, algorithm=ALGORITHM)
+    """A session token for this user.
+
+    Sessions last until they are replaced: the token carries no expiry unless
+    ``JWT_EXPIRE_MINUTES`` asks for one, so signing in once keeps the app and
+    the site signed in instead of logging people out mid-listen.
+    """
+    payload = {"sub": str(user_id)}
+    if settings.jwt_expire_minutes > 0:
+        payload["exp"] = (datetime.now(timezone.utc)
+                          + timedelta(minutes=settings.jwt_expire_minutes))
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
 
 def read_access_token(token: str) -> int:

@@ -120,8 +120,35 @@ def test_delete_tolerates_a_refusal_and_an_already_missing_file(bank, monkeypatc
     bank.delete("a-local-file.mp3")
 
 
+def test_a_file_uploaded_on_the_old_host_is_read_back_on_the_new_one(bank):
+    # The media service moved hosts; the key stored at upload time still names
+    # the host it answered on then.
+    old = "https://gitty-bank-api.onrender.com/f/med_1"
+    assert bank.url_for(old) == "https://bank.test/f/med_1"
+    # A key that is already current, points somewhere else, or is a local file
+    # is left exactly as it is.
+    assert bank.url_for("https://bank.test/f/med_2") == "https://bank.test/f/med_2"
+    assert bank.url_for("https://elsewhere.example/x.jpg") == "https://elsewhere.example/x.jpg"
+    assert bank.url_for("a-local-file.mp3") == "a-local-file.mp3"
+
+
+def test_deleting_an_old_key_asks_the_current_host(bank, monkeypatch):
+    seen = {}
+
+    def fake_delete(url, headers=None, timeout=None):
+        seen["url"] = url
+        return httpx.Response(204)
+
+    monkeypatch.setattr(storage_module.httpx, "delete", fake_delete)
+    bank.delete("https://gitty-bank-api.onrender.com/f/med_3")
+    assert seen["url"] == "https://bank.test/api/v1/files/med_3"
+
+
 def test_media_redirects_to_the_file_on_the_service():
-    response = media_response("https://bank.test/f/med_1", "audio/mpeg", _request())
+    # Whatever the storage this process picked, a key on today's media host is
+    # handed to the client unchanged.
+    key = f"{storage_module.settings.gitty_bank_base_url.rstrip('/')}/f/med_1"
+    response = media_response(key, "audio/mpeg", _request())
     assert response.status_code == 302
-    assert response.headers["location"] == "https://bank.test/f/med_1"
+    assert response.headers["location"] == key
     assert "max-age" in response.headers["cache-control"]

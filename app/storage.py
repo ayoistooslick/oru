@@ -56,6 +56,10 @@ class LocalStorage:
             raise FileNotFoundError
         return path
 
+    def url_for(self, key: str) -> str:
+        """Keys on this storage already are the address to fetch them from."""
+        return key
+
     def delete(self, key: str) -> None:
         try:
             self.path_for(key).unlink(missing_ok=True)
@@ -132,6 +136,9 @@ class S3Storage:
             raise UploadTooLarge
         self.client.put_object(Bucket=self.bucket, Key=key, Body=data)
         return key, total
+
+    def url_for(self, key: str) -> str:
+        return key
 
     def path_for(self, key: str) -> Path:
         if self.client is None or self.bucket is None:
@@ -215,7 +222,8 @@ class GittyBankStorage:
     """Media lives in Gitty Bank, and the key for a file is its public URL.
 
     The service is an upload API with one public download URL per file, so a key
-    in the database is that URL (``https://gitty-bank-api.onrender.com/f/med_x``).
+    in the database is that URL (``https://gitty-bank-api.vercel.app/f/med_x``).
+    ``url_for`` keeps those keys working when the service changes hosts.
     Nothing streams through this app: the media responses redirect to it, which
     keeps Range requests working because the service answers those itself, and
     keeps audio out of the API's bandwidth.
@@ -269,8 +277,21 @@ class GittyBankStorage:
     def path_for(self, key: str) -> Path:
         raise FileNotFoundError
 
+    def url_for(self, key: str) -> str:
+        """The same file, addressed on the service this app talks to now.
+
+        A key is the public URL the service handed back at upload time, and a
+        file keeps its path when the service moves hosts. Reading the stored
+        path through today's base URL is what lets files uploaded while it
+        answered elsewhere keep working after the move.
+        """
+        parts = urlsplit(key)
+        if parts.scheme in ("http", "https") and parts.path.startswith("/f/"):
+            return f"{self.base}{parts.path}"
+        return key
+
     def delete(self, key: str) -> None:
-        file_id = _bank_file_id(key)
+        file_id = _bank_file_id(self.url_for(key))
         if file_id is None:
             return
         try:
@@ -290,7 +311,8 @@ class GittyBankStorage:
 
     def read_bytes(self, key: str) -> bytes | None:
         try:
-            response = httpx.get(key, timeout=self.TIMEOUT, follow_redirects=True)
+            response = httpx.get(self.url_for(key), timeout=self.TIMEOUT,
+                                 follow_redirects=True)
         except httpx.HTTPError as error:
             log.warning("failed to read %r: %s", key, error)
             return None
@@ -298,8 +320,9 @@ class GittyBankStorage:
 
     def size(self, key: str) -> int | None:
         try:
-            response = httpx.get(key, headers={"Range": "bytes=0-0"}, timeout=self.TIMEOUT,
-                                 follow_redirects=True)
+            response = httpx.get(self.url_for(key),
+                                 headers={"Range": "bytes=0-0"},
+                                 timeout=self.TIMEOUT, follow_redirects=True)
         except httpx.HTTPError as error:
             log.warning("failed to stat %r: %s", key, error)
             return None
@@ -313,8 +336,9 @@ class GittyBankStorage:
 
     def read_range(self, key: str, start: int, end: int) -> bytes | None:
         try:
-            response = httpx.get(key, headers={"Range": f"bytes={start}-{end}"}, timeout=self.TIMEOUT,
-                                 follow_redirects=True)
+            response = httpx.get(self.url_for(key),
+                                 headers={"Range": f"bytes={start}-{end}"},
+                                 timeout=self.TIMEOUT, follow_redirects=True)
         except httpx.HTTPError as error:
             log.warning("failed to read %r range: %s", key, error)
             return None

@@ -44,7 +44,10 @@ class Settings(BaseSettings):
     # Gitty Bank holds uploads and serves them from a public file URL. The key is
     # a secret; the URLs it returns are public by design.
     gitty_bank_api_key: str = Field(default="", validation_alias="GITTY_BANK_API_KEY")
-    gitty_bank_base_url: str = Field(default="https://gitty-bank-api.onrender.com",
+    # Where the media service answers now. Files keep their path when the host
+    # moves, so this is the one value to change; keys stored earlier are read
+    # back through it too (see GittyBankStorage.url_for).
+    gitty_bank_base_url: str = Field(default="https://gitty-bank-api.vercel.app",
                                      validation_alias="GITTY_BANK_BASE_URL")
     cors_origins: list[str] = Field(default_factory=list, validation_alias="CORS_ORIGINS")
     allow_wildcard_cors: bool = Field(default=False, validation_alias="ALLOW_WILDCARD_CORS")
@@ -52,7 +55,10 @@ class Settings(BaseSettings):
     # Google sign-in stays off until a client id is supplied. The id is public;
     # it is only used to check that an incoming Google token was meant for us.
     google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
-    jwt_expire_minutes: int = Field(default=60 * 24, validation_alias="JWT_EXPIRE_MINUTES")
+    # Sessions do not expire: a listener who signed in once stays signed in, the
+    # way the app stores the token for as long as it is installed. Set a
+    # positive number of minutes to bring expiry back.
+    jwt_expire_minutes: int = Field(default=0, validation_alias="JWT_EXPIRE_MINUTES")
     max_audio_bytes: int = Field(default=100 * 1024 * 1024, validation_alias="MAX_AUDIO_BYTES")
     max_cover_bytes: int = Field(default=5 * 1024 * 1024, validation_alias="MAX_COVER_BYTES")
 

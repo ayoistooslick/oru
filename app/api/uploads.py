@@ -78,7 +78,9 @@ def media_response(key: str, media_type: str | None, request: Request, filename:
     if key.startswith(("http://", "https://")):
         # The file lives on the media service; it answers Range requests itself,
         # so a redirect keeps seeking working without streaming audio through us.
-        return RedirectResponse(key, status_code=302, headers={"Cache-Control": cache_control})
+        # url_for points the stored path at the host the service answers on now.
+        return RedirectResponse(storage.url_for(key), status_code=302,
+                                headers={"Cache-Control": cache_control})
 
     local: Path | None = None
     try:
