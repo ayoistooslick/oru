@@ -207,6 +207,22 @@ to `zipalign` and `apksigner sign` with the release key. It is never attached to
   release.
 - The current raw APK is at `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
 
+### App updates
+
+ORU is sideloaded, so nothing updates it by itself. Each install asks
+`https://oru.freebuff.app/app-version.json` what the newest build is, at most twice a day,
+and shows an **Update** dialog when that version code is higher than its own; the button opens
+the download in a Custom Tab. A failed check stays silent, so an offline phone never nags.
+
+Cut a release with the manifest in step — the version comes from `build.gradle`:
+
+```sh
+python -m scripts.app_release --notes "What changed in this build"
+```
+
+Add `--required` when an install must not keep running on the old build: the dialog then has no
+*Later*. The file is published with the site, so the deploy is what tells phones about it.
+
 ### Signing
 
 Two keys exist, and only one of them ships:

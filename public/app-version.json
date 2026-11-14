@@ -1,0 +1,7 @@
+{
+  "versionCode": 3,
+  "versionName": "1.2.0",
+  "url": "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk",
+  "notes": "Safe areas under the status bar, a search box you can read, a player without tick marks, and a clear message when a track's audio is missing.",
+  "required": false
+}

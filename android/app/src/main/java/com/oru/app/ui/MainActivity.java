@@ -76,6 +76,14 @@ public class MainActivity extends AppCompatActivity {
         openRequestedTab(getIntent());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Coming back to the app is the moment to notice a new release: an
+        // install that was left open for days learns about it here.
+        com.oru.app.util.UpdateCheck.maybeCheck(this);
+    }
+
     /** Android 13+ hides the media notification until this is granted. */
     private void askForNotifications() {
         if (android.os.Build.VERSION.SDK_INT < 33) {
