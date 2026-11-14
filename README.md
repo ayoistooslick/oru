@@ -230,3 +230,16 @@ clearly-labelled debug build:
 
 Locally, `android/keystore.properties` supplies the same four values; `assembleRelease` then produces
 `android/app/build/outputs/apk/release/app-release.apk`.
+
+Without those secrets, download the `oru-release-unsigned` artifact and sign it by hand:
+
+```sh
+BT="$ANDROID_HOME/build-tools/34.0.0"
+"$BT/zipalign" -p -f 4 oru-release-unsigned.apk oru-aligned.apk
+"$BT/apksigner" sign --ks android/keystore/oru-release.jks --ks-key-alias oru \
+  --out oru.apk oru-aligned.apk
+"$BT/apksigner" verify --print-certs oru.apk
+```
+
+The printed SHA-256 has to equal the fingerprint in `public/.well-known/assetlinks.json`; if it
+does not, the APK will not install over an existing release and site links will not open it.
