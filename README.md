@@ -203,6 +203,9 @@ publishes it as both a workflow artifact and a GitHub release asset.
 - Tag pushes publish nothing from CI. Stable releases are cut by hand with the release key
   (`gh release create v1.1.0 oru.apk --target main`), because a debug-signed APK attached to a tag
   would replace the signed one, break App Links and break clean upgrades.
+- Every run also uploads `oru-release-unsigned.apk`, an unsigned release package for the maintainer
+to `zipalign` and `apksigner sign` with the release key. It is never attached to a published
+  release.
 - The current raw APK is at `https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk`.
 
 ### Signing

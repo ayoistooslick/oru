@@ -123,6 +123,26 @@ jobs:
           path: oru.apk
           if-no-files-found: error
 
+      # The release key lives outside the repository, so a maintainer signs
+      # stable builds by hand. Give them a current release package to sign:
+      # assembled here, unsigned, and never attached to a published release.
+      - name: Build the unsigned release package
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk ../oru-release-unsigned.apk
+          else
+            echo "Release signing is configured, so there is nothing to sign by hand."
+          fi
+
+      - name: Upload the unsigned release package
+        uses: actions/upload-artifact@v7
+        with:
+          name: oru-release-unsigned
+          path: oru-release-unsigned.apk
+          if-no-files-found: ignore
+
       # Builds from main are test builds and are marked pre-release, so
       # /releases/latest/download/oru.apk keeps pointing at a tagged, signed
       # release rather than at whichever commit ran last.
