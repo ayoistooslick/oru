@@ -1,10 +1,12 @@
 /**
  * Every place that needs to point at the app, or at the app from the web.
  *
- * The APK lives behind one short link so a new build is a single edit here
- * instead of a hunt through the pages.
+ * The APK comes from the signed release itself, so the download follows the
+ * stable tag instead of a file on a service that can suspend. A new build is a
+ * single edit here instead of a hunt through the pages.
  */
-export const APK_URL = "https://is.gd/xvGD0Y";
+export const APK_URL =
+  "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk";
 
 /** The scheme the Android app registers, e.g. oru://song/12. */
 export const APP_SCHEME = "oru";

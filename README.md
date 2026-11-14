@@ -30,10 +30,9 @@ Tags: `independent-artist-platform` · `music-discovery` · `fastapi` · `androi
   drafts, publish songs and releases, and see plays, likes and follows.
 - **Moderators** see reports from listeners and mark them resolved or dismissed.
 
-APK: <https://is.gd/xvGD0Y>, which redirects to the signed APK of the current release
-(`.../releases/download/v1.1.0/oru-1.1.0.apk`). The release also carries a copy named
-`oru.apk` for `/releases/latest/download/oru.apk`; the versioned file is the one linked from
-the site because CI cannot overwrite it.
+APK: <https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk>. Each stable
+tagged release carries the signed build twice: under its version (`oru-1.2.0.apk`) and as
+`oru.apk`, which is the name the site and `/releases/latest` use.
 
 ## Links open in the app
 
