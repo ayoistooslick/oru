@@ -90,8 +90,12 @@ public final class AccountSheet {
 
         Window window = dialog.getWindow();
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // The blur radius lives on the window's layout params, not the
+            // window itself, and only exists from Android 12.
             window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-            window.setBlurBehindRadius(18);
+            WindowManager.LayoutParams params = window.getAttributes();
+            params.setBlurBehindRadius(18);
+            window.setAttributes(params);
         }
         dialog.show();
     }
