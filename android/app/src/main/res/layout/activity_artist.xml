@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
-        android:layout_height="208dp"
+        android:layout_height="168dp"
         android:theme="@style/Theme.Oru">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
@@ -59,7 +59,7 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:fillViewport="true"
-        android:paddingBottom="96dp"
+        android:paddingBottom="140dp"
         android:visibility="gone"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
@@ -131,83 +131,15 @@
                 android:textAppearance="@style/TextAppearance.Oru.Body"
                 android:textColor="@color/ink_soft" />
 
-            <!-- Numbers -->
-            <LinearLayout
+            <!-- One sentence of numbers instead of a card of tiles: the page
+                 is about the music, and the card pushed it down the screen. -->
+            <TextView
+                android:id="@+id/statsLine"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/card_surface"
-                android:baselineAligned="false"
-                android:orientation="horizontal"
-                android:paddingVertical="14dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/songCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Oru.Title"
-                        android:textColor="@color/ink" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Songs"
-                        android:textAppearance="@style/TextAppearance.Oru.Label" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/playsCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Oru.Title"
-                        android:textColor="@color/ink" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Plays"
-                        android:textAppearance="@style/TextAppearance.Oru.Label" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/followersCountText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Oru.Title"
-                        android:textColor="@color/ink" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Followers"
-                        android:textAppearance="@style/TextAppearance.Oru.Label" />
-
-                </LinearLayout>
-
-            </LinearLayout>
+                android:layout_marginTop="14dp"
+                android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                android:textColor="@color/ink_soft" />
 
             <TextView
                 android:id="@+id/postsHeader"
@@ -295,11 +227,29 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <include
-        android:id="@+id/miniPlayer"
-        layout="@layout/view_mini_player"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom" />
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/miniPlayer"
+            layout="@layout/view_mini_player"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/artistNav"
+            style="@style/Widget.Oru.BottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/paper"
+            app:itemIconTint="@color/bottom_nav_item_color"
+            app:itemTextColor="@color/bottom_nav_item_color"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav_menu" />
+
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

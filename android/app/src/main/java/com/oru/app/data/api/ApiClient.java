@@ -40,12 +40,14 @@ public class ApiClient {
     private static volatile Retrofit retrofit;
     private static volatile OkHttpClient okHttpClient;
     private static volatile SessionManager sessionManager;
+    private static volatile Context appContext;
 
     public static void init(Context context, SessionManager sessionManager) {
         if (ApiClient.sessionManager != null) {
             return;
         }
         ApiClient.sessionManager = sessionManager;
+        ApiClient.appContext = context.getApplicationContext();
 
         Gson gson = new GsonBuilder()
                 .setLenient()
@@ -102,7 +104,14 @@ public class ApiClient {
             // Tell the backend we are a native app so it can tailor responses.
             builder.addHeader("X-Client", "oru-android");
             builder.addHeader("Accept", "application/json");
-            return chain.proceed(builder.build());
+            Response response = chain.proceed(builder.build());
+            // A token the server no longer accepts is not a content error: the
+            // screens used to show the raw 401 and a "Try again" that could
+            // only fail again. Send the listener to sign in instead.
+            if (token != null && response.code() == 401 && appContext != null) {
+                com.oru.app.data.session.SessionExpiry.onUnauthorized(appContext);
+            }
+            return response;
         }
     }
 

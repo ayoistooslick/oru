@@ -26,8 +26,9 @@ import com.oru.app.ui.studio.StudioFragment;
 import com.oru.app.ui.home.HomeFragment;
 
 /**
- * Main activity: toolbar + bottom navigation + NavHost.
- * The five tab destinations match the web app shell.
+ * Main activity: avatar header + bottom navigation + NavHost.
+ * The four tabs are home, search, library and studio; drops and the account
+ * live behind the avatar so they are reachable from every tab.
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -35,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController;
     private boolean keyboardVisible;
     private boolean mainDestination = true;
-    private com.oru.app.data.model.User account;
 
     private com.oru.app.ui.components.MiniPlayer miniPlayer;
 
@@ -73,15 +73,30 @@ public class MainActivity extends AppCompatActivity {
         setupBottomNavigation();
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this, binding.miniPlayer);
         askForNotifications();
+        binding.accountButton.setOnClickListener(v ->
+                com.oru.app.ui.components.AccountSheet.show(this));
+        loadHeaderAvatar();
         openRequestedTab(getIntent());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // A picture changed in the profile is the header's picture too.
+        loadHeaderAvatar();
         // Coming back to the app is the moment to notice a new release: an
         // install that was left open for days learns about it here.
         com.oru.app.util.UpdateCheck.maybeCheck(this);
+    }
+
+    /** The header is a face, so it has to follow the saved identity. */
+    private void loadHeaderAvatar() {
+        if (binding == null) {
+            return;
+        }
+        SessionManager session = new SessionManager(this);
+        com.oru.app.ui.components.Covers.loadAvatar(binding.accountButton,
+                session.getAvatarUrl());
     }
 
     /** Android 13+ hides the media notification until this is granted. */
@@ -157,69 +172,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * The account menu — profile, artist page when there is one, settings — is
-     * opened by the button beside the greeting on Home.
-     */
-    public void openAccountMenu(View anchor) {
-        if (account == null) {
-            new com.oru.app.data.repository.AuthRepository(
-                    com.oru.app.util.LazySession.getApiService(),
-                    new SessionManager(this),
-                    com.oru.app.util.LazySession.getGson())
-                    .getCurrentUser(new com.oru.app.data.repository.Callback<
-                            com.oru.app.data.model.User>() {
-                        @Override
-                        public void onSuccess(com.oru.app.data.model.User loaded) {
-                            account = loaded;
-                            showAccountMenu(anchor);
-                        }
-
-                        @Override
-                        public void onFailure(Throwable error) {
-                            // Still offer the doors that do not need the account.
-                            showAccountMenu(anchor);
-                        }
-                    });
-            return;
-        }
-        showAccountMenu(anchor);
-    }
-
-    private void showAccountMenu(View anchor) {
-        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(
-                this, anchor != null ? anchor : binding.toolbar);
-        popup.inflate(R.menu.account_menu);
-        android.view.MenuItem artistItem =
-                popup.getMenu().findItem(R.id.menu_artist_page);
-        if (artistItem != null) {
-            artistItem.setVisible(account != null && account.hasArtistProfile());
-        }
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.menu_profile) {
-                startActivity(new Intent(this,
-                        com.oru.app.ui.profile.ProfileActivity.class));
-                return true;
-            }
-            if (id == R.id.menu_artist_page && account != null) {
-                com.oru.app.ui.components.Actions.openArtist(this, account.id);
-                return true;
-            }
-            if (id == R.id.menu_notifications) {
-                startActivity(new Intent(this,
-                        com.oru.app.ui.notifications.NotificationsActivity.class));
-                return true;
-            }
-            if (id == R.id.menu_settings) {
-                startActivity(new Intent(this,
-                        com.oru.app.ui.settings.SettingsActivity.class));
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
 
     @Override
     public boolean onSupportNavigateUp() {

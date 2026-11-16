@@ -9,18 +9,20 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false">
+        android:clipToPadding="false"
+        android:paddingBottom="132dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- The banner: anyone can put a picture here, artists or listeners. -->
+            <!-- Shorter than it was: the cover introduces you, it is not the
+                 page. -->
             <FrameLayout
                 android:id="@+id/bannerTapTarget"
                 android:layout_width="match_parent"
-                android:layout_height="240dp"
+                android:layout_height="160dp"
                 android:background="@color/card_hi">
 
                 <ImageView
@@ -32,12 +34,12 @@
 
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="120dp"
+                    android:layout_height="104dp"
                     android:background="@drawable/bg_banner_top_scrim" />
 
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="96dp"
+                    android:layout_height="80dp"
                     android:layout_gravity="bottom"
                     android:background="@drawable/bg_banner_fade" />
 
@@ -50,6 +52,19 @@
                     android:contentDescription="Back"
                     android:padding="10dp"
                     android:src="@drawable/ic_arrow_left"
+                    app:tint="@color/cream" />
+
+                <ImageButton
+                    android:id="@+id/shareButton"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginEnd="62dp"
+                    android:background="@drawable/bg_circle_scrim"
+                    android:contentDescription="Share your page"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_share"
                     app:tint="@color/cream" />
 
                 <ImageButton
@@ -69,30 +84,30 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|end"
-                    android:layout_margin="14dp"
+                    android:layout_margin="12dp"
                     android:background="@drawable/bg_pill_scrim"
                     android:drawableStart="@drawable/ic_image"
                     android:drawablePadding="6dp"
                     android:drawableTint="@color/cream"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="7dp"
+                    android:paddingHorizontal="11dp"
+                    android:paddingVertical="6dp"
                     android:text="Change cover"
                     android:textAppearance="@style/TextAppearance.Oru.Label"
                     android:textColor="@color/cream" />
 
             </FrameLayout>
 
-            <!-- The face sits half over the banner. -->
+            <!-- The face sits half over the cover. -->
             <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="20dp"
-                android:layout_marginTop="-54dp">
+                android:layout_marginTop="-42dp">
 
                 <ImageView
                     android:id="@+id/avatarImage"
-                    android:layout_width="108dp"
-                    android:layout_height="108dp"
+                    android:layout_width="88dp"
+                    android:layout_height="88dp"
                     android:background="@drawable/avatar_ring"
                     android:clipToOutline="true"
                     android:contentDescription="Your picture"
@@ -103,13 +118,13 @@
 
                 <ImageButton
                     android:id="@+id/editAvatarButton"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_gravity="bottom|end"
                     android:background="@drawable/bg_gear_flame"
                     android:contentDescription="Change your picture"
                     android:elevation="5dp"
-                    android:padding="8dp"
+                    android:padding="7dp"
                     android:src="@drawable/ic_edit"
                     app:tint="@color/night" />
 
@@ -120,19 +135,20 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="20dp"
-                android:paddingTop="14dp">
+                android:paddingTop="10dp">
 
                 <TextView
                     android:id="@+id/displayName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.Oru.Display"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Oru.Headline"
                     android:textColor="@color/ink" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="4dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -150,7 +166,7 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_stat_tile"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="4dp"
+                        android:paddingVertical="3dp"
                         android:textAppearance="@style/TextAppearance.Oru.Label"
                         android:textColor="@color/flame_ink"
                         android:visibility="gone" />
@@ -161,117 +177,28 @@
                     android:id="@+id/bioText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:lineSpacingMultiplier="1.3"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingMultiplier="1.25"
                     android:textAppearance="@style/TextAppearance.Oru.Body"
                     android:textColor="@color/ink_soft"
                     android:visibility="gone" />
 
+                <!-- The two numbers that matter, as words rather than three
+                     tiles: who you follow, and for an artist, who follows you. -->
                 <TextView
-                    android:id="@+id/joinedText"
+                    android:id="@+id/followLine"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:textAppearance="@style/TextAppearance.Oru.Label"
-                    android:textColor="@color/ink_faint" />
-
-                <!-- Three numbers that describe a listener at a glance. -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:baselineAligned="false"
-                    android:orientation="horizontal">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_stat_tile"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:paddingVertical="12dp">
-
-                        <TextView
-                            android:id="@+id/statLikes"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textAppearance="@style/TextAppearance.Oru.Title"
-                            android:textColor="@color/ink" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Liked"
-                            android:textAppearance="@style/TextAppearance.Oru.Label"
-                            android:textColor="@color/ink_faint" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginHorizontal="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_stat_tile"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:paddingVertical="12dp">
-
-                        <TextView
-                            android:id="@+id/statPlaylists"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textAppearance="@style/TextAppearance.Oru.Title"
-                            android:textColor="@color/ink" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Playlists"
-                            android:textAppearance="@style/TextAppearance.Oru.Label"
-                            android:textColor="@color/ink_faint" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_stat_tile"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:paddingVertical="12dp">
-
-                        <TextView
-                            android:id="@+id/statFollowing"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textAppearance="@style/TextAppearance.Oru.Title"
-                            android:textColor="@color/ink" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Following"
-                            android:textAppearance="@style/TextAppearance.Oru.Label"
-                            android:textColor="@color/ink_faint" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
+                    android:layout_marginTop="8dp"
+                    android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                    android:textColor="@color/ink_soft" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/editProfileButton"
                     style="@style/Widget.Oru.Button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="14dp"
                     android:text="Edit profile"
                     app:icon="@drawable/ic_edit"
                     app:iconGravity="textStart"
@@ -280,7 +207,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="26dp"
+                    android:layout_marginTop="22dp"
                     android:text="Your ORU"
                     android:textAppearance="@style/TextAppearance.Oru.Label"
                     android:textColor="@color/ink_faint" />
@@ -291,7 +218,7 @@
                     android:layout_marginTop="8dp"
                     android:background="@drawable/card_surface"
                     android:orientation="vertical"
-                    android:padding="6dp">
+                    android:padding="4dp">
 
                     <LinearLayout
                         android:id="@+id/studioRow"
@@ -328,6 +255,54 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="Upload songs and publish them"
+                                android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                                android:textColor="@color/ink_faint" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/ink_faint" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/dropsRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_inbox"
+                            app:tint="@color/flame_ink" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Drops"
+                                android:textAppearance="@style/TextAppearance.Oru.Body"
+                                android:textColor="@color/ink" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="What was shared with you"
                                 android:textAppearance="@style/TextAppearance.Oru.BodySoft"
                                 android:textColor="@color/ink_faint" />
 
@@ -446,7 +421,7 @@
                     android:id="@+id/logOutRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="14dp"
                     android:background="?attr/selectableItemBackground"
                     android:drawableStart="@drawable/ic_logout"
                     android:drawablePadding="10dp"
@@ -468,7 +443,7 @@
 
                 <View
                     android:layout_width="match_parent"
-                    android:layout_height="32dp" />
+                    android:layout_height="24dp" />
 
             </LinearLayout>
 
@@ -482,5 +457,30 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:indeterminateTint="@color/flame" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/miniPlayer"
+            layout="@layout/view_mini_player"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/profileNav"
+            style="@style/Widget.Oru.BottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/paper"
+            app:itemIconTint="@color/bottom_nav_item_color"
+            app:itemTextColor="@color/bottom_nav_item_color"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav_menu" />
+
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

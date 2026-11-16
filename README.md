@@ -189,6 +189,12 @@ curl -X POST "https://oru.freebuff.app/api?__path=/api/v1/maintenance/reset" \
 freebuff-deploy env unset ORU_RESET_TOKEN && freebuff-deploy start
 ```
 
+To empty the song catalogue and keep the accounts, use `POST /maintenance/songs` with
+`ORU_SONGS_TOKEN` (header `X-Oru-Songs`), stored and removed the same way. It deletes every song row,
+its likes, playlist entries, release entries and listening history, and the audio and cover files
+behind them; users, artist pages and empty releases stay. Locally, `python -m scripts.purge_songs --yes`
+does the same to the configured database.
+
 ## The Android app
 
 `android/` is the native client (Java, native views, Retrofit networking, Android Media3 playback).

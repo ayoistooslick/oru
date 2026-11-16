@@ -12,14 +12,33 @@
         android:background="@color/paper_deep"
         android:elevation="0dp">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <!-- A face, not a wordmark. The account is the door to profile, drops
+             and settings, so it has to be reachable from every tab — and the
+             bar gets out of the way as soon as there is something to read. -->
+        <LinearLayout
+            android:id="@+id/headerBar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="@string/app_name"
-            app:titleTextAppearance="@style/TextAppearance.Oru.Title"
-            app:titleTextColor="@color/ink"
-            app:subtitleTextColor="@color/ink_faint" />
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            app:layout_scrollFlags="scroll|enterAlways|snap">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/accountButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="@string/account"
+                android:focusable="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_artist"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Oru.Circle"
+                app:strokeColor="@color/hair"
+                app:strokeWidth="1dp" />
+
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -27,7 +46,7 @@
          tag would be inflated as a plain View and crash with InflateException. -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
-        android:name="androidx.navigation.fragment.NavHostFragment"
+        android:name="androidx.fragment.app.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:defaultNavHost="true"

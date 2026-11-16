@@ -60,7 +60,10 @@ class Settings(BaseSettings):
     # positive number of minutes to bring expiry back.
     jwt_expire_minutes: int = Field(default=0, validation_alias="JWT_EXPIRE_MINUTES")
     max_audio_bytes: int = Field(default=100 * 1024 * 1024, validation_alias="MAX_AUDIO_BYTES")
-    max_cover_bytes: int = Field(default=5 * 1024 * 1024, validation_alias="MAX_COVER_BYTES")
+    # Cover art and avatars are displayed a few hundred pixels wide, so a
+    # fraction of a megabyte is the whole budget. The Android client re-encodes
+    # to fit; this is the server-side stop for every other client.
+    max_cover_bytes: int = Field(default=400 * 1024, validation_alias="MAX_COVER_BYTES")
 
     @property
     def sqlite_path(self) -> Path | None:

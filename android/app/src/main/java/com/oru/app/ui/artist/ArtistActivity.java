@@ -72,6 +72,7 @@ public class ArtistActivity extends AppCompatActivity {
         binding.followButton.setOnClickListener(v -> toggleFollow());
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
                 binding.miniPlayer);
+        com.oru.app.ui.components.BottomNav.attach(binding.artistNav, this);
 
         binding.toolbar.inflateMenu(R.menu.artist_menu);
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -171,9 +172,11 @@ public class ArtistActivity extends AppCompatActivity {
                 ? " follower" : " followers");
         binding.listenersText.setText(line);
         binding.bioText.setText(a.bio != null ? a.bio : "");
-        binding.songCountText.setText(String.valueOf(a.publishedSongCount));
-        binding.playsCountText.setText(String.valueOf(a.playsCount));
-        binding.followersCountText.setText(formatFollows(a.followerCount));
+        binding.statsLine.setText(a.publishedSongCount
+                + (a.publishedSongCount == 1 ? " song" : " songs")
+                + " · " + formatFollows(a.playsCount) + " plays"
+                + " · " + formatFollows(a.followerCount)
+                + (a.followerCount == 1 ? " follower" : " followers"));
         updateFollowButton(following);
 
         // Covers applies the API's media path rules; a bare path never loads.

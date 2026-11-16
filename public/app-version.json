@@ -1,7 +1,7 @@
 {
-  "versionCode": 3,
-  "versionName": "1.2.0",
+  "versionCode": 4,
+  "versionName": "1.3.0",
   "url": "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk",
-  "notes": "Safe areas under the status bar, a search box you can read, a player without tick marks, and a clear message when a track's audio is missing.",
+  "notes": "Your avatar is the account door on every tab, four tabs instead of five, a shorter profile with one line of followers, a sign-in screen without the duplicate heading, pictures under 400 KB, and an expired session now goes straight to sign-in.",
   "required": false
 }

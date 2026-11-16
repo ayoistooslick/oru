@@ -12,14 +12,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.oru.app.R;
 import com.oru.app.data.model.Artist;
-import com.oru.app.data.model.Playlist;
-import com.oru.app.data.model.Song;
 import com.oru.app.data.model.User;
 import com.oru.app.data.repository.AuthRepository;
 import com.oru.app.data.repository.Callback;
 import com.oru.app.data.repository.CommunityRepository;
 import com.oru.app.data.session.SessionManager;
 import com.oru.app.databinding.ActivityProfileBinding;
+import com.oru.app.ui.components.BottomNav;
 import com.oru.app.ui.components.Covers;
 import com.oru.app.ui.components.ProfileEditor;
 import com.oru.app.ui.components.UiErrors;
@@ -27,17 +26,14 @@ import com.oru.app.util.LazySession;
 import com.oru.app.util.PickedFile;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The account behind the home screen's gear: a banner anyone can change, a face,
- * three numbers that describe a listener, and the doors that matter.
+ * The account behind the header's avatar: a short cover, a face, the two
+ * numbers that describe an account, and the doors that matter. The join date is
+ * still recorded on the server; it is simply not worth the space here.
  */
 public class ProfileActivity extends AppCompatActivity {
 
@@ -48,6 +44,7 @@ public class ProfileActivity extends AppCompatActivity {
     private CommunityRepository communityRepo;
     private SessionManager session;
     private User user;
+    private com.oru.app.ui.components.MiniPlayer miniPlayer;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     /** Both pictures use the system picker, so no storage permission is needed. */
@@ -72,6 +69,7 @@ public class ProfileActivity extends AppCompatActivity {
                 LazySession.getGson());
 
         binding.backButton.setOnClickListener(v -> finish());
+        binding.shareButton.setOnClickListener(v -> share());
         binding.settingsButton.setOnClickListener(v -> openSettings());
         binding.settingsRow.setOnClickListener(v -> openSettings());
         binding.bannerTapTarget.setOnClickListener(v -> pickBanner.launch(IMAGE_MIME));
@@ -81,6 +79,10 @@ public class ProfileActivity extends AppCompatActivity {
         binding.editProfileButton.setOnClickListener(v -> ProfileEditor.show(this,
                 user, authRepo, this::onProfileSaved));
         binding.studioRow.setOnClickListener(v -> openStudio());
+        binding.dropsRow.setOnClickListener(v -> openTab(R.id.sharesFragment));
+        BottomNav.attach(binding.profileNav, this);
+        miniPlayer = new com.oru.app.ui.components.MiniPlayer(this,
+                binding.miniPlayer);
         binding.artistPageRow.setOnClickListener(v -> {
             if (user != null) {
                 com.oru.app.ui.components.Actions.openArtist(this, user.id);
@@ -141,8 +143,6 @@ public class ProfileActivity extends AppCompatActivity {
         binding.roleText.setText(role);
         binding.roleText.setVisibility(role.isEmpty() ? View.GONE : View.VISIBLE);
 
-        binding.joinedText.setText(joinedLine(account.createdAt));
-
         boolean artist = account.hasArtistProfile();
         binding.artistPageRow.setVisibility(artist ? View.VISIBLE : View.GONE);
         String stageName = account.artistStageName();
@@ -156,47 +156,60 @@ public class ProfileActivity extends AppCompatActivity {
         loadStats();
     }
 
-    /** Three counts, each shown as soon as it arrives. */
+    /**
+     * One line instead of three tiles: who this account follows, and — for an
+     * artist — who follows back. A listener with no followers yet is not shown a
+     * zero that means nothing.
+     */
     private void loadStats() {
-        communityRepo.getMyLikes(new Callback<List<Song>>() {
-            @Override
-            public void onSuccess(List<Song> songs) {
-                setStat(binding.statLikes, songs != null ? songs.size() : 0);
-            }
-
-            @Override
-            public void onFailure(Throwable error) {
-                // The number is decoration; the page works without it.
-            }
-        });
-        communityRepo.listPlaylists(new Callback<List<Playlist>>() {
-            @Override
-            public void onSuccess(List<Playlist> playlists) {
-                setStat(binding.statPlaylists,
-                        playlists != null ? playlists.size() : 0);
-            }
-
-            @Override
-            public void onFailure(Throwable error) {
-            }
-        });
+        final int[] following = {-1};
+        final int[] followers = {-1};
         communityRepo.getFollowing(new Callback<List<Artist>>() {
             @Override
             public void onSuccess(List<Artist> artists) {
-                setStat(binding.statFollowing,
-                        artists != null ? artists.size() : 0);
+                following[0] = artists != null ? artists.size() : 0;
+                renderFollowLine(following[0], followers[0]);
             }
 
             @Override
             public void onFailure(Throwable error) {
+                renderFollowLine(following[0], followers[0]);
             }
         });
+        if (user != null && user.hasArtistProfile()) {
+            new com.oru.app.data.repository.MusicRepository(
+                    LazySession.getApiService(), LazySession.getGson())
+                    .getArtist(user.id, new Callback<Artist>() {
+                        @Override
+                        public void onSuccess(Artist artist) {
+                            followers[0] = artist != null ? artist.followerCount : 0;
+                            renderFollowLine(following[0], followers[0]);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable error) {
+                            renderFollowLine(following[0], followers[0]);
+                        }
+                    });
+        }
     }
 
-    private void setStat(android.widget.TextView view, int value) {
-        if (binding != null) {
-            view.setText(String.valueOf(value));
+    private void renderFollowLine(int following, int followers) {
+        if (binding == null) {
+            return;
         }
+        StringBuilder line = new StringBuilder();
+        if (following >= 0) {
+            line.append("Following ").append(following);
+        }
+        if (followers >= 0) {
+            if (line.length() > 0) {
+                line.append(" · ");
+            }
+            line.append(followers).append(followers == 1 ? " follower" : " followers");
+        }
+        binding.followLine.setText(line);
+        binding.followLine.setVisibility(line.length() == 0 ? View.GONE : View.VISIBLE);
     }
 
     private void onProfileSaved(User updated) {
@@ -278,28 +291,19 @@ public class ProfileActivity extends AppCompatActivity {
         return "";
     }
 
-    /** "Listening since March 2026", from the account's creation date. */
-    private static String joinedLine(String createdAt) {
-        if (createdAt == null || createdAt.length() < 10) {
-            return "";
-        }
-        try {
-            SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-            in.setTimeZone(TimeZone.getTimeZone("UTC"));
-            Date date = in.parse(createdAt.substring(0, 10));
-            if (date == null) {
-                return "";
-            }
-            SimpleDateFormat out = new SimpleDateFormat("MMMM yyyy", Locale.US);
-            return "Listening since " + out.format(date);
-        } catch (java.text.ParseException error) {
-            return "";
-        }
-    }
-
     private void showError(String message) {
         binding.errorText.setText(message);
         binding.errorText.setVisibility(View.VISIBLE);
+    }
+
+    /** Shares the artist page when there is one, so the link has a face. */
+    private void share() {
+        boolean artist = user != null && user.hasArtistProfile();
+        String url = artist
+                ? "https://oru.freebuff.app/artist/" + user.id
+                : "https://oru.freebuff.app";
+        com.oru.app.ui.components.Actions.share(this,
+                artist ? user.displayName + " on ORU" : "ORU", url);
     }
 
     private void openSettings() {
@@ -308,8 +312,15 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void openStudio() {
+        openTab(R.id.studioFragment);
+    }
+
+    /** Hands a tab back to the one activity that owns the navigation. */
+    private void openTab(int destination) {
         Intent intent = new Intent(this, com.oru.app.ui.MainActivity.class);
-        intent.putExtra("tab", R.id.studioFragment);
+        intent.putExtra("tab", destination);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
     }
 
@@ -324,6 +335,10 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (miniPlayer != null) {
+            miniPlayer.release();
+            miniPlayer = null;
+        }
         io.shutdown();
         binding = null;
     }

@@ -1,9 +1,11 @@
 """Operator-only resets.
 
-Two one-off jobs live here, both switched off unless the environment names a
+Three one-off jobs live here, all switched off unless the environment names a
 secret for them, so a deployed API never exposes a button that deletes data:
 
 - ``POST /maintenance/reset`` empties the database completely (``ORU_RESET_TOKEN``).
+- ``POST /maintenance/songs`` empties the song catalogue, accounts stay
+  (``ORU_SONGS_TOKEN``).
 - ``POST /maintenance/demo-catalogue`` seeds the demo artists (``ORU_DEMO_RESET``).
 """
 
@@ -48,6 +50,20 @@ def reset_database(x_oru_reset: str = Header(default="")):
 
     ensure_schema()
     return {"reset": True, "tables": len(tables)}
+
+
+@router.post("/maintenance/songs")
+def purge_songs_route(x_oru_songs: str = Header(default="")):
+    """Delete every song and its media, leaving users and artist pages alone."""
+    expected = os.environ.get("ORU_SONGS_TOKEN", "")
+    if not expected:
+        raise HTTPException(status_code=404,
+                            detail={"code": "not_found", "message": "Not here"})
+    _guard(x_oru_songs, expected)
+
+    from app.song_purge import purge_songs
+
+    return {**purge_songs(), "purged": True}
 
 
 @router.post("/maintenance/demo-catalogue")

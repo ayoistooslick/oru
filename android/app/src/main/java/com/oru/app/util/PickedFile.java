@@ -26,7 +26,14 @@ import java.util.Locale;
 public final class PickedFile {
 
     /** Longest edge kept when a picture is re-encoded for an upload. */
-    private static final int MAX_IMAGE_EDGE = 1600;
+    private static final int MAX_IMAGE_EDGE = 1280;
+
+    /**
+     * A picture upload stays under a fraction of a megabyte. Covers and avatars
+     * are shown at a few hundred pixels wide, so anything larger is bytes the
+     * media service pays for and nobody sees.
+     */
+    private static final long MAX_IMAGE_BYTES = 380L * 1024;
 
     public final File file;
     public final String name;
@@ -239,12 +246,7 @@ public final class PickedFile {
             }
             File target = new File(dir,
                     System.currentTimeMillis() + "-picture.jpg");
-            try (FileOutputStream out = new FileOutputStream(target)) {
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
-                    throw new IOException("That picture couldn't be saved");
-                }
-                out.flush();
-            }
+            writeJpeg(bitmap, target);
             if (target.length() == 0) {
                 //noinspection ResultOfMethodCallIgnored
                 target.delete();
@@ -261,6 +263,27 @@ public final class PickedFile {
             }
             //noinspection ResultOfMethodCallIgnored
             source.delete();
+        }
+    }
+
+    /**
+     * Encodes JPEG at falling quality until the file fits the upload budget,
+     * or the quality floor is reached. Each pass rewrites the file from scratch
+     * because a FileOutputStream appends its position, not its zero.
+     */
+    private static void writeJpeg(Bitmap bitmap, File target) throws IOException {
+        int quality = 88;
+        while (true) {
+            try (FileOutputStream out = new FileOutputStream(target, false)) {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)) {
+                    throw new IOException("That picture couldn't be saved");
+                }
+                out.flush();
+            }
+            if (target.length() <= MAX_IMAGE_BYTES || quality <= 48) {
+                return;
+            }
+            quality -= 10;
         }
     }
 

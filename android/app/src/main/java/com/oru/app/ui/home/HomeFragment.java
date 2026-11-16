@@ -62,14 +62,14 @@ public class HomeFragment extends Fragment {
             loadHome(true);
         });
 
-        // The account door lives beside the greeting now; MainActivity owns the
-        // menu so the artist-page entry keeps the account it already loaded.
-        binding.accountButton.setOnClickListener(v -> {
-            if (getActivity() instanceof com.oru.app.ui.MainActivity) {
-                ((com.oru.app.ui.MainActivity) getActivity())
-                        .openAccountMenu(binding.accountButton);
-            }
-        });
+        // A quiet feed sells the next step: the empty page offers the studio,
+        // because a listener with nothing to hear is a listener about to leave.
+        binding.emptyView.emptyHint.setVisibility(View.VISIBLE);
+        binding.emptyView.emptyAction.setVisibility(View.VISIBLE);
+        binding.emptyView.emptyAction.setText("Open studio");
+        binding.emptyView.emptyAction.setOnClickListener(v ->
+                androidx.navigation.Navigation.findNavController(binding.getRoot())
+                        .navigate(R.id.studioFragment));
 
         if (musicRepo == null) {
             musicRepo = new MusicRepository(

@@ -57,6 +57,14 @@ public class AuthActivity extends AppCompatActivity {
         setupButtons();
         updateUiForMode();
         loadConfig();
+
+        // Arriving from a rejected token: say what happened instead of letting a
+        // blank form look like a fresh install.
+        if (getIntent() != null && getIntent().getBooleanExtra("session_ended", false)) {
+            binding.errorText.setText("Your session ended. Sign in again to keep listening.");
+            binding.errorText.setVisibility(View.VISIBLE);
+            binding.emailEditText.requestFocus();
+        }
     }
 
     /** The server decides whether Google sign-in is offered at all. */
@@ -204,15 +212,14 @@ public class AuthActivity extends AppCompatActivity {
 
     private void updateUiForMode() {
         if (isSignUp) {
-            // Registration form.
-            binding.authTitle.setText(getString(R.string.sign_up));
+            // Registration form. The button already says which mode this is; a
+            // second "Sign up" heading above it only took space.
             binding.primaryButton.setText(getString(R.string.sign_up));
             binding.secondaryButton.setText(getString(R.string.have_account));
             showField(binding.handleLayout, binding.handleEditText);
             showField(binding.displayNameLayout, binding.displayNameEditText);
         } else {
             // Sign-in form.
-            binding.authTitle.setText(getString(R.string.sign_in));
             binding.primaryButton.setText(getString(R.string.sign_in));
             binding.secondaryButton.setText(getString(R.string.no_account));
             hideField(binding.handleLayout, binding.handleEditText);

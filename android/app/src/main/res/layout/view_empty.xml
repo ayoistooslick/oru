@@ -1,32 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- The quiet page, kept small on purpose: an empty screen is an invitation,
+     not a wall. A caller can name the next step through `emptyAction`. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/paper_deep"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingHorizontal="40dp"
     android:visibility="gone">
 
-    <LinearLayout
+    <ImageView
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_headphones"
+        android:tint="@color/ink_faint" />
+
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:layout_marginTop="12dp"
+        android:text="@string/empty_state"
+        android:textAppearance="@style/TextAppearance.Oru.Title"
+        android:textColor="@color/ink"
+        android:textAlignment="center" />
 
-        <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_headphones"
-            android:tint="@color/ink_faint"
-            android:contentDescription="@null" />
+    <TextView
+        android:id="@+id/emptyHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Follow an artist and their songs land here."
+        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+        android:textAlignment="center"
+        android:textColor="@color/ink_soft"
+        android:visibility="gone" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/empty_state"
-            android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-            android:textAlignment="center" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/emptyAction"
+        style="@style/Widget.Oru.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:visibility="gone" />
 
-    </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>

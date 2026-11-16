@@ -7,96 +7,75 @@
     android:layout_height="match_parent"
     android:background="@color/paper_deep">
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
+        <!-- The greeting is the page's hero, so nothing may cover it. The empty
+             state used to sit on top of this row and take "Good morning" with
+             it. -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="12dp">
 
-            <!-- The greeting and the account door share one row, so the gear
-                 sits level with the words instead of floating above them. -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/homeGreeting"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="20dp"
-                android:paddingTop="16dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="12dp">
+                android:text="Listen"
+                android:textAppearance="@style/TextAppearance.Oru.Headline"
+                android:textColor="@color/ink" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+            <TextView
+                android:id="@+id/homeSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Fresh from the artists you follow."
+                android:textAppearance="@style/TextAppearance.Oru.BodySoft"
+                android:textColor="@color/ink_soft" />
 
-                    <TextView
-                        android:id="@+id/homeGreeting"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Listen"
-                        android:textAppearance="@style/TextAppearance.Oru.Headline"
-                        android:textColor="@color/ink" />
+        </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/homeSubtitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Fresh from the artists you follow."
-                        android:textAppearance="@style/TextAppearance.Oru.BodySoft"
-                        android:textColor="@color/ink_soft" />
-
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/accountButton"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="12dp"
-                    android:background="@drawable/bg_gear_flame"
-                    android:contentDescription="@string/account"
-                    android:elevation="2dp"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_settings"
-                    android:tint="@color/night" />
-
-            </LinearLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/feedRecyclerView"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingBottom="88dp" />
 
-        </LinearLayout>
+            <include
+                android:id="@+id/emptyView"
+                layout="@layout/view_empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
-        <include
-            android:id="@+id/emptyView"
-            layout="@layout/view_empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            <include
+                android:id="@+id/errorView"
+                layout="@layout/view_error"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
-        <include
-            android:id="@+id/errorView"
-            layout="@layout/view_error"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/flame" />
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminateTint="@color/flame" />
+        </FrameLayout>
 
-    </FrameLayout>
+    </LinearLayout>
 
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
