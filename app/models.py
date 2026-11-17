@@ -236,6 +236,30 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
+class BetaApplication(Base):
+    """A request to run the beta line of the app.
+
+    One row per account: re-applying after a decline is allowed and updates the
+    same row, so the queue never fills with duplicates. Approval is what makes
+    the beta download reachable, and it is the only thing that does — the build
+    exists either way, but it is not offered to anyone who has not been read by
+    a moderator first.
+    """
+
+    __tablename__ = "beta_applications"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+
+
 class ModerationAction(Base):
     __tablename__ = "moderation_actions"
     id: Mapped[int] = mapped_column(primary_key=True)

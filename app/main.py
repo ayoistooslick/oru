@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import inspect, text
 
-from app.api import accounts, community, maintenance, moderation, music, notifications
+from app.api import accounts, beta, community, maintenance, moderation, music, notifications
 from app.assetlinks import ASSETLINKS
 from app.social import render_document, request_origin
 from app.config import BASE_DIR, settings
@@ -210,6 +210,7 @@ def build_api() -> FastAPI:
     api.include_router(community.router)
     api.include_router(moderation.router)
     api.include_router(notifications.router)
+    api.include_router(beta.router)
     api.include_router(maintenance.router)
     api.add_exception_handler(RequestValidationError, validation_error_handler)
     api.add_exception_handler(HTTPException, http_error_handler)

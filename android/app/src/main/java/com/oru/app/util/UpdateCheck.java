@@ -35,8 +35,9 @@ import okhttp3.Response;
  */
 public final class UpdateCheck {
 
-    /** The manifest the site serves next to the app. */
+    /** The manifest the site serves next to the app, per line. */
     private static final String MANIFEST = "/app-version.json";
+    private static final String BETA_MANIFEST = "/app-version-beta.json";
     /** One check a day is plenty for a release that changes now and then. */
     private static final long EVERY_MS = TimeUnit.HOURS.toMillis(12);
     private static final String PREFS = "oru";
@@ -65,8 +66,12 @@ public final class UpdateCheck {
         // again on every screen change.
         prefs.edit().putLong(CHECKED_AT, now).apply();
 
+        // The beta install follows its own channel: it must never be pointed at
+        // the release build, and a release install must never be offered the
+        // beta.
+        boolean beta = activity.getPackageName().endsWith(".beta");
         Request request = new Request.Builder()
-                .url(ApiClient.origin() + MANIFEST)
+                .url(ApiClient.origin() + (beta ? BETA_MANIFEST : MANIFEST))
                 .header("Cache-Control", "no-cache")
                 .build();
         CLIENT.newCall(request).enqueue(new okhttp3.Callback() {

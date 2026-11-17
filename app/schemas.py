@@ -71,6 +71,18 @@ class ReportCreate(BaseModel):
     details: str = Field(default="", max_length=2000)
 
 
+class BetaApply(BaseModel):
+    """Why this person wants the beta build. Short and optional, but the note
+    is what a moderator reads before deciding, so it is worth asking for."""
+
+    note: str = Field(default="", max_length=1000)
+
+
+class BetaDecision(BaseModel):
+    approve: bool
+    note: str = Field(default="", max_length=1000)
+
+
 class ModerationDecision(BaseModel):
     action: Literal["hide", "dismiss", "restore"]
     reason: str = Field(min_length=5, max_length=1000)

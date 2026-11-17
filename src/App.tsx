@@ -25,6 +25,7 @@ import { SettingsPage } from "./pages/Settings";
 import { Moderation } from "./pages/Moderation";
 import { SongSharing } from "./pages/SongSharing";
 import { About } from "./pages/About";
+import Beta from "./pages/Beta";
 import { NotFound } from "./pages/NotFound";
 
 function FullScreenLoader({ label }: { label: string }) {
@@ -95,6 +96,7 @@ export default function App() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/moderation" element={<Moderation />} />
+                <Route path="/beta" element={<Beta />} />
                 <Route path="/shares" element={<SongSharing />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

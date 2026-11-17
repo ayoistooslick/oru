@@ -218,6 +218,128 @@ export function Moderation() {
           ))}
         </ul>
       )}
+
+      <BetaQueue />
     </Page>
   );
 }
+
+/**
+ * The beta queue, read by a person.
+ *
+ * The beta build is handed out by hand: every request waits here until a
+ * moderator approves it. Nothing ships it automatically, which is the point —
+ * the first people to run unfinished work are chosen.
+ */
+function BetaQueue() {
+  const toasts = useToasts();
+  const queue = useResource<{ items: BetaRequest[] }>(
+    (signal) => request("/moderation/beta", { signal }),
+    [],
+  );
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const decide = async (entry: BetaRequest, approve: boolean) => {
+    setBusy(entry.id);
+    try {
+      await request(`/moderation/beta/${entry.id}/decision`, {
+        method: "POST",
+        body: { approve, note: approve ? "Approved" : "Not this time" },
+      });
+      toasts.saved(
+        approve ? "Approved" : "Declined",
+        approve
+          ? "They can download the beta from their beta page now."
+          : "They can ask again with more detail.",
+      );
+      queue.reload();
+    } catch (error) {
+      toasts.error(
+        "Could not save that",
+        error instanceof Error ? error.message : "Try again.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const items = queue.data?.items ?? [];
+
+  return (
+    <section className="mt-12 border-t border-hair pt-8">
+      <h2 className="text-[22px] font-extrabold">Beta testers</h2>
+      <p className="mt-1.5 max-w-3xl text-[15px] leading-relaxed text-ink-soft">
+        People who asked for the beta build. Approving one gives that account the
+        download; declining explains itself on their page, and they can ask again.
+      </p>
+
+      {queue.loading && !queue.data ? (
+        <div className="flex items-center gap-3 py-8 text-ink-soft">
+          <Spinner /> Reading the queue…
+        </div>
+      ) : queue.error ? (
+        <EmptyState title="Could not load the queue" message={queue.error} />
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="Nobody is waiting"
+          message="Requests for the beta build appear here."
+        />
+      ) : (
+        <ul className="mt-5 space-y-3">
+          {items.map((entry) => (
+            <li key={entry.id} className="rounded-xl bg-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[16.5px] font-bold">
+                    {entry.display_name || entry.handle}
+                    <span className="ml-2 text-[13px] font-semibold text-ink-faint">
+                      @{entry.handle}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink-faint">
+                    {entry.email} · asked {formatTimeAgo(entry.created_at)}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-ink/8 px-3 py-1 text-[12px] font-bold uppercase">
+                  {entry.status}
+                </span>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-ink-soft">
+                {entry.note || "No note given."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy === entry.id}
+                  onClick={() => decide(entry, true)}
+                  className="h-9 rounded-full bg-flame px-4 text-[13.5px] font-semibold text-cream disabled:opacity-60 press"
+                >
+                  Approve
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy === entry.id}
+                  onClick={() => decide(entry, false)}
+                >
+                  Decline
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+type BetaRequest = {
+  id: number;
+  user_id: number;
+  handle: string | null;
+  display_name: string | null;
+  email: string | null;
+  note: string;
+  status: string;
+  created_at: string;
+};

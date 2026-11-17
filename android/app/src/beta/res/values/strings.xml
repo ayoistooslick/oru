@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The beta line's name. Everything else is shared: the beta is the same app
+     with newer code, not a different product. -->
+<resources>
+    <string name="app_name">ORU Beta</string>
+</resources>

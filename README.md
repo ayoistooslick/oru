@@ -229,6 +229,38 @@ python -m scripts.app_release --notes "What changed in this build"
 Add `--required` when an install must not keep running on the old build: the dialog then has no
 *Later*. The file is published with the site, so the deploy is what tells phones about it.
 
+### The beta line
+
+Two builds ship from one commit: `stable` (the release everyone installs) and `beta`, which carries
+unfinished work. The beta has its own package id (`com.oru.app.beta`), its own icon and its own update
+channel, so it installs beside the release instead of replacing it.
+
+It is not a public download. `/beta` asks for a place; a moderator reads the request in
+**Moderation → Beta testers** and approves or declines it. Only an approved account is handed the
+build (`GET /api/v1/beta/download`, or `/beta/link` for the page). Requests live in
+`beta_applications`, one row per account, and a declined request can be made again — which puts it
+back in the queue.
+
+CI uploads `oru-beta-release-unsigned` beside the stable package. Sign it with the release key and
+publish it to the `beta` pre-release, which is the address the approval points at:
+
+```sh
+"$BT/apksigner" sign --ks android/keystore/oru-release.jks --ks-key-alias oru \
+  --out oru-beta.apk oru-beta-aligned.apk
+gh release delete beta --yes 2>/dev/null || true
+gh release create beta oru-beta.apk --title "ORU beta" --prerelease --target main
+```
+
+Override the address with `BETA_APK_URL` if the build ever lives elsewhere. Beta installs read
+`https://oru.freebuff.app/app-version-beta.json`; `python -m scripts.app_release --channel beta`
+writes it.
+
+### Media storage
+
+Gitty Bank is retired: its API answers `500` for every file operation, so production runs
+`STORAGE=s3` against the configured bucket. `STORAGE` still accepts `local` for development, and
+the API proxies reads (including Range requests) so clients never need bucket credentials.
+
 ### Signing
 
 Two keys exist, and only one of them ships:

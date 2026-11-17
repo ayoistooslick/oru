@@ -17,8 +17,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GRADLE = ROOT / "android" / "app" / "build.gradle"
-MANIFEST = ROOT / "public" / "app-version.json"
-DOWNLOAD = "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk"
+DOWNLOADS = {
+    "stable": (ROOT / "public" / "app-version.json",
+               "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk"),
+    # The beta install reads its own manifest, so a beta phone can never be
+    # offered the release build and a release phone can never be offered beta.
+    "beta": (ROOT / "public" / "app-version-beta.json",
+             "https://github.com/ayoistooslick/oru/releases/download/beta/oru-beta.apk"),
+}
 
 
 def android_version() -> tuple[int, str]:
@@ -35,26 +41,30 @@ def main() -> None:
     parser.add_argument("--notes", default="", help="one line about the release")
     parser.add_argument("--required", action="store_true",
                         help="the app blocks until it is updated")
-    parser.add_argument("--url", default=DOWNLOAD)
+    parser.add_argument("--channel", choices=sorted(DOWNLOADS), default="stable")
+    parser.add_argument("--url", default=None)
     args = parser.parse_args()
 
+    manifest, default_url = DOWNLOADS[args.channel]
     code, name = android_version()
+    if args.channel == "beta":
+        name = f"{name}-beta"
     previous = {}
-    if MANIFEST.exists():
+    if manifest.exists():
         try:
-            previous = json.loads(MANIFEST.read_text(encoding="utf-8"))
+            previous = json.loads(manifest.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             previous = {}
     notes = args.notes or previous.get("notes", "")
 
-    MANIFEST.write_text(json.dumps({
+    manifest.write_text(json.dumps({
         "versionCode": code,
         "versionName": name,
-        "url": args.url,
+        "url": args.url or default_url,
         "notes": notes,
         "required": bool(args.required),
     }, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"app-version.json: {name} ({code})")
+    print(f"{manifest.name}: {name} ({code})")
 
 
 if __name__ == "__main__":

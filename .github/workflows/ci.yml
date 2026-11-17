@@ -104,15 +104,18 @@ jobs:
             echo "No release key in secrets: building a debug-signed test APK (App Links will not verify on it)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # The project ships two flavors: `stable` (the release line) and `beta`
+      # (installs beside it, own package id). Output paths carry the flavor, so
+      # every copy below names it explicitly.
       - name: Build the native APK
         run: |
           cd android
           if [ -n "$ORU_KEYSTORE_FILE" ]; then
-            ./gradlew assembleRelease --no-daemon
-            cp app/build/outputs/apk/release/app-release.apk ../oru.apk
+            ./gradlew assembleStableRelease --no-daemon
+            cp app/build/outputs/apk/stable/release/app-stable-release.apk ../oru.apk
           else
-            ./gradlew assembleDebug --no-daemon
-            cp app/build/outputs/apk/debug/app-debug.apk ../oru.apk
+            ./gradlew assembleStableDebug --no-daemon
+            cp app/build/outputs/apk/stable/debug/app-stable-debug.apk ../oru.apk
           fi
           ls -lh ../oru.apk
 
@@ -129,9 +132,9 @@ jobs:
       - name: Build the unsigned release package
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
-          if [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk ../oru-release-unsigned.apk
+          ./gradlew assembleStableRelease --no-daemon
+          if [ -f app/build/outputs/apk/stable/release/app-stable-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/stable/release/app-stable-release-unsigned.apk ../oru-release-unsigned.apk
           else
             echo "Release signing is configured, so there is nothing to sign by hand."
           fi
@@ -142,6 +145,22 @@ jobs:
           name: oru-release-unsigned
           path: oru-release-unsigned.apk
           if-no-files-found: ignore
+
+      # The beta line. Built from the same commit as the release, unsigned, and
+      # published by hand to the `beta` pre-release that approved testers are
+      # pointed at.
+      - name: Build the unsigned beta package
+        run: |
+          cd android
+          ./gradlew assembleBetaRelease --no-daemon
+          cp app/build/outputs/apk/beta/release/app-beta-release-unsigned.apk ../oru-beta-release-unsigned.apk
+
+      - name: Upload the unsigned beta package
+        uses: actions/upload-artifact@v7
+        with:
+          name: oru-beta-release-unsigned
+          path: oru-beta-release-unsigned.apk
+          if-no-files-found: error
 
       # Builds from main are test builds and are marked pre-release, so
       # /releases/latest/download/oru.apk keeps pointing at a tagged, signed

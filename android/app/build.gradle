@@ -37,6 +37,22 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Two lines, one catalogue. `stable` is what everybody gets; `beta` carries
+    // unfinished work, installs beside the release (its own package id and
+    // icon), and updates from its own manifest. Beta builds are handed out by
+    // hand from the site after a moderator approves the request.
+    flavorDimensions += "channel"
+    productFlavors {
+        stable {
+            dimension "channel"
+        }
+        beta {
+            dimension "channel"
+            applicationId "com.oru.app.beta"
+            versionNameSuffix "-beta"
+        }
+    }
+
     signingConfigs {
         release {
             if (hasReleaseKey) {

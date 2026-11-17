@@ -420,7 +420,13 @@ export function Landing() {
                 Download for Android
               </a>
             </div>
-            <p className="mt-4 text-[13px] text-cream/70">Free · Web, iPhone and Android 7 and newer</p>
+            <p className="mt-4 text-[13px] text-cream/70">
+              Free · Web, iPhone and Android 7 and newer
+              <span className="mx-1.5 opacity-50">·</span>
+              <Link to="/beta" className="font-semibold text-cream underline-offset-4 hover:underline">
+                Want the beta?
+              </Link>
+            </p>
           </div>
         </Section>
       </main>
