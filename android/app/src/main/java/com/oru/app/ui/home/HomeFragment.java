@@ -198,13 +198,8 @@ public class HomeFragment extends Fragment {
             parts.add(rows);
             rows.submitList(following);
         }
-        if (discover != null && !discover.isEmpty()) {
-            parts.add(new SectionAdapter("All songs", null));
-            FeedAdapter rows = new FeedAdapter();
-            parts.add(rows);
-            rows.submitList(discover);
-        }
-
+        // No "All songs" section: its rows were the same songs already shown in
+        // the rails above, so the feed repeated itself before it ended.
         if (parts.isEmpty()) {
             binding.emptyView.getRoot().setVisibility(View.VISIBLE);
             return;

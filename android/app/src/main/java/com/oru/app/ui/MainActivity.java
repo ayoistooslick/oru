@@ -75,6 +75,9 @@ public class MainActivity extends AppCompatActivity {
         askForNotifications();
         binding.accountButton.setOnClickListener(v ->
                 com.oru.app.ui.components.AccountSheet.show(this));
+        binding.notificationsButton.setOnClickListener(v -> startActivity(
+                new Intent(this,
+                        com.oru.app.ui.notifications.NotificationsActivity.class)));
         loadHeaderAvatar();
         openRequestedTab(getIntent());
     }
@@ -82,11 +85,42 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // A picture changed in the profile is the header's picture too.
+        // A picture changed in the profile is the header's picture too, and
+        // the bell has to know whether anything new arrived while away.
         loadHeaderAvatar();
+        loadUnread();
         // Coming back to the app is the moment to notice a new release: an
         // install that was left open for days learns about it here.
         com.oru.app.util.UpdateCheck.maybeCheck(this);
+    }
+
+    /** A dot, not a count: the number is on the drops screen itself. */
+    private void loadUnread() {
+        if (binding == null) {
+            return;
+        }
+        new com.oru.app.data.repository.NotificationsRepository(
+                com.oru.app.util.LazySession.getApiService(),
+                com.oru.app.util.LazySession.getGson())
+                .unread(new com.oru.app.data.repository.Callback<
+                        com.oru.app.data.model.NotificationsPage.Unread>() {
+                    @Override
+                    public void onSuccess(
+                            com.oru.app.data.model.NotificationsPage.Unread unread) {
+                        if (binding == null) {
+                            return;
+                        }
+                        binding.unreadDot.setVisibility(unread != null
+                                && unread.unread > 0
+                                ? android.view.View.VISIBLE
+                                : android.view.View.GONE);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        // No dot is the right answer when the count is unknown.
+                    }
+                });
     }
 
     /** The header is a face, so it has to follow the saved identity. */
@@ -135,8 +169,25 @@ public class MainActivity extends AppCompatActivity {
         }
         int tab = intent.getIntExtra("tab", 0);
         if (tab != 0) {
-            navController.navigate(tab);
+            // Same options the bar uses: one entry per tab, and the tab's own
+            // state restored when you come back to it.
+            navController.navigate(tab, null, tabOptions());
         }
+    }
+
+    /**
+     * How a tab is entered: no duplicate entries, and the back stack collapses
+     * to the start destination. Without this every trip out to profile or
+     * drops left another copy behind, so Back walked through old tabs instead of
+     * leaving the app from Home the way it should.
+     */
+    private androidx.navigation.NavOptions tabOptions() {
+        return new androidx.navigation.NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setPopUpTo(navController.getGraph().getStartDestinationId(),
+                        false, true)
+                .setRestoreState(true)
+                .build();
     }
 
     private void setupBottomNavigation() {
@@ -151,6 +202,30 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = binding.bottomNavigation;
         NavigationUI.setupWithNavController(bottomNav, navController);
 
+        // Tapping the tab you are already on returns to the top of it, which is
+        // what a listener reaches for after scrolling a long list.
+        bottomNav.setOnItemReselectedListener(item -> scrollCurrentToTop());
+
+        // Back reaches Home first, then leaves the app. Before this, Back from
+        // any tab closed ORU outright.
+        getOnBackPressedDispatcher().addCallback(this,
+                new androidx.activity.OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        if (navController.getCurrentDestination() != null
+                                && navController.getCurrentDestination().getId()
+                                        != R.id.homeFragment) {
+                            navController.navigate(R.id.homeFragment, null,
+                                    tabOptions());
+                            return;
+                        }
+                        // Already home: leave, exactly as Back would. Calling
+                        // finish() rather than re-dispatching keeps this callback
+                        // armed for the next press instead of disabling it once.
+                        finish();
+                    }
+                });
+
         // Preserve the selected tab when returning from sub-activities.
         navController.addOnDestinationChangedListener(
                 (controller, destination, arguments) -> {
@@ -161,6 +236,70 @@ public class MainActivity extends AppCompatActivity {
                             || destination.getId() == R.id.studioFragment;
                     updateBottomNavigationVisibility();
                 });
+    }
+
+    /** Finds the scrollable child of whichever tab is showing and rewinds it. */
+    private void scrollCurrentToTop() {
+        NavHostFragment host = (NavHostFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment);
+        if (host == null) {
+            return;
+        }
+        for (androidx.fragment.app.Fragment fragment : host.getChildFragmentManager()
+                .getFragments()) {
+            android.view.View view = fragment.getView();
+            if (view == null) {
+                continue;
+            }
+            androidx.recyclerview.widget.RecyclerView list =
+                    findRecycler(view);
+            if (list != null && list.getLayoutManager() != null) {
+                list.smoothScrollToPosition(0);
+                return;
+            }
+            androidx.core.widget.NestedScrollView scroll =
+                    findScroll(view);
+            if (scroll != null) {
+                scroll.smoothScrollTo(0, 0);
+                return;
+            }
+        }
+    }
+
+    private static androidx.recyclerview.widget.RecyclerView findRecycler(
+            android.view.View view) {
+        if (view instanceof androidx.recyclerview.widget.RecyclerView) {
+            return (androidx.recyclerview.widget.RecyclerView) view;
+        }
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                androidx.recyclerview.widget.RecyclerView found =
+                        findRecycler(group.getChildAt(i));
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static androidx.core.widget.NestedScrollView findScroll(
+            android.view.View view) {
+        if (view instanceof androidx.core.widget.NestedScrollView) {
+            return (androidx.core.widget.NestedScrollView) view;
+        }
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                androidx.core.widget.NestedScrollView found =
+                        findScroll(group.getChildAt(i));
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     private void updateBottomNavigationVisibility() {

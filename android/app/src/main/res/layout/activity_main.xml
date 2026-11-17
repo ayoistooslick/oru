@@ -38,6 +38,39 @@
                 app:strokeColor="@color/hair"
                 app:strokeWidth="1dp" />
 
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- The bell came back with the account menu's removal: new drops
+                 and follows need somewhere to land. -->
+            <FrameLayout
+                android:layout_width="48dp"
+                android:layout_height="48dp">
+
+                <ImageButton
+                    android:id="@+id/notificationsButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/menu_notifications"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_notifications"
+                    app:tint="@color/ink" />
+
+                <View
+                    android:id="@+id/unreadDot"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/bg_unread_dot"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
         </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>

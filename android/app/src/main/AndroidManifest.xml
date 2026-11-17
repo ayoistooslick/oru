@@ -116,16 +116,19 @@
         <activity
             android:name=".ui.artist.ArtistActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Oru" />
 
         <activity
             android:name=".ui.release.ReleaseActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Oru" />
 
         <activity
             android:name=".ui.playlist.PlaylistActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Oru" />
 
         <activity
