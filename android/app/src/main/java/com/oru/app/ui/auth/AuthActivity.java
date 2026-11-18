@@ -44,6 +44,8 @@ public class AuthActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityAuthBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        // If the app closed on the way here, say why before asking for anything.
+        com.oru.app.util.CrashLog.reportIfAny(this);
 
         session = new SessionManager(this);
 

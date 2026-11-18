@@ -51,7 +51,11 @@ public class SessionManager {
     }
 
     public boolean isSignedIn() {
-        return prefs.getString(KEY_TOKEN, null) != null;
+        // An empty string used to count as a session, which sent every request
+        // out without a usable token and bounced between the sign-in screen and
+        // the app. A session needs a token with something in it.
+        String token = prefs.getString(KEY_TOKEN, null);
+        return token != null && !token.trim().isEmpty();
     }
 
     @Nullable

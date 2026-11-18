@@ -1,7 +1,7 @@
 {
-  "versionCode": 5,
-  "versionName": "1.3.1-beta",
+  "versionCode": 6,
+  "versionName": "1.3.2-beta",
   "url": "https://github.com/ayoistooslick/oru/releases/download/beta/oru-beta.apk",
-  "notes": "The beta channel. Same app, newer code, rougher edges.",
+  "notes": "Beta channel: crash reporting, inset fix, session fix.",
   "required": false
 }

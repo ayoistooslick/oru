@@ -31,6 +31,10 @@ public class OruApplication extends Application {
         ThemeMode.apply(this);
         createNotificationChannels();
 
+        // A sideloaded app has no crash console, so the last exception is kept
+        // and shown on the next launch instead of vanishing.
+        com.oru.app.util.CrashLog.install(this);
+
         // The data layer builds Retrofit from the saved session, and every
         // screen asks LazySession for a service while it is being created. That
         // call throws unless something has initialised the client first, so do

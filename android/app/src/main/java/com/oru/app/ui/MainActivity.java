@@ -63,12 +63,18 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {
-            keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
-            updateBottomNavigationVisibility();
-            return insets;
-        });
+        // The root's inset listener belongs to SystemBars, which pads the whole
+        // screen clear of the status and gesture bars. Watching the keyboard
+        // from the bar itself keeps that padding intact — two listeners on one
+        // view means the last one wins, and back then the safe area lost.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.bottomArea,
+                (view, insets) -> {
+                    keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+                    updateBottomNavigationVisibility();
+                    return insets;
+                });
         ViewCompat.requestApplyInsets(binding.getRoot());
+        com.oru.app.util.CrashLog.reportIfAny(this);
 
         setupBottomNavigation();
         miniPlayer = new com.oru.app.ui.components.MiniPlayer(this, binding.miniPlayer);
