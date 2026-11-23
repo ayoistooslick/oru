@@ -42,7 +42,12 @@ public final class SessionExpiry {
             intent.putExtra("session_ended", true);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                     | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            app.startActivity(intent);
+            try {
+                app.startActivity(intent);
+            } catch (RuntimeException ignored) {
+                // A phone that refuses the start still has a cleared session;
+                // the next launch opens sign-in by itself.
+            }
         });
     }
 }

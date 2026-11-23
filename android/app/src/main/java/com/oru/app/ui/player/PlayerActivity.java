@@ -112,11 +112,14 @@ public class PlayerActivity extends AppCompatActivity {
     private void connectPlayer() {
         SessionToken token = new SessionToken(this,
                 new ComponentName(this, PlayerService.class));
-        controllerFuture = new MediaController.Builder(this, token).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> future =
+                new MediaController.Builder(this, token).buildAsync();
+        controllerFuture = future;
+        future.addListener(() -> {
             MediaController connected;
             try {
-                connected = controllerFuture.get();
+                // The field is cleared on destroy; a local reference cannot be.
+                connected = future.get();
             } catch (Exception error) {
                 runOnUiThread(() -> showError(new IllegalStateException(
                         "The player could not start (" + error
@@ -942,6 +945,9 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void showError(Throwable error) {
+        if (binding == null || isFinishing() || isDestroyed()) {
+            return;
+        }
         binding.errorView.getRoot().setVisibility(View.VISIBLE);
         binding.errorView.errorMessage.setText(
                 UiErrors.message(this, error));

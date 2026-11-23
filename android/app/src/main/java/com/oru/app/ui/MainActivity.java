@@ -42,7 +42,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Before anything inflates: if the last launch failed, say so.
+        com.oru.app.util.CrashLog.reportIfAny(this);
+        try {
+            open();
+        } catch (Throwable error) {
+            // A startup failure must not look like the app closing by itself:
+            // show the reason, with a way to copy it.
+            com.oru.app.util.CrashLog.record(this, error);
+            com.oru.app.util.CrashLog.showFallback(this, error);
+        }
+    }
 
+    private void open() {
         // Auth gate: if not signed in, go to the auth activity.
         SessionManager session = new SessionManager(this);
         if (!session.isSignedIn()) {
@@ -91,13 +103,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // A picture changed in the profile is the header's picture too, and
-        // the bell has to know whether anything new arrived while away.
-        loadHeaderAvatar();
-        loadUnread();
-        // Coming back to the app is the moment to notice a new release: an
-        // install that was left open for days learns about it here.
-        com.oru.app.util.UpdateCheck.maybeCheck(this);
+        try {
+            // A picture changed in the profile is the header's picture too, and
+            // the bell has to know whether anything new arrived while away.
+            loadHeaderAvatar();
+            loadUnread();
+            // Coming back to the app is the moment to notice a new release: an
+            // install that was left open for days learns about it here.
+            com.oru.app.util.UpdateCheck.maybeCheck(this);
+        } catch (Throwable error) {
+            // None of this is worth closing the app for.
+            com.oru.app.util.CrashLog.record(this, error);
+        }
     }
 
     /** A dot, not a count: the number is on the drops screen itself. */

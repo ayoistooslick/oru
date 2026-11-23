@@ -111,6 +111,7 @@ public final class UpdateCheck {
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
+        try {
         int latest = manifest.optInt("versionCode", 0);
         int installed = installedVersionCode(activity);
         if (latest <= 0 || installed <= 0 || latest <= installed) {
@@ -139,6 +140,9 @@ public final class UpdateCheck {
                 .setNegativeButton(required ? null : "Later", null)
                 .setCancelable(!required)
                 .show();
+        } catch (RuntimeException ignored) {
+            // A dialog that cannot be shown is not worth a crash.
+        }
     }
 
     /** This install's own version code, read from the package itself. */

@@ -244,7 +244,14 @@ public class AuthRepository {
     }
 
     public void saveSessionFromToken(TokenResponse token) {
+        // The API sends the account with every token, but a reply without it
+        // used to crash right where sign-in ends. Keep the token, fall back to
+        // the fields the screen already knows.
         User u = token.user;
+        if (u == null) {
+            session.saveSession(token.accessToken, -1, null, null, null);
+            return;
+        }
         session.saveSession(token.accessToken, u.id, u.handle, u.displayName,
                 u.avatarUrl);
     }

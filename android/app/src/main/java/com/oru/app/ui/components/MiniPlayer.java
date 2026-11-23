@@ -72,13 +72,22 @@ public final class MiniPlayer {
 
         SessionToken token = new SessionToken(activity,
                 new ComponentName(activity, PlayerService.class));
-        controllerFuture = new MediaController.Builder(activity, token).buildAsync();
-        controllerFuture.addListener(() -> {
+        final ListenableFuture<MediaController> future =
+                new MediaController.Builder(activity, token).buildAsync();
+        controllerFuture = future;
+        future.addListener(() -> {
+            // The field is nulled by release(), and the future itself is
+            // cancelled there. Reading the field here crashed with a null
+            // pointer or a CancellationException whenever the screen was closed
+            // before the session finished connecting — which is exactly what
+            // happens when the task is cleared at sign-in.
             MediaController connected;
             try {
-                connected = controllerFuture.get();
-            } catch (InterruptedException | ExecutionException error) {
-                // No session: the bar simply stays hidden.
+                connected = future.get();
+            } catch (InterruptedException | ExecutionException
+                    | java.util.concurrent.CancellationException error) {
+                return;
+            } catch (RuntimeException error) {
                 return;
             }
             activity.runOnUiThread(() -> {

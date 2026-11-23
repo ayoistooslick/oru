@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.3.2",
+  "versionCode": 7,
+  "versionName": "1.3.3",
   "url": "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk",
-  "notes": "A crash now names itself on the next launch with a Copy button, the safe area and keyboard no longer fight over one listener, and a blank token no longer counts as signed in.",
+  "notes": "A media session that disconnects while a screen closes can no longer crash the app, and a startup failure now shows the reason instead of closing.",
   "required": false
 }

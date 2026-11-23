@@ -76,6 +76,70 @@ public final class CrashLog {
         }
     }
 
+    /** Records a caught failure without ending the process. */
+    public static void record(Context context, Throwable error) {
+        try {
+            write(context, error);
+        } catch (Throwable ignored) {
+            // Never let reporting make things worse.
+        }
+    }
+
+    /**
+     * The screen of last resort: if a startup step throws, ORU shows the reason
+     * with a Copy button instead of closing. Built entirely in code, so it
+     * cannot fail on the same broken layout that caused the fall.
+     */
+    public static void showFallback(Activity activity, Throwable error) {
+        try {
+            StringWriter text = new StringWriter();
+            PrintWriter writer = new PrintWriter(text);
+            error.printStackTrace(writer);
+            writer.flush();
+            final String trace = text.toString();
+
+            android.widget.LinearLayout layout = new android.widget.LinearLayout(activity);
+            layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+            layout.setPadding(56, 120, 56, 56);
+            layout.setBackgroundColor(0xFF0D0A07);
+
+            android.widget.TextView title = new android.widget.TextView(activity);
+            title.setText("ORU could not start");
+            title.setTextColor(0xFFF5ECE0);
+            title.setTextSize(24);
+            layout.addView(title);
+
+            android.widget.TextView body = new android.widget.TextView(activity);
+            body.setText(trace.length() > 1600 ? trace.substring(0, 1600) : trace);
+            body.setTextColor(0xFFCFC3B4);
+            body.setTextSize(12);
+            body.setPadding(0, 28, 0, 28);
+            layout.addView(body);
+
+            android.widget.Button copy = new android.widget.Button(activity);
+            copy.setText("Copy the details");
+            copy.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager)
+                        activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("ORU crash", trace));
+                    Toast.makeText(activity, "Copied. Send it to the developer.",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+            layout.addView(copy);
+
+            android.widget.Button retry = new android.widget.Button(activity);
+            retry.setText("Try again");
+            retry.setOnClickListener(v -> activity.recreate());
+            layout.addView(retry);
+
+            activity.setContentView(layout);
+        } catch (Throwable ignored) {
+            activity.finish();
+        }
+    }
+
     /** Shows the stored trace once, then forgets it. */
     public static void reportIfAny(Activity activity) {
         if (activity == null || activity.isFinishing()) {

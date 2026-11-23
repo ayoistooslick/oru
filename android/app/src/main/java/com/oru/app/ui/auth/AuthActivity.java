@@ -42,10 +42,16 @@ public class AuthActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityAuthBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
         // If the app closed on the way here, say why before asking for anything.
         com.oru.app.util.CrashLog.reportIfAny(this);
+        try {
+            binding = ActivityAuthBinding.inflate(getLayoutInflater());
+            setContentView(binding.getRoot());
+        } catch (Throwable error) {
+            com.oru.app.util.CrashLog.record(this, error);
+            com.oru.app.util.CrashLog.showFallback(this, error);
+            return;
+        }
 
         session = new SessionManager(this);
 
@@ -55,10 +61,16 @@ public class AuthActivity extends AppCompatActivity {
             return;
         }
 
-        setupFields();
-        setupButtons();
-        updateUiForMode();
-        loadConfig();
+        try {
+            setupFields();
+            setupButtons();
+            updateUiForMode();
+            loadConfig();
+        } catch (Throwable error) {
+            com.oru.app.util.CrashLog.record(this, error);
+            com.oru.app.util.CrashLog.showFallback(this, error);
+            return;
+        }
 
         // Arriving from a rejected token: say what happened instead of letting a
         // blank form look like a fresh install.
