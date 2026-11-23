@@ -1,7 +1,7 @@
 {
-  "versionCode": 7,
-  "versionName": "1.3.3-beta",
+  "versionCode": 8,
+  "versionName": "1.3.4-beta",
   "url": "https://github.com/ayoistooslick/oru/releases/download/beta/oru-beta.apk",
-  "notes": "Beta channel: the media-session crash fix and the startup fallback screen.",
+  "notes": "Beta channel: the signed-in screen now inflates — the fragment host used a class name that does not exist.",
   "required": false
 }
