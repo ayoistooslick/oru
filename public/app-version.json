@@ -2,6 +2,6 @@
   "versionCode": 8,
   "versionName": "1.3.4",
   "url": "https://github.com/ayoistooslick/oru/releases/latest/download/oru.apk",
-  "notes": "Fixes the crash after signing in: the main screen named its fragment host with a class that does not exist, so the signed-in screen could never inflate. The host now uses androidx.navigation.fragment.NavHostFragment.",
+  "notes": "1.3.4 fixes the crash you could hit right after signing in — the main screen could never inflate again. It also ships a round of UI work you won't see just from that fix: the header now shows your own picture, the Account tab has its own shortcut, a bell shows unread notices, and the home feed is deduplicated so the same track stops repeating itself. Each screen also got a space back — the profile and artist pages pull their header up, posts/trusters track your followers and following, and pages with nothing in them point straight at the studio so you can drop something in. Sign-in and sign-up were cleaned up too. This is the first release on the v1.3 line, so it replaces everything before it. (If a screen still won't open, ORU can now show the reason on screen and copy it to share.)", "required": true,
   "required": false
 }

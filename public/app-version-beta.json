@@ -2,6 +2,6 @@
   "versionCode": 8,
   "versionName": "1.3.4-beta",
   "url": "https://github.com/ayoistooslick/oru/releases/download/beta/oru-beta.apk",
-  "notes": "Beta channel: the signed-in screen now inflates — the fragment host used a class name that does not exist.",
+  "notes": "Beta line, 1.3.4-beta. Same bottom line as stable: the crash right after signing in is gone, and the same UI pass shipped — your own picture in the header, an Account shortcut, a bell for unread notices, a home feed that stops repeating the same track, and a few cleaner heads and empty pages. Beta is the line I review before it goes out, so nothing here ships without a look. Install this line separately from stable. If a screen still gives trouble, ORU now shows the reason on screen and can copy it to you.",
   "required": false
 }
